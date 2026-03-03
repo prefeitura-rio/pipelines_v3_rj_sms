@@ -1,0 +1,13 @@
+cases:
+
+  # [teste] Previsão do tempo
+  - case_slug: "test-weather-report"
+    flow_path: "pipelines.reports.weather.flows"
+    flow_name: "weather_report"
+    params:
+      environment: "dev"
+      lat: -22.9519
+      lon: -43.2105
+
+  # ....
+

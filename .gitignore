@@ -1,0 +1,16 @@
+# Ambientes
+.python-version
+env/
+venv/
+.env/
+.venv/
+
+__pycache__/
+
+# Mantém arquivo de config de debugging
+.vscode/*
+!.vscode/launch.json
+
+# Arquivos que você deve criar localmente
+.env
+localrun.selected.yaml
