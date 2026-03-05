@@ -9,7 +9,12 @@
       "console": "integratedTerminal",
       "justMyCode": false,
       "subProcess": false,
-      "env": { "DO_NOT_TRACK": "1" }
+      "env": {
+        "environment": "dev",
+        "DO_NOT_TRACK": "1",
+        "PREFECT_SERVER_ANALYTICS_ENABLED": "false",
+        "IN_DEBUGGER": "1"
+      }
     }
   ]
 }

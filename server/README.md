@@ -1,6 +1,19 @@
+# Servidor pipelines
 
-(WIP)
+Inclui:
+* Servidor Prefect UI
+  Não inclui os workers!
+* Servidor Infisical
+
+
+## Prefect
 
 ```sh
-$ docker compose up
+$ ...
+```
+
+## Infisical
+
+```sh
+$ docker compose --profile infisical-profile up --build
 ```

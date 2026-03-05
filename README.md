@@ -2,7 +2,7 @@
 
 > Ambiente para extração e carga de dados brutos, em **Python + Prefect v3**, que abastece o Data Lake (**Google Cloud Storage / Google Big Query**) da Secretaria Municipal de Saúde do Rio de Janeiro (**SMS Rio**).
 
-Administrador: [Pedro Marques](@TanookiVerde) (S/CIT)
+Administrador: [Pedro Marques](https://github.com/TanookiVerde) (S/CIT)
 
 
 ## ⚙️ Configuração de ambiente

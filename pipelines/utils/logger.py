@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 
+from prefect.exceptions import MissingContextError
 from prefect.logging import get_run_logger
 from typing_extensions import Literal
 
@@ -26,7 +27,11 @@ def log(
 	Returns:
 		None
 	"""
-	get_run_logger().log(LEVELS_CONFIG[level]["type"], msg)
+	try:
+		get_run_logger().log(LEVELS_CONFIG[level]["type"], msg)
+	except MissingContextError as e:
+		# Não há flow executando (ainda, ou mais)
+		# A função provavelmente foi chamada p.ex. em evento lifecycle
+		print(msg)
 
 	# TODO: discord
-
