@@ -21,6 +21,7 @@ Crie um arquivo `.env` na raiz do repositório, baseado no arquivo `.env.example
 ```env
 INFISICAL_ADDRESS=xxxxxxxxxxxxxxxx
 INFISICAL_TOKEN=xxxxxxxxxxxxxxxx
+INFISICAL_PROJECT_ID=xxxxxxxxxxxxxxxx
 ```
 
 Peça as credenciais do Infisical ao administrador do projeto.
