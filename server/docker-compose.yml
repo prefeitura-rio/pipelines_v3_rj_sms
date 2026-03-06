@@ -8,56 +8,62 @@
 services:
 
   ##################################
-  ##          PREFECT UI          ##
+  ##            SHARED            ##
   ##################################
-  prefect-postgres:
-    image: postgres:14
-    environment:
-      POSTGRES_USER: prefect
-      POSTGRES_PASSWORD: prefect
-      POSTGRES_DB: prefect
-    volumes:
-      - prefect_pg_data:/var/lib/postgresql/data
+  shared-postgres:
+    image: postgres:14-alpine
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U prefect"]
+      test: "pg_isready --username=cit_pipelines && psql --username=cit_pipelines --list"
       interval: 5s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
+    restart: always
+    environment:
+      POSTGRES_USER: cit_pipelines
+      POSTGRES_PASSWORD: cit_pipelines
+      POSTGRES_MULTIPLE_DATABASES: prefect, infisical
     networks:
-      - prefect-network
-    profiles:
-      - prefect-profile
-
-  prefect-redis:
-    image: redis:7
+      - pref-infis-shared-network
     volumes:
-      - prefect_redis_data:/data
+      - shared_pg_data:/var/lib/postgresql/data
+      - ./scripts/pg_entrypoint.sh:/docker-entrypoint-initdb.d/pg_entrypoint.sh
+
+  shared-redis:
+    image: redis:7-alpine
     healthcheck:
       test: ["CMD-SHELL", "redis-cli ping"]
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: always
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
     networks:
-      - prefect-network
-    profiles:
-      - prefect-profile
+      - pref-infis-shared-network
+    volumes:
+      - shared_redis_data:/data
 
+
+
+  ##################################
+  ##          PREFECT UI          ##
+  ##################################
   prefect-server:
     image: prefecthq/prefect:3-latest
     depends_on:
-      prefect-postgres:
+      shared-postgres:
         condition: service_healthy
-      prefect-redis:
+      shared-redis:
         condition: service_healthy
     environment:
-      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://prefect:prefect@prefect-postgres:5432/prefect
+      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://cit_pipelines:cit_pipelines@shared-postgres:5432/prefect
       PREFECT_SERVER_API_HOST: 0.0.0.0
       PREFECT_SERVER_UI_API_URL: http://localhost:4200/api
-      PREFECT_MESSAGING_BROKER: prefect-redis.messaging
-      PREFECT_MESSAGING_CACHE: prefect-redis.messaging
-      PREFECT_REDIS_MESSAGING_HOST: prefect-redis
+      PREFECT_MESSAGING_BROKER: shared-redis.messaging
+      PREFECT_MESSAGING_CACHE: shared-redis.messaging
+      PREFECT_REDIS_MESSAGING_HOST: shared-redis
       PREFECT_REDIS_MESSAGING_PORT: 6379
-      PREFECT_REDIS_MESSAGING_DB: 0
+      PREFECT_REDIS_MESSAGING_DB: 0  # Database #0, diferente da do Infisical
       PREFECT_SERVER_ANALYTICS_ENABLED: false
       DO_NOT_TRACK: 1
     command: prefect server start --no-services
@@ -71,8 +77,7 @@ services:
       start_period: 60s
     networks:
       - prefect-network
-    profiles:
-      - prefect-profile
+      - pref-infis-shared-network
 
   prefect-services:
     image: prefecthq/prefect:3-latest
@@ -80,10 +85,10 @@ services:
       prefect-server:
         condition: service_healthy
     environment:
-      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://prefect:prefect@prefect-postgres:5432/prefect
-      PREFECT_MESSAGING_BROKER: prefect-redis.messaging
-      PREFECT_MESSAGING_CACHE: prefect-redis.messaging
-      PREFECT_REDIS_MESSAGING_HOST: prefect-redis
+      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://cit_pipelines:cit_pipelines@shared-postgres:5432/prefect
+      PREFECT_MESSAGING_BROKER: shared-redis.messaging
+      PREFECT_MESSAGING_CACHE: shared-redis.messaging
+      PREFECT_REDIS_MESSAGING_HOST: shared-redis
       PREFECT_REDIS_MESSAGING_PORT: 6379
       PREFECT_REDIS_MESSAGING_DB: 0
       PREFECT_SERVER_ANALYTICS_ENABLED: false
@@ -91,8 +96,7 @@ services:
     command: prefect server services start
     networks:
       - prefect-network
-    profiles:
-      - prefect-profile
+      - pref-infis-shared-network
 
   # Usamos Google Cloud Run ao invés de worker local
   # prefect-worker:
@@ -104,65 +108,33 @@ services:
   ##################################
 
   infisical-backend:
-    container_name: infisical-backend
+    image: infisical/infisical:v0.158.7
     restart: unless-stopped
     depends_on:
-      infisical-db:
+      shared-postgres:
         condition: service_healthy
-      infisical-redis:
+      shared-redis:
         condition: service_started
-    image: infisical/infisical:v0.158.7
-    pull_policy: always
-    env_file: .env
     ports:
       - 80:8080
-    environment:
-      - NODE_ENV=production
-    networks:
-      - infisical-network
-    profiles:
-      - infisical-profile
-
-  infisical-redis:
-    image: redis
-    container_name: infisical-dev-redis
     env_file: .env
-    restart: always
     environment:
-      - ALLOW_EMPTY_PASSWORD=yes
+      NODE_ENV: "production"
+      DB_CONNECTION_URI: postgres://cit_pipelines:cit_pipelines@shared-postgres:5432/infisical
+      # "/1" aqui indica database #1, diferente da do Prefect
+      REDIS_URL: redis://shared-redis:6379/1
+      SITE_URL: http://localhost:80
+      OTEL_TELEMETRY_COLLECTION_ENABLED: false
+      ENABLE_MSSQL_SECRET_ROTATION_ENCRYPT: true  # precisa disso?
+      INVITE_ONLY_SIGNUP: true
     networks:
-      - infisical-network
-    volumes:
-      - infisical_redis_data:/data
-    profiles:
-      - infisical-profile
-
-  infisical-db:
-    container_name: infisical-db
-    image: postgres:14-alpine
-    restart: always
-    env_file: .env
-    volumes:
-      - infisical_pg_data:/var/lib/postgresql/data
-    networks:
-      - infisical-network
-    healthcheck:
-      test: "pg_isready --username=${POSTGRES_USER} && psql --username=${POSTGRES_USER} --list"
-      interval: 5s
-      timeout: 10s
-      retries: 10
-    profiles:
-      - infisical-profile
+      - pref-infis-shared-network
 
 
 networks:
   prefect-network:
-  infisical-network:
+  pref-infis-shared-network:
 
 volumes:
-  prefect_pg_data:
-  prefect_redis_data:
-  infisical_pg_data:
-    driver: local
-  infisical_redis_data:
-    driver: local
+  shared_redis_data:
+  shared_pg_data:
