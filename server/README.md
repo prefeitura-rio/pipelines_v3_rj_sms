@@ -1,7 +1,7 @@
 # Servidor pipelines
 
 Inclui:
-* Servidor Prefect UI
+* Servidor Prefect UI\
   Não inclui os workers!
 * Servidor Infisical
 
@@ -61,7 +61,7 @@ $ docker compose up infisical-backend --build
 
 #### Conta de administrador
 Na primeira execução, ele abre a tela de cadastro da conta de administrador.
-Não temos um servidor SMTP, então os emails não precisam ser reais; ex. "admin@cit.local"
+Não temos um servidor SMTP, então os emails não precisam ser reais; ex. `admin@cit.local`
 A senha tem mínimo de caracteres e requer letras e dígitos pelo menos.
 
 #### Configurações relevantes
@@ -88,7 +88,7 @@ Ao criar o token, uma janelinha irá abrir com seu valor. Deve ser algo parecido
 que ser criado em seu lugar.
 
 
-### Conta de usuários
+#### Conta de usuários
 Para cadastrar outro usuário, é necessário ir na página da organização,
 na aba "Access Control", e clicar no botão "Invite Users to Organization".
 Um ou múltiplos endereços de email (que, novamente, não precisam ser reais)
@@ -105,3 +105,27 @@ gerado.
 A senha de usuário, contraintuitivamente, possui mais restrições do que a senha
 de administrador. Além de mínimo de caracteres e obrigatoriedade de letras e
 dígitos, ela também não pode ter aparecido em vazamentos de senhas anteriores.
+
+
+## TODO
+- Funções de auxílio todas dos flows do Prefect
+  - Acesso a BigQuery, Cloud Storage, ...
+  - dbt
+    - Ver se dá pra printar logs mais descritivos do dbt dessa vez :/
+- Autenticação\
+  SMTR usa [Authentik](https://goauthentik.io/), self-hosted
+- Nginx (ou equivalente)
+  - Proxy reverso separando Infisical / Prefect / autenticação
+- VM
+  - One-liner de importação do repositório?
+  - Domínio configurado
+    - HTTPS
+- Worker Pool via Google Cloud Run
+- Identificação de usuário logado no Prefect (opcional) (queria muito)
+  - Ou gambiarra com `<iframe>`\
+    (mais complicado do que parece, acho que perderia URL trocadas em transição de página)
+  - Ou customizar imagem do container(?)\
+    (meio que travaria a versão "pra sempre")
+  - Aproveitar que já tô mexendo na encanação e colocar um
+`* { transition: 50ms !important }` ou algo parecido, as transições por padrão
+são de **250 ms** sem motivo aparente?? [baldes de tempo jogado fora à toa](https://github.com/PrefectHQ/prefect/blob/2b1c62f299d880e471c734a6c1fe6c18de6dc3e0/ui/src/pages/AppRouterView.vue#L142)
