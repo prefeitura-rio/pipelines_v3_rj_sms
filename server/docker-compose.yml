@@ -59,8 +59,8 @@ services:
       PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://cit_pipelines:cit_pipelines@shared-postgres:5432/prefect
       PREFECT_SERVER_API_HOST: 0.0.0.0
       PREFECT_SERVER_UI_API_URL: http://localhost:4200/api
-      PREFECT_MESSAGING_BROKER: shared-redis.messaging
-      PREFECT_MESSAGING_CACHE: shared-redis.messaging
+      PREFECT_MESSAGING_BROKER: prefect_redis.messaging  # módulo Python interno, não mexer
+      PREFECT_MESSAGING_CACHE: prefect_redis.messaging  # não mexer
       PREFECT_REDIS_MESSAGING_HOST: shared-redis
       PREFECT_REDIS_MESSAGING_PORT: 6379
       PREFECT_REDIS_MESSAGING_DB: 0  # Database #0, diferente da do Infisical
@@ -86,8 +86,8 @@ services:
         condition: service_healthy
     environment:
       PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://cit_pipelines:cit_pipelines@shared-postgres:5432/prefect
-      PREFECT_MESSAGING_BROKER: shared-redis.messaging
-      PREFECT_MESSAGING_CACHE: shared-redis.messaging
+      PREFECT_MESSAGING_BROKER: prefect_redis.messaging  # não mexer
+      PREFECT_MESSAGING_CACHE: prefect_redis.messaging  # não mexer
       PREFECT_REDIS_MESSAGING_HOST: shared-redis
       PREFECT_REDIS_MESSAGING_PORT: 6379
       PREFECT_REDIS_MESSAGING_DB: 0
@@ -124,9 +124,9 @@ services:
       # "/1" aqui indica database #1, diferente da do Prefect
       REDIS_URL: redis://shared-redis:6379/1
       SITE_URL: http://localhost:80
-      OTEL_TELEMETRY_COLLECTION_ENABLED: false
-      ENABLE_MSSQL_SECRET_ROTATION_ENCRYPT: true  # precisa disso?
       INVITE_ONLY_SIGNUP: true
+      TELEMETRY_ENABLED: false
+      OTEL_TELEMETRY_COLLECTION_ENABLED: false
     networks:
       - pref-infis-shared-network
 
