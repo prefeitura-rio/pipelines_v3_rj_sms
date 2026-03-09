@@ -23,7 +23,7 @@ $ docker compose up shared-postgres shared-redis --build
 
 ### Deploy
 ```sh
-$ docker compose up prefect-server prefect-services --build
+$ docker compose up prefect-server prefect-services prefect-worker --build
 ```
 
 ### Pós-instalação
@@ -32,6 +32,10 @@ $ docker compose up prefect-server prefect-services --build
 de imediato, pois pode ser alterado posteriormente.
 
 É interessante configurar um limite de flows paralelos ("Flow Run Concurrency").
+
+... JSON de credenciais ...
+
+#### Work Pool
 
 
 
@@ -108,6 +112,7 @@ dígitos, ela também não pode ter aparecido em vazamentos de senhas anteriores
 
 
 ## TODO
+- Dockerfile pro Prefect Worker pra adicionar `pip install "prefect-gcp[cloud_run_v2]"` 🥴
 - Funções de auxílio todas dos flows do Prefect
   - Acesso a BigQuery, Cloud Storage, ...
   - dbt

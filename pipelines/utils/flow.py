@@ -18,18 +18,24 @@ class Flow(OriginalFlow):
 
 
 class FlowDecorator(OriginalFlowDecorator):
-	def __init__(self, *args, **kwargs):
-		pass
+	state_handlers: List[Callable] = None
+	owners: List[str] = None
 
-	def __call__(self, *args, state_handlers: List[Callable] = None, owners: Optional[List[str]] = None, **kwargs):
+	def __init__(self, *args, state_handlers: List[Callable] = None, owners: Optional[List[str]] = None, **kwargs):
+		self.state_handlers = state_handlers or []
+		self.owners = owners or []
+
+	def __call__(self, *args, **kwargs):
 		return Flow(
 			*args,
-			owners=owners,
-			on_completion=state_handlers,
-			on_failure=state_handlers,
-			on_cancellation=state_handlers,
-			on_crashed=state_handlers,
-			on_running=state_handlers,
+			owners=self.owners,
+			on_completion=[*self.state_handlers],
+			on_failure=[*self.state_handlers],
+			on_cancellation=[*self.state_handlers],
+			on_crashed=[*self.state_handlers],
+			on_running=[*self.state_handlers],
 			validate_parameters=False,
 			**kwargs
 		)
+
+flow = FlowDecorator
