@@ -99,19 +99,16 @@ services:
       - pref-infis-shared-network
 
   prefect-worker:
-    image: prefecthq/prefect:3-latest
+    build: 
+      context: ./scripts
+      dockerfile: Dockerfile.prefect-worker
     depends_on:
       prefect-server:
         condition: service_healthy
     restart: on-failure
     environment:
       PREFECT_API_URL: http://prefect-server:4200/api
-    # FIXME: trocar essa bagunça toda aqui por um dockerfile que faz o pip install
-    command: sh /tmp/worker_entrypoint.sh
-    volumes:
-      - ./scripts/worker_entrypoint.sh:/tmp/worker_entrypoint.sh
-    # -- Substituir tudo por:
-    # command: prefect worker start --pool "gcp-wp"
+      PREFECT_GCP_WORK_POOL_NAME: gcp-wp
     networks:
       - prefect-network
       - pref-infis-shared-network

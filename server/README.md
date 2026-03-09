@@ -23,7 +23,11 @@ $ docker compose up shared-postgres shared-redis --build
 
 ### Deploy
 ```sh
-$ docker compose up prefect-server prefect-services prefect-worker --build
+$ docker compose up prefect-server prefect-services --build
+```
+
+```sh
+$ docker compose up prefect-worker --build
 ```
 
 ### Pós-instalação
@@ -112,7 +116,13 @@ dígitos, ela também não pode ter aparecido em vazamentos de senhas anteriores
 
 
 ## TODO
-- Dockerfile pro Prefect Worker pra adicionar `pip install "prefect-gcp[cloud_run_v2]"` 🥴
+- Worker Pool via Google Cloud Run
+  - [Google Cloud Run Worker Guide](https://docs.prefect.io/integrations/prefect-gcp/gcp-worker-guide) \
+    (acho que não precisa do Worker no Docker Compose afinal de contas...)
+- VM
+  - One-liner de importação do repositório?
+  - Domínio configurado
+    - HTTPS
 - Funções de auxílio todas dos flows do Prefect
   - Acesso a BigQuery, Cloud Storage, ...
   - dbt
@@ -121,11 +131,6 @@ dígitos, ela também não pode ter aparecido em vazamentos de senhas anteriores
   SMTR usa [Authentik](https://goauthentik.io/), self-hosted
 - Nginx (ou equivalente)
   - Proxy reverso separando Infisical / Prefect / autenticação
-- VM
-  - One-liner de importação do repositório?
-  - Domínio configurado
-    - HTTPS
-- Worker Pool via Google Cloud Run
 - Identificação de usuário logado no Prefect (opcional) (queria muito)
   - Ou gambiarra com `<iframe>`\
     (mais complicado do que parece, acho que perderia URL trocadas em transição de página)
