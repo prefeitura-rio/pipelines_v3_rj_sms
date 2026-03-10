@@ -1,0 +1,82 @@
+name: pipelines_v3_rj_sms
+prefect-version: 3.6.18
+
+# Construção da imagem do docker
+build:
+- prefect.deployments.steps.run_shell_script:
+    id: get-commit-hash
+    script: git rev-parse --short HEAD
+    stream_output: false
+- prefect_docker.deployments.steps.build_docker_image:
+    id: build_image
+    requires: prefect-docker>=0.6.5
+    image_name: ghcr.io/prefeitura-rio/pipelines_v3_rj_sms/deployments
+    tag: "FIXME-{{ get-commit-hash.stdout }}"
+      # "capture__jae_auxiliar-{{ ... }}"
+    dockerfile: auto
+    platform: linux/amd64
+
+# Upload da imagem para o artifact repository
+push:
+- prefect_docker.deployments.steps.push_docker_image:
+    requires: prefect-docker>=0.6.5
+    image_name: '{{ build_image.image_name }}'
+    tag: '{{ build_image.tag }}'
+
+# Clonagem da imagem no filesystem do worker
+pull:
+- prefect.deployments.steps.set_working_directory:
+    directory: /opt/prefect/pipelines_v3_rj_sms
+
+# Deploy
+deployments:
+## Staging
+- name: FIXME--staging
+    # "rj-capture--jae_auxiliar--staging"
+  version: "{{ build_image.tag }}"
+  tags: []
+  description: null
+  schedule: {}
+  flow_name: null
+  concurrency_limit: 1
+  entrypoint: FIXME
+    # "pipelines/reports/weather/flows.py:weather_report"
+  parameters:  # FIXME
+    lat: 14.5994
+    lon: 28.6731
+  work_pool:
+    name: gcp-wp  # FIXME
+    work_queue_name: default
+    job_variables:
+      image: "{{ build_image.image_name }}:{{ build_image.tag }}"
+      command: uv run --package FIXME -- prefect flow-run execute
+        # "--package capture__jae_auxiliar"
+      secretName: prefect-jobs-secrets-staging  # ?
+      image_pull_policy: always
+
+## Prod
+- name: FIXME--prod
+    # "rj-capture--jae_auxiliar--staging"
+  version: "{{ build_image.tag }}"
+  tags: []
+  description: null
+  schedule: {}
+  flow_name: null
+  concurrency_limit: 1
+  entrypoint: FIXME
+    # "pipelines/reports/weather/flows.py:weather_report"
+  parameters:  # FIXME
+    lat: 14.5994
+    lon: 28.6731
+  # schedules:  # FIXME
+  #   - cron: "0 * * * *"
+  #     timezone: "America/Sao_Paulo"
+  work_pool:
+    name: gcp-wp  # FIXME
+    work_queue_name: default
+    job_variables:
+      image: "{{ build_image.image_name }}:{{ build_image.tag }}"
+      command: uv run --package FIXME -- prefect flow-run execute
+        # "--package capture__jae_auxiliar"
+      secretName: prefect-jobs-secrets  # ?
+      image_pull_policy: always

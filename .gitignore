@@ -14,3 +14,10 @@ __pycache__/
 # Arquivos que você deve criar localmente
 .env
 localrun.selected.yaml
+
+# Authentik
+/server/certs
+/server/custom-templates
+# Nginx Proxy Manager
+/server/data
+/server/letsencrypt

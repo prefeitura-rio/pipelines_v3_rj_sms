@@ -4,6 +4,10 @@
 #   [Ref] https://docs.prefect.io/v3/how-to-guides/self-hosted/docker-compose
 # - Infisical
 #   [Ref] https://infisical.com/docs/self-hosting/deployment-options/docker-compose
+# - Authentik
+#   [Ref] https://docs.goauthentik.io/install-config/install/docker-compose/
+# - Nginx Proxy Manager
+#   [Ref] https://nginxproxymanager.com/setup/
 
 services:
 
@@ -11,7 +15,7 @@ services:
   ##            SHARED            ##
   ##################################
   shared-postgres:
-    image: postgres:14-alpine
+    image: postgres:16-alpine
     healthcheck:
       test: "pg_isready --username=cit_pipelines && psql --username=cit_pipelines --list"
       interval: 5s
@@ -21,12 +25,12 @@ services:
     environment:
       POSTGRES_USER: cit_pipelines
       POSTGRES_PASSWORD: cit_pipelines
-      POSTGRES_MULTIPLE_DATABASES: prefect, infisical
+      POSTGRES_MULTIPLE_DATABASES: prefect, infisical, authentik, nginx_pm
     networks:
-      - pref-infis-shared-network
+      - shared-network
     volumes:
       - shared_pg_data:/var/lib/postgresql/data
-      - ./scripts/pg_entrypoint.sh:/docker-entrypoint-initdb.d/pg_entrypoint.sh
+      - ./settings/pg_entrypoint.sh:/docker-entrypoint-initdb.d/pg_entrypoint.sh
 
   shared-redis:
     image: redis:7-alpine
@@ -39,9 +43,10 @@ services:
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
     networks:
-      - pref-infis-shared-network
+      - shared-network
     volumes:
       - shared_redis_data:/data
+
 
 
 
@@ -59,6 +64,7 @@ services:
       PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://cit_pipelines:cit_pipelines@shared-postgres:5432/prefect
       PREFECT_SERVER_API_HOST: 0.0.0.0
       PREFECT_SERVER_UI_API_URL: http://localhost:4200/api
+      # PREFECT_SERVER_UI_API_URL: https://overlightly-unmovable-alphonso.ngrok-free.dev FIXME
       PREFECT_MESSAGING_BROKER: prefect_redis.messaging  # módulo Python interno, não mexer
       PREFECT_MESSAGING_CACHE: prefect_redis.messaging  # não mexer
       PREFECT_REDIS_MESSAGING_HOST: shared-redis
@@ -70,14 +76,20 @@ services:
     ports:
       - "4200:4200"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:4200/api/health', timeout=1)"]
+      test: [
+        "CMD",
+        "python",
+        "-c",
+        "import urllib.request as u; u.urlopen('http://localhost:4200/api/health', timeout=1)"
+        # "import urllib.request as u; u.urlopen('http://overlightly-unmovable-alphonso.ngrok-free.dev/api/health', timeout=1)"
+      ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
     networks:
       - prefect-network
-      - pref-infis-shared-network
+      - shared-network
 
   prefect-services:
     image: prefecthq/prefect:3-latest
@@ -96,28 +108,12 @@ services:
     command: prefect server services start
     networks:
       - prefect-network
-      - pref-infis-shared-network
-
-  prefect-worker:
-    build: 
-      context: ./scripts
-      dockerfile: Dockerfile.prefect-worker
-    depends_on:
-      prefect-server:
-        condition: service_healthy
-    restart: on-failure
-    environment:
-      PREFECT_API_URL: http://prefect-server:4200/api
-      PREFECT_GCP_WORK_POOL_NAME: gcp-wp
-    networks:
-      - prefect-network
-      - pref-infis-shared-network
+      - shared-network
 
 
   ##################################
   ##          INFISICAL           ##
   ##################################
-
   infisical-backend:
     image: infisical/infisical:v0.158.7
     restart: unless-stopped
@@ -127,24 +123,105 @@ services:
       shared-redis:
         condition: service_started
     ports:
-      - 80:8080
+      - 8080:8080
     env_file: .env
     environment:
       NODE_ENV: "production"
       DB_CONNECTION_URI: postgres://cit_pipelines:cit_pipelines@shared-postgres:5432/infisical
       # "/1" aqui indica database #1, diferente da do Prefect
       REDIS_URL: redis://shared-redis:6379/1
-      SITE_URL: http://localhost:80
+      SITE_URL: http://localhost:8080
       INVITE_ONLY_SIGNUP: true
       TELEMETRY_ENABLED: false
       OTEL_TELEMETRY_COLLECTION_ENABLED: false
     networks:
-      - pref-infis-shared-network
+      - shared-network
+
+
+  ##################################
+  ##          AUTHENTIK           ##
+  ##################################
+  authentik-server:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.2.1}
+    restart: unless-stopped
+    shm_size: 512mb
+    command: server
+    depends_on:
+      shared-postgres:
+        condition: service_healthy
+    env_file:
+    - .env
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: shared-postgres
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__USER: cit_pipelines
+      AUTHENTIK_POSTGRESQL__PASSWORD: cit_pipelines
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
+    ports:
+    - ${COMPOSE_PORT_HTTP:-9000}:9000
+    - ${COMPOSE_PORT_HTTPS:-9443}:9443
+    networks:
+      - shared-network
+    volumes:
+    - ./data:/data
+    - ./custom-templates:/templates
+
+  authentik-worker:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.2.1}
+    restart: unless-stopped
+    shm_size: 512mb
+    user: root
+    command: worker
+    depends_on:
+      shared-postgres:
+        condition: service_healthy
+    env_file:
+    - .env
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: shared-postgres
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__USER: cit_pipelines
+      AUTHENTIK_POSTGRESQL__PASSWORD: cit_pipelines
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
+    networks:
+      - shared-network
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - ./data:/data
+    - ./certs:/certs
+    - ./custom-templates:/templates
+
+
+  ##################################
+  ##     NGINX PROXY MANAGER      ##
+  ##################################
+  nginx-manager:
+    image: "jc21/nginx-proxy-manager:latest"
+    restart: unless-stopped
+    depends_on:
+      - shared-postgres
+    ports:
+      - "80:80"
+      - "443:443"
+      - "81:81"  # Admin Web Port
+    environment:
+      TZ: "America/Sao_Paulo"
+      DB_POSTGRES_HOST: shared-postgres
+      DB_POSTGRES_PORT: "5432"
+      DB_POSTGRES_USER: cit_pipelines
+      DB_POSTGRES_PASSWORD: cit_pipelines
+      DB_POSTGRES_NAME: nginx_pm
+      DISABLE_IPV6: "true"
+    networks:
+      - shared-network
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
 
 
 networks:
   prefect-network:
-  pref-infis-shared-network:
+  shared-network:
 
 volumes:
   shared_redis_data:

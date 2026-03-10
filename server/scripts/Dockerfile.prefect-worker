@@ -1,5 +1,0 @@
-FROM prefecthq/prefect:3-latest
-
-RUN pip install "prefect-gcp[cloud_run_v2]==0.6.17" --quiet --no-input
-
-CMD prefect worker start --pool "$PREFECT_GCP_WORK_POOL_NAME"
