@@ -185,7 +185,7 @@ Onde `XXXXXXX` é o nome da database; eles são intuitivos mas, para referência
   - HTTPS
   - SSO do Google
 - Funções de auxílio todas dos flows do Prefect
-  - Acesso a BigQuery, Cloud Storage, ...
+  - Acesso a Cloud Storage, ...
   - dbt
     - Ver se dá pra printar logs mais descritivos do dbt dessa vez :/
 - Identificação de usuário logado no Prefect (opcional) (queria muito)

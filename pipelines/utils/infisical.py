@@ -21,7 +21,6 @@ def get_infisical_client() -> InfisicalClient:
 	"""
 	token = getenv_or_action("INFISICAL_TOKEN", action="raise")
 	site_url = getenv_or_action("INFISICAL_ADDRESS", action="raise")
-	log(f"INFISICAL_ADDRESS: {site_url}")
 	return InfisicalClient(
 		token=token,
 		host=site_url,
@@ -84,15 +83,20 @@ def inject_env(
 
 def inject_bd_credentials(environment: str = "dev", force_injection=False) -> None:
 	"""
-	Loads Base dos Dados credentials from Infisical into environment variables.
+	Carrega credenciais de Base dos Dados do Infisical em variáveis de ambiente.
 
 	Args:
-		environment (str, optional): The infiscal environment for which to retrieve credentials. Defaults to 'dev'. Accepts 'dev' or 'prod'.
+		environment(str?):
+			Ambiente do Infiscal onde estão as credenciais, p.ex. "dev"/"prod".
+			Valor padrão de "dev".
+		force_injection(bool?):
+			Caso todas as variáveis já estejam carregadas no ambiente, o servidor
+			do Infisical não é contactado, a não ser que a função receba
+			`force_injection=True`, situação em que elas são obtidas novamente.
+			Valor padrão de False.
 
-	Returns:
-		None
 	"""
-	# Verify if all environment variables are already set
+	# Confere se todas as variáveis já foram obtidas
 	all_variables_set = True
 	for variable in [
 		"BASEDOSDADOS_CONFIG",
@@ -104,9 +108,8 @@ def inject_bd_credentials(environment: str = "dev", force_injection=False) -> No
 			all_variables_set = False
 			break
 
-	# If all variables are set, skip injection
+	# Se já temos todas, não é necessário obtê-las novamente no Infisical
 	if all_variables_set and not force_injection:
-		# log("All environment variables are already set. Skipping injection.")
 		return
 
 	log(f"ENVIROMENT: {environment}")
@@ -120,7 +123,7 @@ def inject_bd_credentials(environment: str = "dev", force_injection=False) -> No
 			environment=environment,
 		)
 
-	# Create service account file for Google Cloud
+	# Salva credenciais de conta de serviço para o Google Cloud
 	service_account_name = "BASEDOSDADOS_CREDENTIALS_PROD"
 	credentials = base64.b64decode(os.environ[service_account_name])
 

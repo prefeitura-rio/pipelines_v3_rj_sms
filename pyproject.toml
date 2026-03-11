@@ -5,10 +5,12 @@ description = "Pipelines"
 readme = "README.md"
 requires-python = ">=3.14.3"
 dependencies = [
+  "db-dtypes>=1.4.4",  # BigQuery reclama sem esse pacote
   "discord-py>=2.6.4",
   "google-cloud-bigquery>=3.40.1",
   "google-cloud-storage>=3.9.0",
   "infisicalsdk>=1.0.16",
+  "pandas>=3.0.1",
   "prefect>=3.6",
 ]
 

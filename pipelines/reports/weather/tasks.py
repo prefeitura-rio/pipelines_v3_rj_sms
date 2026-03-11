@@ -1,13 +1,29 @@
 # -*- coding: utf-8 -*-
 import httpx
+from pandas import DataFrame
 
-from prefect import task
 from pipelines.utils.logger import log
+from pipelines.utils.prefect import authenticated_task as task
+from google.cloud import bigquery
+
 
 from .constants import (
 	BASE_API_URL,
 	FORECAST_ENDPOINT
 )
+
+
+@task()
+def get_bairros():
+	log("Instanciando cliente BigQuery")
+	client = bigquery.Client()
+	sql = "select distinct nome from `rj-sms.datario_dados_mestres.bairro`"
+
+	log(f"Executando query '{sql}'")
+	df: DataFrame = client.query_and_wait(sql).to_dataframe()
+
+	log(f"{df.sample(5)}")
+	return 0
 
 
 @task(retries=3, timeout_seconds=15)

@@ -5,6 +5,7 @@ from pipelines.constants import constants
 
 from .tasks import (
 	fetch_weather,
+	get_bairros,
 	print_report
 )
 
@@ -17,5 +18,6 @@ from .tasks import (
 	],
 )
 def weather_report(lat: float, lon: float, environment: str="dev"):
-	data = fetch_weather(lat=lat, lon=lon, environment=environment)
+	zero = get_bairros()
+	data = fetch_weather(lat=lat + zero, lon=lon, environment=environment)
 	print_report(data=data)
