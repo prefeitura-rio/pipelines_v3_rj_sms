@@ -22,20 +22,14 @@ $ docker compose up shared-postgres shared-redis --build
 $ docker compose up prefect-server prefect-services --build
 ```
 
-```sh
-$ docker compose up prefect-worker --build
-```
-
 ### Pós-instalação
 É necessário configurar um Work Pool. Vá em "Work Pools" → "Create Work Pool"
-→ "Google Cloud Run V2". Fora o nome do Work Pool, nada precisa ser preenchido
-de imediato, pois pode ser alterado posteriormente.
+→ "Google Cloud Run V2".
 
-É interessante configurar um limite de flows paralelos ("Flow Run Concurrency").
-
-... JSON de credenciais ...
-
-#### Work Pool
+* É interessante configurar um limite de flows paralelos ("Flow Run Concurrency").
+* Em "GcpCredentials", clique no botão de "Add +". Block Name: "prefect-cloud-run" (aqui é livre, mas faz sentido ser isso, né?); Service Account Info: copie e cole o JSON da conta de serviço. Botão de "Create".
+* Em "Service Account Name", cole o email (normalmente @&lt;projeto&gt;.iam.gserviceaccount.com) da conta de serviço.
+* Clique no botão no final da página para criar a Work Pool. Você talvez precise marcar os campos "Prefect API Key Secret" e "Prefect API Auth String Secret" como nulos para conseguir fazer isso.
 
 
 
@@ -67,11 +61,11 @@ $ docker compose up infisical-backend --build
 
 #### Conta de administrador
 Na primeira execução, ele abre a tela de cadastro da conta de administrador.
-Não temos um servidor SMTP, então os emails não precisam ser reais; ex. `admin@teste.local`
+Não temos um servidor SMTP, então os emails não precisam ser reais; ex. `admin@test.local`
 A senha tem mínimo de caracteres e requer letras e dígitos pelo menos.
 
 #### Configurações relevantes
-Em "Server Console" > "General", é interessante desabilitar "Allow user signups".
+Em "Server Console" → "General", é interessante desabilitar "Allow user signups".
 
 Na página da organização:
 * Na aba "Settings", é interessante modificar o nome (por padrão, "Admin Org") para
@@ -152,26 +146,44 @@ Ele demora bastante a subir na primeira execução.
 
 Navegue até `http://localhost:9000/if/flow/initial-setup/`. Crie um login para o administrador. Em seguida, clique no botão "Admin interface".
 
-Barra lateral, "Applications" > "Applications", botão "Create with Provider":
+Barra lateral, "Applications" → "Applications", botão "Create with Provider":
 
 > Nome "nginx", slug "nginx", policy ANY \
 > Proxy Provider \
 > Authorization flow "implicit" \
 > Forward auth (single application): "http://pipelines.dominio.local" \
-> Advanced flow settings > Authentication flow "default-authentication..."
+> Advanced flow settings → Authentication flow "default-authentication..."
 
-Barra lateral, "Applications" > "Outposts", clique em editar o já criado "Embedded Outpost". ("ah, eu apaguei": Create > Type "Proxy", Integration "----")
+Barra lateral, "Applications" → "Outposts", clique em editar o já criado "Embedded Outpost". ("ah, eu apaguei": Create → Type "Proxy", Integration "----")
 
 Adicione o nginx à lista de Selected Applications. Abra "Advanced Settings" e configure `authentik_host` como "http://auth.dominio.local/" (por padrão é "http://localhost:9000").
 
 
+## Troubleshooting
+
+### A configuração salva no Postgres está errada
+> Fiz besteira configurando o container X (p.ex. apaguei a conta de admin do Infisical) e meus erros foram calcificados no Postgres. Não quero apagar o volume inteiro, porque ele é compartilhado e eu perderia a configuração dos outros containers também :(
+
+**R:** Você pode apagar somente a database que está incorreta. Com o container do Postgres executando, faça:
+```sh
+$ docker exec -it server-shared-postgres-1 /bin/bash
+(...):/$ psql -U cit_pipelines postgres
+postgres=$ drop database XXXXXXX;
+DROP DATABASE
+postgres=$ create database XXXXXXX;
+CREATE DATABASE
+postgres=$ grant all privileges on database "XXXXXXX" to "cit_pipelines";
+GRANT
+```
+
+Onde `XXXXXXX` é o nome da database; eles são intuitivos mas, para referência, estão na variável `POSTGRES_MULTIPLE_DATABASES` da configuração no Docker Compose do Postgres.
+
+
 ## TODO
-- Worker Pool via Google Cloud Run
-  - [Google Cloud Run Worker Guide](https://docs.prefect.io/integrations/prefect-gcp/gcp-worker-guide) \
-- VM
-  - One-liner de importação do repositório?
-  - Domínio configurado
-    - HTTPS
+- (dependências do domínio configurado)
+  - Worker Pool via Google Cloud Run ([guia](https://docs.prefect.io/integrations/prefect-gcp/gcp-worker-guide))
+  - HTTPS
+  - SSO do Google
 - Funções de auxílio todas dos flows do Prefect
   - Acesso a BigQuery, Cloud Storage, ...
   - dbt
