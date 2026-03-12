@@ -3,12 +3,14 @@ name = "pipelines-v3-rj-sms"
 version = "0.0.1"
 description = "Pipelines"
 readme = "README.md"
-requires-python = ">=3.14.3"
+requires-python = ">=3.13,<3.14"  # dbt não existe pra Python 3.14+
 dependencies = [
-  "db-dtypes>=1.4.4",  # BigQuery reclama sem esse pacote
+  "db-dtypes>=1.4.4",  # BigQuery reclama sem db-dtypes
+  "dbt-bigquery>=1.11.1",
+  "dbt-core>=1.11.7",
   "discord-py>=2.6.4",
   "google-cloud-bigquery>=3.40.1",
-  "google-cloud-storage>=3.9.0",
+  "google-cloud-storage>=3,<3.2",  # dbt-bigquery requer google-cloud-storage<3.2
   "infisicalsdk>=1.0.16",
   "pandas>=3.0.1",
   "prefect>=3.6",

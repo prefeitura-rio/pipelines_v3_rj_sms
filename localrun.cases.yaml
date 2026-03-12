@@ -1,5 +1,9 @@
 cases:
 
+  ################################
+  #  REPORTS                     #
+  ################################
+
   # [teste] Previsão do tempo
   - case_slug: "test-weather-report"
     flow_path: "pipelines.reports.weather.flows"
@@ -9,5 +13,19 @@ cases:
       lat: -22.9519
       lon: -43.2105
 
-  # ....
 
+
+  ################################
+  #  TRANSFORM                   #
+  ################################
+
+  # Modelos dbt
+  - case_slug: "datalake-transform-dbt"
+    flow_path: "pipelines.datalake.transform.dbt.flows"
+    flow_name: "sms_execute_dbt"
+    params:
+      environment: "dev"
+      # command: "run"
+      # rename_flow: true
+      # send_discord_report: true
+      # ...

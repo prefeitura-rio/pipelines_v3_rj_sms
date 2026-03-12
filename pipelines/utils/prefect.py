@@ -41,7 +41,8 @@ def authenticated_task(fn: Callable = None, **task_init_kwargs: Any) -> Union[
 	# Instância de Task
 	if fn is not None:
 		return Task(
-			fn=inject_credential_setting_in_function(fn), **task_init_kwargs
+			fn=inject_credential_setting_in_function(fn),
+			**task_init_kwargs
 		)
 	# Decorator
 	return lambda any_function: Task(

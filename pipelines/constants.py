@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+import pytz
 from enum import Enum
+
 
 class constants(Enum):
 
@@ -18,6 +20,9 @@ class constants(Enum):
 		"staging": "rj-sms-dev",
 		"prod": "rj-sms"
 	}
+
+	TIMEZONE = "America/Sao_Paulo"
+	PYTZ_TIMEZONE = pytz.timezone(TIMEZONE)
 
 
 	################################
