@@ -26,6 +26,12 @@ Se seu sistema estará em um servidor, i.e. não será exclusivamente na máquin
 Em desenvolvimento local, é possível editar o arquivo de `hosts` da máquina para criar subdomínios que podem ajudar a seguir o passo a passo; ex. "127.0.0.1 → pipelines.dominio.local".
 
 
+Algumas referências úteis:
+* [Install Docker Engine on Debian](https://docs.docker.com/engine/install/debian/)
+* [nginx: Linux packages § Debian](https://nginx.org/en/linux_packages.html#Debian)
+* [Certbot Instructions § Nginx on Linux (pip)](https://certbot.eff.org/instructions?ws=nginx&os=pip&tab=standard)
+
+
 ## Shared
 Os serviços de Postgres e Redis são compartilhados entre o Prefect e o Infisical.
 Em desenvolvimento, você deve subí-los antes dos outros:
@@ -69,10 +75,10 @@ Você agora pode acessar esse painel de configuração em "http://npm.dominio.lo
 
 ## Authentik
 ```sh
-$ docker compose up authentik-server authentik-worker --build
+$ docker compose up -d authentik-server authentik-worker --build
 ```
 
-Ele demora bastante a subir na primeira execução.
+Ele demora bastante a subir na primeira execução – tipo literalmente uns 5 minutos. Se você quiser, suba pela primeira vez sem o `-d` para ver a hora em que os logs de inicialização se acalmam e, no fim dos passos seguintes de configuração, Ctrl+C e bote pra rodar de novo.
 
 Navegue até "http://auth.dominio.local/if/flow/initial-setup/" (ou "localhost:9000/..."). Crie um login para o administrador. É possível que você receba uma página de "Not Found"; se isso aconteceu, veja § "Acesso inicial ao Authentik 'not found'" no fim do README.
 
@@ -108,9 +114,11 @@ PREFECT_SERVER_API_PORT="80" \
 docker compose up -d prefect-server prefect-services --build
 ```
 
+Navegue até "http://pipelines.dominio.local". Se tudo correu bem, você deve ser redirecionado para uma tela de login em "http://auth.dominio.local".
+
+
 ### Pós-instalação
-É necessário configurar um Work Pool. Vá em "Work Pools" → "Create Work Pool"
-→ "Google Cloud Run V2".
+É necessário configurar um Work Pool. Vá em "Work Pools" → "Create Work Pool" → "Google Cloud Run V2".
 
 * É interessante configurar um limite de flows paralelos ("Flow Run Concurrency").
 * Em "GcpCredentials", clique no botão de "Add +". Block Name: "prefect-cloud-run" (aqui é livre, mas faz sentido ser isso, né?); Service Account Info: copie e cole o JSON da conta de serviço. Botão de "Create".
@@ -201,6 +209,10 @@ Onde `XXXXXXX` é o nome da database; eles são intuitivos mas, para referência
 **R:** Isso provavelmente significa que o serviço ao qual o NPM aponta não existe. O docker para o serviço desejado ou não está rodando, ou tem outro nome, etc etc.
 
 
+### "Default Site" / "Congratulations!"
+**R:** O serviço ao qual o NPM aponta ou não está executando ou está desabilitado. Se você já tinha configurado o serviço antes de subí-lo, tente desabilitar e reabilitar o proxy host, ou encontrar problemas na configuração. Lembrando que para serviços dentro de um mesmo docker compose, é necessário usar o nome do serviço (ex. "prefect-server") ao invés de "localhost".
+
+
 ### Acesso inicial ao Authentik "not found"
 > Subi o docker compose do Authentik e, depois de esperar tempo demais para ele iniciar, me deparo com um "Not Found" em `/if/flow/initial-setup/`!
 
@@ -217,10 +229,9 @@ E, em seguida, ao invés de navegar para `/if/flow/initial-setup/`, o caminho se
 
 
 ## TODO
-- (dependências do domínio configurado)
-  - Worker Pool via Google Cloud Run ([guia](https://docs.prefect.io/integrations/prefect-gcp/gcp-worker-guide))
-  - HTTPS
-  - SSO do Google
+- HTTPS
+- Worker Pool via Google Cloud Run ([guia](https://docs.prefect.io/integrations/prefect-gcp/gcp-worker-guide))
+- Login via SSO do Google
 - Funções de auxílio todas dos flows do Prefect
   - Acesso a Cloud Storage, ...
   - dbt
