@@ -66,7 +66,8 @@ services:
     environment:
       PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://cit_pipelines:cit_pipelines@shared-postgres:5432/prefect
       PREFECT_SERVER_API_HOST: 0.0.0.0
-      PREFECT_SERVER_UI_API_URL: http://localhost:4200/api
+      PREFECT_SERVER_API_PORT: 4200
+      PREFECT_SERVER_UI_API_URL: http://${PREFECT_SERVER_API_HOST:-localhost}:${PREFECT_SERVER_API_PORT:-4200}/api
       PREFECT_MESSAGING_BROKER: prefect_redis.messaging  # módulo Python interno, não mexer
       PREFECT_MESSAGING_CACHE: prefect_redis.messaging  # não mexer
       PREFECT_REDIS_MESSAGING_HOST: shared-redis
@@ -78,7 +79,12 @@ services:
     ports:
       - "4200:4200"
     healthcheck:
-      test: [ "CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:4200/api/health', timeout=1)" ]
+      test: [
+        "CMD",
+        "python",
+        "-c",
+        "import os; import urllib.request as u; h=os.environ['PREFECT_SERVER_API_HOST']; p=os.environ['PREFECT_SERVER_API_PORT']; u.urlopen(f'http://{h}:{p}/api/health', timeout=1)"
+      ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -197,8 +203,8 @@ services:
     depends_on:
       - shared-postgres
     ports:
-      - "80:80"
-      - "443:443"
+      - "7080:80"
+      - "7443:443"
       - "81:81"  # Admin Web Port
     environment:
       TZ: "America/Sao_Paulo"

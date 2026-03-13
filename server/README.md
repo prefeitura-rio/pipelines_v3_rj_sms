@@ -1,9 +1,29 @@
 # Servidor pipelines
 
 Inclui:
+* Nginx Proxy Manager
+* Servidor Authentik
 * Servidor Prefect UI\
   Não inclui os workers!
 * Servidor Infisical
+
+
+## Pré-instalação
+Crie um arquivo `.env` baseado no arquivo `.env.example`.
+
+Você pode executar os seguintes comandos para gerar chaves aleatórias:<sup>[[Infisical Docs]](https://infisical.com/docs/self-hosting/configuration/envars#general-platform)</sup>
+```sh
+# ENCRYPTION_KEY
+$ openssl rand -hex 16
+# AUTH_SECRET
+$ openssl rand -base64 32
+# AUTHENTIK_SECRET_KEY
+$ openssl rand -base64 60 | tr -d '\n'
+```
+
+Se seu sistema estará em um servidor, i.e. não será exclusivamente na máquina local e acessível via localhost, então também configure as variáveis `PREFECT_SERVER_API_HOST` e `PREFECT_SERVER_API_PORT` para o endereço publicamente acessível e porta do Prefect. Nessa documentação, usaremos "dominio.local" como domínio falso de exemplo.
+
+Em desenvolvimento local, é possível editar o arquivo de `hosts` da máquina para criar subdomínios que podem ajudar a seguir o passo a passo; ex. "127.0.0.1 → pipelines.dominio.local".
 
 
 ## Shared
@@ -11,15 +31,81 @@ Os serviços de Postgres e Redis são compartilhados entre o Prefect e o Infisic
 Em desenvolvimento, você deve subí-los antes dos outros:
 
 ```sh
-$ docker compose up shared-postgres shared-redis --build
+$ docker compose up -d shared-postgres shared-redis --build
 ```
+
+
+## Nginx Proxy Manager (NPM)
+> [!NOTE]
+> As documentações do NPM e do Authentik, aqui, usam `dominio.local` como domínio falso. Este deve ser substituído pelo seu domínio real, ou então por algum equivalente a localhost (adicionado ao arquivo de `hosts`) se você estiver desenvolvendo localmente.
+
+Grande parte dessa documentação teve como base [este tutorial](https://joshrnoll.com/implementing-sso-using-authentik-and-nginx-reverse-proxy-manager/), escrito por Josh Noll.
+
+```sh
+$ docker compose up -d nginx-manager --build
+```
+
+Para abrir a UI do NPM, é necessário acessar a porta 81. Em situações em que as únicas portas disponíveis na VM são 80 e 443, é necessário fazer uma configuração temporária do Nginx primeiro. Copie o pequeno conteúdo do arquivo `settings/initial.nginx.conf` para `/etc/nginx/conf.d/default.conf` da máquina (fora do docker!!) e reinicie o serviço do Nginx (`systemctl restart nginx`).
+
+Navegue até "http://&lt;IP do servidor&gt;:81/" (se estiver rodando local, é "localhost:81"). Crie um login para o administrador.
+
+Em seguida, é hora de adicionar os proxies. Em "Proxy Hosts", clique no botão "Add Proxy Host":
+
+> Domain Names: npm.dominio.local \
+> Scheme: HTTP, nginx-manager, 81
+
+Você agora pode acessar esse painel de configuração em "http://npm.dominio.local". Para conseguir ver as mudanças no NPM, é preciso direcionar as portas 80 e 443 do servidor para as respectivas portas do NPM, 7080 e 7443. Para isso, carrege a configuração `settings/external.nginx.conf` em `/etc/nginx/conf.d/default.conf` no servidor (fora do docker!!) e reinicie o serviço do Nginx (`systemctl restart nginx`).
+
+> Domain Names: auth.dominio.local \
+> Scheme: HTTP, authentik-server, 9000
+
+> Domain Name: pipelines.dominio.local \
+> Scheme: HTTP, prefect-server, 4200 \
+> Aqui, é necessário também clicar na engrenagem ⚙️ e adicionar o conteúdo do arquivo `./settings/pipelines.nginx.conf` na caixa de texto. Essa é a configuração que confere se o usuário possui login ativo e, se sim, permite acesso ao Prefect.
+
+> Domain Names: infisical.dominio.local \
+> Scheme: HTTP, infisical-backend, 8080
+
+
+## Authentik
+```sh
+$ docker compose up authentik-server authentik-worker --build
+```
+
+Ele demora bastante a subir na primeira execução.
+
+Navegue até "http://auth.dominio.local/if/flow/initial-setup/" (ou "localhost:9000/..."). Crie um login para o administrador. É possível que você receba uma página de "Not Found"; se isso aconteceu, veja § "Acesso inicial ao Authentik 'not found'" no fim do README.
+
+Em seguida, clique no botão "Admin interface". Barra lateral, "Applications" → "Applications", botão "Create with Provider":
+
+> Nome "nginx", slug "nginx", policy ANY \
+> Proxy Provider \
+> Authorization flow "implicit" \
+> Forward auth (single application): "http://pipelines.dominio.local" \
+> Advanced flow settings → Authentication flow "default-authentication..."
+
+Barra lateral, "Applications" → "Outposts", clique em editar o já criado "Embedded Outpost". ("ah, eu apaguei": Create → Type "Proxy", Integration "----")
+
+Adicione o nginx à lista de Selected Applications. Abra "Advanced Settings" e garanta que `authentik_host` é "http://auth.dominio.local/" (pode ser ex. "http://localhost:9000").
+
+Você pode criar usuários em "Directory" → "Users" → "New User". Pode ser interessante colocar o usuário em uma pasta que não só "user"; p.ex. "user/organizacao". Depois de criado, é possível configurar uma senha para o usuário clicando na setinha ao seu lado na lista e, em seguida, em "Set password". O usuário pode trocar a própria senha fazendo login diretamente em "http://auth.dominio.local", clicando na engrenagem, e em "Change password".
 
 
 ## Prefect
 
 ### Deploy do servidor
+Se você estiver executando localmente, então basta:
+
 ```sh
-$ docker compose up prefect-server prefect-services --build
+$ docker compose up -d prefect-server prefect-services --build
+```
+
+Contudo, em um servidor, é importante configurar o domínio e porta da API que o cliente vai tentar acessar. Isso pode ser feito pelo arquivo `.env` ou direto na execução do container. Por exemplo:
+
+```sh
+$ PREFECT_SERVER_API_HOST="pipelines.dominio.local" \
+PREFECT_SERVER_API_PORT="80" \
+docker compose up -d prefect-server prefect-services --build
 ```
 
 ### Pós-instalação
@@ -32,29 +118,13 @@ $ docker compose up prefect-server prefect-services --build
 * Clique no botão no final da página para criar a Work Pool. Você talvez precise marcar os campos "Prefect API Key Secret" e "Prefect API Auth String Secret" como nulos para conseguir fazer isso.
 
 
-
 ## Infisical
-
-### Pré-instalação
-Crie um arquivo `.env` baseado no arquivo `.env.example`.
-
-Para as variáveis `ENCRYPTION_KEY` e `AUTH_SECRET`, você pode executar os
-seguintes comandos:<sup>[[Infisical Docs]](https://infisical.com/docs/self-hosting/configuration/envars#general-platform)</sup>
-```sh
-# ENCRYPTION_KEY
-$ openssl rand -hex 16
-# AUTH_SECRET
-$ openssl rand -base64 32
-# AUTHENTIK_SECRET_KEY
-$ openssl rand -base64 60 | tr -d '\n'
-```
-
 
 ### Deploy
 Para subir o servidor:
 
 ```sh
-$ docker compose up infisical-backend --build
+$ docker compose up -d infisical-backend --build
 ```
 
 ### Pós-instalação
@@ -107,58 +177,6 @@ de administrador. Além de mínimo de caracteres e obrigatoriedade de letras e
 dígitos, ela também não pode ter aparecido em vazamentos de senhas anteriores.
 
 
-## Nginx Proxy Manager (NPM)
-> [!NOTE]
-> As documentações do NPM e do Authentik, aqui, usam `dominio.local` como domínio falso. Este deve ser substituído pelo seu domínio real, ou então por algum equivalente a localhost (adicionado ao arquivo de `hosts`) se você estiver desenvolvendo localmente.
-
-Grande parte dessa documentação teve como base [este tutorial](https://joshrnoll.com/implementing-sso-using-authentik-and-nginx-reverse-proxy-manager/), escrito por Josh Noll.
-
-```sh
-$ docker compose up nginx-manager --build
-```
-
-Navegue até `http://localhost:81/`. Crie um login para o administrador.
-
-Em seguida, é hora de adicionar os proxies. Em "Proxy Hosts", clique no botão "Add Proxy Host":
-
-> Domain Names: npm.dominio.local \
-> Scheme: HTTP, nginx-manager, 81
-
-(você agora pode acessar esse painel de configuração em `http://npm.dominio.local`)
-
-> Domain Names: auth.dominio.local \
-> Scheme: HTTP, authentik-server, 9000
-
-> Domain Name: pipelines.dominio.local \
-> Scheme: HTTP, prefect-server, 4200 \
-> Aqui, é necessário também clicar na engrenagem ⚙️ e adicionar o conteúdo do arquivo `./settings/pipelines.nginx.conf` na caixa de texto. Essa é a configuração que confere se o usuário possui login ativo e, se sim, permite acesso ao Prefect.
-
-> Domain Names: infisical.dominio.local \
-> Scheme: HTTP, infisical-backend, 8080
-
-
-## Authentik
-```sh
-$ docker compose up authentik-server authentik-worker --build
-```
-
-Ele demora bastante a subir na primeira execução.
-
-Navegue até `http://localhost:9000/if/flow/initial-setup/`. Crie um login para o administrador. Em seguida, clique no botão "Admin interface".
-
-Barra lateral, "Applications" → "Applications", botão "Create with Provider":
-
-> Nome "nginx", slug "nginx", policy ANY \
-> Proxy Provider \
-> Authorization flow "implicit" \
-> Forward auth (single application): "http://pipelines.dominio.local" \
-> Advanced flow settings → Authentication flow "default-authentication..."
-
-Barra lateral, "Applications" → "Outposts", clique em editar o já criado "Embedded Outpost". ("ah, eu apaguei": Create → Type "Proxy", Integration "----")
-
-Adicione o nginx à lista de Selected Applications. Abra "Advanced Settings" e configure `authentik_host` como "http://auth.dominio.local/" (por padrão é "http://localhost:9000").
-
-
 ## Troubleshooting
 
 ### A configuração salva no Postgres está errada
@@ -177,6 +195,25 @@ GRANT
 ```
 
 Onde `XXXXXXX` é o nome da database; eles são intuitivos mas, para referência, estão na variável `POSTGRES_MULTIPLE_DATABASES` da configuração no Docker Compose do Postgres.
+
+
+### 502 Bad Gateway!!
+**R:** Isso provavelmente significa que o serviço ao qual o NPM aponta não existe. O docker para o serviço desejado ou não está rodando, ou tem outro nome, etc etc.
+
+
+### Acesso inicial ao Authentik "not found"
+> Subi o docker compose do Authentik e, depois de esperar tempo demais para ele iniciar, me deparo com um "Not Found" em `/if/flow/initial-setup/`!
+
+**R:** Esse problema aparentemente é comum. Vou ser honesto e dizer que eu não sei como eu resolvi. As sugestões online parecem se resumir a "tente derrubar e subir novamente os containers do Authentik" (não funcionou pra mim). Encontrei uma pessoa online dizendo que era só configurar variáveis de ambiente antes de subir o container pela primeira vez – parte do [automated install](https://docs.goauthentik.io/install-config/automated-install) – configurando email e senha para a conta de administrador. Algo tipo assim:
+
+```sh
+$ AUTHENTIK_BOOTSTRAP_EMAIL="...@..." AUTHENTIK_BOOTSTRAP_PASSWORD="..." \
+docker compose up -d authentik-server authentik-worker
+```
+
+(lembrando que isso iria requerer antes apagar a database do Authentik, descrito acima em § "A configuração salva no Postgres está errada")
+
+E, em seguida, ao invés de navegar para `/if/flow/initial-setup/`, o caminho seria `/if/flow/default-authentication-flow/?next=%2F`. Mas, quando eu tentei isso, ao fazer login, recebi erro de usuário e senha incorretos, e o caminho `/if/flow/initial-setup/` estava funcionando. 🤷🏻‍♀️
 
 
 ## TODO
