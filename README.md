@@ -47,7 +47,7 @@ override_params:
 
 O arquivo acima diz que o caso de slug `nome-do-case` será executado. Além disso, ele especifica que o parâmetro "environment" terá o valor de "dev" ao invés do valor padrão. Os valores padrão, novamente, podem ser definidos em `localrun.cases.yaml`.
 
-Antes de executar, confira se seu ambiente está executando com o ambiente correto (python 3.14.x), dentro do `.venv/`. Isso pode ser alterado pela interface, no canto inferior direito, ao abrir um arquivo .py.
+Antes de executar, confira se seu ambiente está executando com o ambiente correto (python 3.13.x), dentro do `.venv/`. Isso pode ser alterado pela interface, no canto inferior direito, ao abrir um arquivo .py.
 
 
 ### 5 - Definindo novos casos

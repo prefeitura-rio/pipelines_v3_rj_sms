@@ -191,8 +191,4 @@ Onde `XXXXXXX` é o nome da database; eles são intuitivos mas, para referência
 - Identificação de usuário logado no Prefect (opcional) (queria muito)
   - Ou gambiarra com `<iframe>`\
     (mais complicado do que parece, acho que perderia URL trocadas em transição de página)
-  - Ou customizar imagem do container(?)\
-    (meio que travaria a versão "pra sempre")
-  - Aproveitar que já tô mexendo na encanação e colocar um
-`* { transition: 50ms !important }` ou algo parecido, as transições por padrão
-são de **250 ms** sem motivo aparente?? [baldes de tempo jogado fora à toa](https://github.com/PrefectHQ/prefect/blob/2b1c62f299d880e471c734a6c1fe6c18de6dc3e0/ui/src/pages/AppRouterView.vue#L142)
+  - Ou customizar imagem do container direto

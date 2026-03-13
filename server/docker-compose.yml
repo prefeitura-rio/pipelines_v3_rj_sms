@@ -54,7 +54,10 @@ services:
   ##          PREFECT UI          ##
   ##################################
   prefect-server:
-    image: prefecthq/prefect:3-latest
+    # image: prefecthq/prefect:sha-4fc6103-python3.13
+    build:
+      context: ./settings
+      dockerfile: Dockerfile.prefect-server
     depends_on:
       shared-postgres:
         condition: service_healthy
@@ -85,7 +88,7 @@ services:
       - shared-network
 
   prefect-services:
-    image: prefecthq/prefect:3-latest
+    image: prefecthq/prefect:sha-4fc6103-python3.13
     depends_on:
       prefect-server:
         condition: service_healthy
