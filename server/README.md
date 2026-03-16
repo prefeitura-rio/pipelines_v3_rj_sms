@@ -86,7 +86,7 @@ A partir de agora, você pode acessar esse painel de configuração em "http://n
 Para cada um dos Proxy Hosts configurados (incluindo o primeiro, acima), vá na aba "SSL", selecione "Request a new Certificate" no dropdown, selecione "Force SSL", "HSTS Enabled" e "HTTP/2 Support".¹
 
 > Domain Names: auth.dominio.local \
-> Scheme: HTTPS, authentik-server, 9443
+> Scheme: HTTP, authentik-server, 9000
 
 > Domain Name: pipelines.dominio.local \
 > Scheme: HTTP, prefect-server, 4200 \
@@ -106,21 +106,23 @@ $ docker compose up -d authentik-server authentik-worker --build
 
 Ele demora bastante a subir na primeira execução – tipo literalmente uns 5 minutos. Se você quiser, suba pela primeira vez sem o `-d` para ver a hora em que os logs de inicialização se acalmam e, no fim dos passos seguintes de configuração, Ctrl+C e bote pra rodar de novo.
 
-Navegue até "http://auth.dominio.local/if/flow/initial-setup/" (ou "localhost:9000/..."). Crie um login para o administrador. É possível que você receba uma página de "Not Found"; se isso aconteceu, veja § "Acesso inicial ao Authentik 'not found'" no fim do README.
+Navegue até "https://auth.dominio.local/if/flow/initial-setup/" (ou "localhost:9000/..."). Crie um login para o administrador. É possível que você receba uma página de "Not Found"; se isso aconteceu, veja § "Acesso inicial ao Authentik 'not found'" no fim do README.
 
 Em seguida, clique no botão "Admin interface". Barra lateral, "Applications" → "Applications", botão "Create with Provider":
 
 > Nome "nginx", slug "nginx", policy ANY \
 > Proxy Provider \
 > Authorization flow "implicit" \
-> Forward auth (single application): "http://pipelines.dominio.local" \
+> Forward auth (single application): "https://pipelines.dominio.local" \
 > Advanced flow settings → Authentication flow "default-authentication..."
 
 Barra lateral, "Applications" → "Outposts", clique em editar o já criado "Embedded Outpost". ("ah, eu apaguei": Create → Type "Proxy", Integration "----")
 
-Adicione o nginx à lista de Selected Applications. Abra "Advanced Settings" e garanta que `authentik_host` é "http://auth.dominio.local/" (pode ser ex. "http://localhost:9000").
+Adicione o nginx à lista de Selected Applications. Abra "Advanced Settings" e garanta que `authentik_host` é "https://auth.dominio.local/" (pode ser ex. "http://localhost:9000").
 
 Você pode criar usuários em "Directory" → "Users" → "New User". Pode ser interessante colocar o usuário em uma pasta que não só "user"; p.ex. "user/organizacao". Depois de criado, é possível configurar uma senha para o usuário clicando na setinha ao seu lado na lista e, em seguida, em "Set password". O usuário pode trocar a própria senha fazendo login diretamente em "http://auth.dominio.local", clicando na engrenagem, e em "Change password".
+
+(TODO: something something New Service Account?)
 
 
 ## Prefect
@@ -146,10 +148,31 @@ Navegue até "http://pipelines.dominio.local". Se tudo correu bem, você deve se
 ### Pós-instalação
 É necessário configurar um Work Pool. Vá em "Work Pools" → "Create Work Pool" → "Google Cloud Run V2".
 
+* O nome que você escolher será posteriormente usado para identificar essa Work Pool; eu recomendaria algo simples, `[a-z\-]`.
 * É interessante configurar um limite de flows paralelos ("Flow Run Concurrency").
 * Em "GcpCredentials", clique no botão de "Add +". Block Name: "prefect-cloud-run" (aqui é livre, mas faz sentido ser isso, né?); Service Account Info: copie e cole o JSON da conta de serviço. Botão de "Create".
 * Em "Service Account Name", cole o email (normalmente @&lt;projeto&gt;.iam.gserviceaccount.com) da conta de serviço.
 * Clique no botão no final da página para criar a Work Pool. Você talvez precise marcar os campos "Prefect API Key Secret" e "Prefect API Auth String Secret" como nulos para conseguir fazer isso.
+
+...
+
+Os passos seguintes também são possíveis pela interface do [Google Cloud](https://console.cloud.google.com/run/services):
+```sh
+$ gcloud auth login
+# "<PROJECT_ID>" é o nome do seu projeto no Google Cloud
+# "<SERVICE_ACCOUNT>" o nome da conta de serviço
+# "<WORK_POOL_NAME>" o nome da Work Pool que você criou acima
+$ gcloud config set project <PROJECT_ID>
+$ gcloud run deploy prefect-worker --image=prefecthq/prefect-gcp:latest \
+--set-env-vars PREFECT_API_URL="https://pipelines.dominio.local" \
+--service-account <SERVICE_ACCOUNT>@<PROJECT_ID>.iam.gserviceaccount.com \
+--no-cpu-throttling \
+--min-instances 1 \
+--startup-probe httpGet.port=8080,httpGet.path=/health,initialDelaySeconds=100,periodSeconds=20,timeoutSeconds=20 \
+--args "prefect","worker","start","--install-policy","never","--with-healthcheck","-p","<WORK_POOL_NAME>","-t","cloud-run"
+```
+
+...
 
 
 ## Infisical
@@ -169,7 +192,7 @@ Ele pode demorar alguns minutos pra subir; execute sem a flag `-d` inicialmente 
 > http://localhost:8080/admin \
 >  \
 > To access Infisical server \
-> http://localhost:8080 \
+> http://localhost:8080
 
 
 ### Pós-instalação
@@ -244,7 +267,7 @@ Onde `XXXXXXX` é o nome da database; eles são intuitivos mas, para referência
 
 
 ### Internal Server Error configurando HTTPS
-No meu caso, isso era porque eu estava usando um endereço de email inválido – p.ex. "admin@npm.local". Ao reiniciar o container sem a flag `-d` (para ver o output) e retentando, vi esse erro:
+**R:** No meu caso, isso era porque eu estava usando um endereço de email inválido – p.ex. "admin@npm.local". Ao reiniciar o container sem a flag `-d` (para ver o output) e retentando, vi esse erro:
 
 > [00/00/0000] [00:00:00 AM] [Express  ] › ⚠  warning   Saving debug log to /data/logs/letsencrypt.log \
 > Unable to register an account with ACME server. The ACME server believes admin@npm.local is an invalid email address. Please ensure it is a valid email and attempt registration again.
@@ -269,6 +292,7 @@ E, em seguida, ao invés de navegar para `/if/flow/initial-setup/`, o caminho se
 
 ## TODO
 - Worker Pool via Google Cloud Run ([guia](https://docs.prefect.io/integrations/prefect-gcp/gcp-worker-guide))
+  - Conta de serviço pelo Authentik?
 - Login via SSO do Google (Authentik, Infisical)
 - Funções de auxílio todas dos flows do Prefect
   - Acesso a Cloud Storage, ...
