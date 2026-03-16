@@ -21,15 +21,21 @@ $ openssl rand -base64 32
 $ openssl rand -base64 60 | tr -d '\n'
 ```
 
-Se seu sistema estará em um servidor, i.e. não será exclusivamente na máquina local e acessível via localhost, então também configure as variáveis `PREFECT_SERVER_API_HOST` e `PREFECT_SERVER_API_PORT` para o endereço publicamente acessível e porta do Prefect. Nessa documentação, usaremos "dominio.local" como domínio falso de exemplo.
+Se seu sistema estará em um servidor, i.e. não será exclusivamente na máquina local e acessível via localhost, então também configure as seguintes variáveis. Nessa documentação, usaremos "dominio.local" como domínio falso de exemplo.
+
+```sh
+# Endereço público do Infisical:
+SITE_URL="https://infisical.dominio.local"
+# Endereço e porta públicos do Prefect:
+PREFECT_SERVER_API_HOST="pipelines.dominio.local"
+PREFECT_SERVER_API_PORT="443"
+```
 
 Em desenvolvimento local, é possível editar o arquivo de `hosts` da máquina para criar subdomínios que podem ajudar a seguir o passo a passo; ex. "127.0.0.1 → pipelines.dominio.local".
 
 
 Algumas referências úteis:
 * [Install Docker Engine on Debian](https://docs.docker.com/engine/install/debian/)
-* [nginx: Linux packages § Debian](https://nginx.org/en/linux_packages.html#Debian)
-* [Certbot Instructions § Nginx on Linux (pip)](https://certbot.eff.org/instructions?ws=nginx&os=pip&tab=standard)
 
 
 ## Shared
@@ -51,19 +57,36 @@ Grande parte dessa documentação teve como base [este tutorial](https://joshrno
 $ docker compose up -d nginx-manager --build
 ```
 
-Para abrir a UI do NPM, é necessário acessar a porta 81. Em situações em que as únicas portas disponíveis na VM são 80 e 443, é necessário fazer uma configuração temporária do Nginx primeiro. Copie o pequeno conteúdo do arquivo `settings/initial.nginx.conf` para `/etc/nginx/conf.d/default.conf` da máquina (fora do docker!!) e reinicie o serviço do Nginx (`systemctl restart nginx`).
+Para abrir a UI do NPM, é necessário acessar a porta 81. Em situações em que as únicas portas disponíveis na VM são 80 e 443, é necessário fazer uma configuração temporária do sistema primeiro:
 
-Navegue até "http://&lt;IP do servidor&gt;:81/" (se estiver rodando local, é "localhost:81"). Crie um login para o administrador.
+1. Vá em `docker-compose.yml`, sob `nginx-manager` → `ports`, troque `"80:80"` por `7080:80`;
+2. Reinicie o container: `docker compose down nginx-manager`, `docker compose up -d nginx-manager --build`;
+3. Siga o [guia de instalação do nginx](https://nginx.org/en/linux_packages.html#Debian) para instalá-lo na máquina;
+4. Copie o pequeno conteúdo do arquivo `settings/setup.nginx.conf` para `/etc/nginx/conf.d/default.conf` da máquina (fora do docker!!) e reinicie o serviço do Nginx (`systemctl restart nginx`).
+
+Navegue até "http://&lt;IP do servidor&gt;:81/" (se estiver rodando local, "localhost:81"), ou :80 caso tenha feito a configuração de Nginx acima. Crie um login para o administrador.
+
+> [!NOTE]
+> Se, para a conta de administrador, você escolher um endereço de email fake – como "admin@npm.local" – será necessário criar uma segunda conta de usuário com um endereço de email real para poder emitir certificados de HTTPS. É possível fazer isso na aba "Users".
 
 Em seguida, é hora de adicionar os proxies. Em "Proxy Hosts", clique no botão "Add Proxy Host":
 
 > Domain Names: npm.dominio.local \
 > Scheme: HTTP, nginx-manager, 81
 
-Você agora pode acessar esse painel de configuração em "http://npm.dominio.local". Para conseguir ver as mudanças no NPM, é preciso direcionar as portas 80 e 443 do servidor para as respectivas portas do NPM, 7080 e 7443. Para isso, carrege a configuração `settings/external.nginx.conf` em `/etc/nginx/conf.d/default.conf` no servidor (fora do docker!!) e reinicie o serviço do Nginx (`systemctl restart nginx`).
+A partir de agora, você pode acessar esse painel de configuração em "http://npm.dominio.local:80". Após confirmar que o serviço está disponível nesse endereço, você pode (e deve!) desfazer a modificação temporária anterior:
+
+1. Pare e desative o Nginx temporário com `systemctl stop nginx` e `systemctl disable nginx`;
+2. Vá em `docker-compose.yml`, sob `nginx-manager` → `ports`, troque `"7080:80"` por `80:80`;
+3. Reinicie o container: `docker compose down nginx-manager`, `docker compose up -d nginx-manager --build`;
+
+> [!NOTE]
+> A recomendação por desabilitar o Nginx da máquina pressupõe que sua máquina expõe as portas 80 e 443 para a Internet por padrão. Se esse não é o caso, configurações adicionais específicas serão necessárias. Caso você não tenha precisado da configuração de Nginx temporária, é altamente recomendável que você configure sua máquina/firewall para não permitir acessos da Internet em qualquer porta.
+
+Para cada um dos Proxy Hosts configurados (incluindo o primeiro, acima), vá na aba "SSL", selecione "Request a new Certificate" no dropdown, selecione "Force SSL", "HSTS Enabled" e "HTTP/2 Support".¹
 
 > Domain Names: auth.dominio.local \
-> Scheme: HTTP, authentik-server, 9000
+> Scheme: HTTPS, authentik-server, 9443
 
 > Domain Name: pipelines.dominio.local \
 > Scheme: HTTP, prefect-server, 4200 \
@@ -71,6 +94,9 @@ Você agora pode acessar esse painel de configuração em "http://npm.dominio.lo
 
 > Domain Names: infisical.dominio.local \
 > Scheme: HTTP, infisical-backend, 8080
+
+
+¹ "Force SSL" redireciona tráfego HTTP para HTTPS, tornando impossível o acesso via porta 80. Contudo, nessa configuração, ainda é possível ter uma conexão não encriptada via HTTPS – então habilitamos "HSTS", que bloqueia conexões que não possuam criptografia habilitada.
 
 
 ## Authentik
@@ -110,7 +136,7 @@ Contudo, em um servidor, é importante configurar o domínio e porta da API que 
 
 ```sh
 $ PREFECT_SERVER_API_HOST="pipelines.dominio.local" \
-PREFECT_SERVER_API_PORT="80" \
+PREFECT_SERVER_API_PORT="443" \
 docker compose up -d prefect-server prefect-services --build
 ```
 
@@ -134,6 +160,17 @@ Para subir o servidor:
 ```sh
 $ docker compose up -d infisical-backend --build
 ```
+
+Ele pode demorar alguns minutos pra subir; execute sem a flag `-d` inicialmente para ver o output do container. Ele só realmente iniciou quando diz:
+
+> Welcome back! \
+>  \
+> To access Infisical Administrator Panel open \
+> http://localhost:8080/admin \
+>  \
+> To access Infisical server \
+> http://localhost:8080 \
+
 
 ### Pós-instalação
 
@@ -167,22 +204,15 @@ que ser criado em seu lugar.
 
 
 #### Conta de usuários
-Para cadastrar outro usuário, é necessário ir na página da organização,
-na aba "Access Control", e clicar no botão "Invite Users to Organization".
-Um ou múltiplos endereços de email (que, novamente, não precisam ser reais)
-podem ser inseridos, lembrando de selecionar o projeto a qual eles pertencem.
+Para cadastrar outro usuário, é necessário ir na página da organização, na aba "Access Control", e clicar no botão "Invite Users to Organization". Um ou múltiplos endereços de email (que, novamente, não precisam ser reais) podem ser inseridos, lembrando de selecionar o projeto a qual eles pertencem.
 
-Como a instância do Infisical não possui SMTP configurado, um popup irá lhe
-informar um URL onde o usuário pode fazer o próprio cadastro. Será algo
-parecido com: `https://.../signupinvite?token=...&to=usuario.teste@infisical.local&organization_id=...`
+Como a instância do Infisical não possui SMTP configurado, um popup irá lhe informar um URL onde o usuário pode fazer o próprio cadastro. Será algo parecido com: `https://.../signupinvite?token=...&to=usuario.teste@infisical.local&organization_id=...`.
 
-Importante ressaltar: ao clicar em "Confirm Email", o token será invalidado;
-se o usuário não completar o cadastro na mesma sessão, outro link terá que ser
-gerado.
+Se o URL possuir "`localhost`" e você tiver feito deploy para um domínio real, será necessário trocar o domínio manualmente. Em teoria, você deve alterar a variável de ambiente `SITE_URL` ("http://localhost:8080" por padrão) para o URL correto (p.ex. "https://infisical.dominio.local"), mas não funcionou comigo 🤷🏻‍♀️.
 
-A senha de usuário, contraintuitivamente, possui mais restrições do que a senha
-de administrador. Além de mínimo de caracteres e obrigatoriedade de letras e
-dígitos, ela também não pode ter aparecido em vazamentos de senhas anteriores.
+Importante ressaltar: ao clicar em "Confirm Email", o token será invalidado; se o usuário não completar o cadastro na mesma sessão, outro link terá que ser gerado.
+
+A senha de usuário, contraintuitivamente, possui mais restrições do que a senha de administrador. Além de mínimo de caracteres e obrigatoriedade de letras e dígitos, ela também não pode ter aparecido em vazamentos de senhas anteriores.
 
 
 ## Troubleshooting
@@ -190,7 +220,7 @@ dígitos, ela também não pode ter aparecido em vazamentos de senhas anteriores
 ### A configuração salva no Postgres está errada
 > Fiz besteira configurando o container X (p.ex. apaguei a conta de admin do Infisical) e meus erros foram calcificados no Postgres. Não quero apagar o volume inteiro, porque ele é compartilhado e eu perderia a configuração dos outros containers também :(
 
-**R:** Você pode apagar somente a database que está incorreta. Com o container do Postgres executando, faça:
+**R:** Você pode apagar somente a database que está incorreta. Lembre de `docker compose down` o container que usa a database incorreta primeiro. Com o container do Postgres executando, faça:
 ```sh
 $ docker exec -it server-shared-postgres-1 /bin/bash
 (...):/$ psql -U cit_pipelines postgres
@@ -206,11 +236,20 @@ Onde `XXXXXXX` é o nome da database; eles são intuitivos mas, para referência
 
 
 ### 502 Bad Gateway!!
-**R:** Isso provavelmente significa que o serviço ao qual o NPM aponta não existe. O docker para o serviço desejado ou não está rodando, ou tem outro nome, etc etc.
+**R:** Isso provavelmente significa que o serviço ao qual o NPM aponta não existe, ou ainda não terminou de subir. O docker para o serviço desejado ou (ainda) não está rodando, ou tem outro nome, etc etc.
 
 
 ### "Default Site" / "Congratulations!"
 **R:** O serviço ao qual o NPM aponta ou não está executando ou está desabilitado. Se você já tinha configurado o serviço antes de subí-lo, tente desabilitar e reabilitar o proxy host, ou encontrar problemas na configuração. Lembrando que para serviços dentro de um mesmo docker compose, é necessário usar o nome do serviço (ex. "prefect-server") ao invés de "localhost".
+
+
+### Internal Server Error configurando HTTPS
+No meu caso, isso era porque eu estava usando um endereço de email inválido – p.ex. "admin@npm.local". Ao reiniciar o container sem a flag `-d` (para ver o output) e retentando, vi esse erro:
+
+> [00/00/0000] [00:00:00 AM] [Express  ] › ⚠  warning   Saving debug log to /data/logs/letsencrypt.log \
+> Unable to register an account with ACME server. The ACME server believes admin@npm.local is an invalid email address. Please ensure it is a valid email and attempt registration again.
+
+Simplesmente criar uma conta nova de administrador com email válido, e então tentar ativar os certificados a partir dela, foi suficiente para resolver.
 
 
 ### Acesso inicial ao Authentik "not found"
@@ -229,9 +268,8 @@ E, em seguida, ao invés de navegar para `/if/flow/initial-setup/`, o caminho se
 
 
 ## TODO
-- HTTPS
 - Worker Pool via Google Cloud Run ([guia](https://docs.prefect.io/integrations/prefect-gcp/gcp-worker-guide))
-- Login via SSO do Google
+- Login via SSO do Google (Authentik, Infisical)
 - Funções de auxílio todas dos flows do Prefect
   - Acesso a Cloud Storage, ...
   - dbt
