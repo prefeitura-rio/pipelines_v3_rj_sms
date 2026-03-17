@@ -114,6 +114,7 @@ Em seguida, clique no botão "Admin interface". Barra lateral, "Applications" �
 > Proxy Provider \
 > Authorization flow "implicit" \
 > Forward auth (single application): "https://pipelines.dominio.local" \
+> Token validity: "days=365" \
 > Advanced flow settings → Authentication flow "default-authentication..."
 
 Barra lateral, "Applications" → "Outposts", clique em editar o já criado "Embedded Outpost". ("ah, eu apaguei": Create → Type "Proxy", Integration "----")
@@ -122,7 +123,7 @@ Adicione o nginx à lista de Selected Applications. Abra "Advanced Settings" e g
 
 Você pode criar usuários em "Directory" → "Users" → "New User". Pode ser interessante colocar o usuário em uma pasta que não só "user"; p.ex. "user/organizacao". Depois de criado, é possível configurar uma senha para o usuário clicando na setinha ao seu lado na lista e, em seguida, em "Set password". O usuário pode trocar a própria senha fazendo login diretamente em "http://auth.dominio.local", clicando na engrenagem, e em "Change password".
 
-(TODO: something something New Service Account?)
+Para que o Worker consiga acessar a API do Prefect, ele vai precisar se autenticar no Authentik; para isso, você precisa criar uma conta de serviço. "Directory" → "Users" → "New Service Account", Username "prefect-worker-service-account" (ou algo parecido), desmarque "Expiring" – queremos que a conta seja permanente. Em seguida, em "Directory" → "Tokens and App passwords" → "Create", Identifier "prefect-worker-app-password" (ou algo parecido), User criado acima, Intent "App password", e desmarque "Expiring" novamente.
 
 
 ## Prefect
@@ -148,28 +149,53 @@ Navegue até "http://pipelines.dominio.local". Se tudo correu bem, você deve se
 ### Pós-instalação
 É necessário configurar um Work Pool. Vá em "Work Pools" → "Create Work Pool" → "Google Cloud Run V2".
 
-* O nome que você escolher será posteriormente usado para identificar essa Work Pool; eu recomendaria algo simples, `[a-z\-]`.
+* O nome que você escolher será posteriormente usado para identificar essa Work Pool; eu recomendaria algo simples, `[a-z\-]`, como "gcp-wp".
 * É interessante configurar um limite de flows paralelos ("Flow Run Concurrency").
 * Em "GcpCredentials", clique no botão de "Add +". Block Name: "prefect-cloud-run" (aqui é livre, mas faz sentido ser isso, né?); Service Account Info: copie e cole o JSON da conta de serviço. Botão de "Create".
 * Em "Service Account Name", cole o email (normalmente @&lt;projeto&gt;.iam.gserviceaccount.com) da conta de serviço.
 * Clique no botão no final da página para criar a Work Pool. Você talvez precise marcar os campos "Prefect API Key Secret" e "Prefect API Auth String Secret" como nulos para conseguir fazer isso.
 
-...
+Vá ao painel de administrador do Authentik. Em "Applications" → "Providers" → "Provider for nginx" → "Authentication", copie o campo "Client ID". Este será substituído no comando abaixo, como `<CLIENT_ID>`. Em "Directory" → "Tokens and App passwords", copie a App Password criada anteriormente, com nome "prefect-worker-app-password". Esta será `<APP_PASSWORD>` no comando abaixo.
 
-Os passos seguintes também são possíveis pela interface do [Google Cloud](https://console.cloud.google.com/run/services):
+Em seguida, execute o seguinte comando no seu terminal:
+
+```sh
+$ curl -L "https://auth.dominio.local/application/o/token/" \
+  --header "Host: auth.dominio.local" \
+  --header "Content-Type: application/x-www-form-urlencoded" \
+  --data "grant_type=client_credentials&client_id=<CLIENT_ID>&username=prefect-worker-service-account&password=<APP_PASSWORD>&scope=profile"
+```
+
+Ele deve te retornar algo como:
+
+```json
+{
+  "access_token": "xxxxxxxx.xxxxxxxx.xxxxxxxx",
+  "token_type": "Bearer",
+  "scope": "profile",
+  "expires_in": 31536000,
+  // ... //
+}
+```
+
+O campo `access_token` é o "JWT", o token que o Prefect Worker terá que usar para passar pela tela de login do Authentik. Na configuração do Authentik, definimos que os tokens desse "client" durariam 365 dias (31,536,000 segundos); isso pode ser modificado na interface de administrador do Authentik, em "Applications" → "Providers" → "Provider for nginx" → "Token validity". Outra requisição terá que ser feita para obter o JWT com novo prazo de validade.
+
+A seguir, vamos fazer deploy do Prefect Worker no Google Cloud Run. Se você preferir, ao invés dos comandos a seguir, também é possível fazer essa etapa através do [site do Google Cloud Run](https://console.cloud.google.com/run/services):
 ```sh
 $ gcloud auth login
 # "<PROJECT_ID>" é o nome do seu projeto no Google Cloud
+$ gcloud config set project <PROJECT_ID>
+# "<BEARER_TOKEN>" é o JWT obtido acima, através de `curl`
 # "<SERVICE_ACCOUNT>" o nome da conta de serviço
 # "<WORK_POOL_NAME>" o nome da Work Pool que você criou acima
-$ gcloud config set project <PROJECT_ID>
 $ gcloud run deploy prefect-worker --image=prefecthq/prefect-gcp:latest \
---set-env-vars PREFECT_API_URL="https://pipelines.dominio.local" \
+--set-env-vars='PREFECT_API_URL="https://pipelines.dominio.local"' \
+--set-env-vars='PREFECT_API_KEY="<BEARER_TOKEN>"' \
 --service-account <SERVICE_ACCOUNT>@<PROJECT_ID>.iam.gserviceaccount.com \
 --no-cpu-throttling \
---min-instances 1 \
+--min-instances 1 --max-instances 20 \
 --startup-probe httpGet.port=8080,httpGet.path=/health,initialDelaySeconds=100,periodSeconds=20,timeoutSeconds=20 \
---args "prefect","worker","start","--install-policy","never","--with-healthcheck","-p","<WORK_POOL_NAME>","-t","cloud-run"
+--args "prefect","worker","start","--install-policy","never","--with-healthcheck","-p","<WORK_POOL_NAME>","-t","cloud-run-v2"
 ```
 
 ...
@@ -302,3 +328,4 @@ E, em seguida, ao invés de navegar para `/if/flow/initial-setup/`, o caminho se
   - Ou gambiarra com `<iframe>`\
     (mais complicado do que parece, acho que perderia URL trocadas em transição de página)
   - Ou customizar imagem do container direto
+- WebSocket do Prefect?
