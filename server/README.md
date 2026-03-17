@@ -147,6 +147,8 @@ Navegue até "http://pipelines.dominio.local". Se tudo correu bem, você deve se
 
 
 ### Pós-instalação
+> Parte desse tutorial tem como base o [guia de intgração Prefect—Cloud Run](https://docs.prefect.io/integrations/prefect-gcp/gcp-worker-guide)
+
 É necessário configurar um Work Pool. Vá em "Work Pools" → "Create Work Pool" → "Google Cloud Run V2".
 
 * O nome que você escolher será posteriormente usado para identificar essa Work Pool; eu recomendaria algo simples, `[a-z\-]`, como "gcp-wp".
@@ -314,6 +316,25 @@ docker compose up -d authentik-server authentik-worker
 (lembrando que isso iria requerer antes apagar a database do Authentik, descrito acima em § "A configuração salva no Postgres está errada")
 
 E, em seguida, ao invés de navegar para `/if/flow/initial-setup/`, o caminho seria `/if/flow/default-authentication-flow/?next=%2F`. Mas, quando eu tentei isso, ao fazer login, recebi erro de usuário e senha incorretos, e o caminho `/if/flow/initial-setup/` estava funcionando. 🤷🏻‍♀️
+
+
+### Prefect Worker parou de funcionar!!
+**R:** Se você está tendo esse erro ~1 ano após o deploy inicial, então é bem possível que o JWT do Worker tenha expirado. Você pode conferir a data de expiração pelo website [jwt.io](https://www.jwt.io/), colando o token no campo e observando a data na propriedade `exp`.
+
+Caso ele esteja expirado, siga os passos para obtenção do JWT em § Prefect > Pós-instalação; i.e.:
+
+```sh
+$ curl -L "https://auth.dominio.local/application/o/token/" \
+  --header "Host: auth.dominio.local" \
+  --header "Content-Type: application/x-www-form-urlencoded" \
+  --data "grant_type=client_credentials&client_id=<CLIENT_ID>&username=prefect-worker-service-account&password=<APP_PASSWORD>&scope=profile"
+```
+
+Com o novo `access_token` recebido, substitua a variável de ambiente `PREFECT_API_KEY` no deploy do Worker, [na página de configuração do Google Cloud Run](https://console.cloud.google.com/run/services).
+
+
+### `docker-credential-gcloud` not installed or not available in PATH
+**R:** Experimente apagar (ou renomear) o arquivo `~/.docker/config.json`.
 
 
 ## TODO

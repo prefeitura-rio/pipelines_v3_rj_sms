@@ -8,6 +8,7 @@ from .tasks import (
 	get_bairros,
 	print_report
 )
+from .schedules import schedules
 
 
 @flow(
@@ -21,3 +22,6 @@ def weather_report(lat: float, lon: float, environment: str="dev"):
 	zero = get_bairros()
 	data = fetch_weather(lat=lat + zero, lon=lon, environment=environment)
 	print_report(data=data)
+
+
+weather_report.serve(schedules=schedules)

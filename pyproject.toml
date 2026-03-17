@@ -16,6 +16,11 @@ dependencies = [
   "prefect>=3.6",
 ]
 
+[dependency-groups]
+dev = [
+  "prefect-docker>=0.6.5",
+]
+
 [tool.uv]
 # [Ref] https://docs.astral.sh/uv/reference/settings/#exclude-newer
 exclude-newer = "1 week"

@@ -6,7 +6,6 @@ from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 from google.cloud import bigquery
 
-
 from .constants import (
 	BASE_API_URL,
 	FORECAST_ENDPOINT
