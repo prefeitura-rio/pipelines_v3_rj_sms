@@ -29,22 +29,23 @@ on:
         type: number
         default: 2
 
+
 jobs:
-  runs-on: ubuntu-latest
-  timeout-minutes: 30
+  deploy-flow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
-  steps:
-    - name: Checkout repository
-      uses: actions/checkout@v6
-      with:
-        fetch-depth: 0
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-    - name: Deploy Prefect flows
-      uses: ./.github/actions/deploy-prefect-flows
-      with:
-        environment: prod
-        prefect_api_url: ${{ secrets.PREFECT_API_URL }}
-        force_deploy: ${{ github.event.inputs.force_deploy == 'true' && '1' || '0' }}
-        debug: ${{ github.event.inputs.debug }}
-        batch_size: ${{ github.event.inputs.batch_size || '3' }}
-        max_retries: ${{ github.event.inputs.max_retries || '2' }}
+      - name: Deploy Prefect flows
+        uses: ./.github/actions/deploy-prefect-flows
+        with:
+          environment: prod
+          force_deploy: ${{ github.event.inputs.force_deploy == 'true' && '1' || '0' }}
+          debug: ${{ github.event.inputs.debug }}
+          batch_size: ${{ github.event.inputs.batch_size || '3' }}
+          max_retries: ${{ github.event.inputs.max_retries || '2' }}

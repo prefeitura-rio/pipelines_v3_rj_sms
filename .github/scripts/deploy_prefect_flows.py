@@ -57,5 +57,9 @@ async def main():
 	# max_retries = os.getenv("MAX_RETRIES", "2")
 	pipeline_filter = os.getenv("PIPELINE_FILTER")
 
-	changed_dirs = get_changed_directories(commit_sha, pipeline_filter)
+	changed_dirs = await get_changed_directories(commit_sha, pipeline_filter)
 	logging.info(changed_dirs)
+
+
+if __name__ == "__main__":
+	asyncio.run(main())

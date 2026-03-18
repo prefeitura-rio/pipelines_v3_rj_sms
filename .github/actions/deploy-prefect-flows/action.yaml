@@ -28,6 +28,7 @@ inputs:
       "reports" (deploy de todos os reports);
     required: false
 
+
 runs:
   using: composite
   steps:
@@ -43,31 +44,31 @@ runs:
       with:
         python-version: "3.13"
 
-    # - uses: actions/cache@v5
-    #   with:
-    #     path: |
-    #       ~/.cache/pip
-    #     key: ${{ runner.os }}-pip-${{ hashFiles("...") }}
-    #     restore-keys: |
-    #       ${{ runner.os }}-pip-
-
     - name: Install uv
       shell: bash
-      run: pip install uv
+      run: pip install uv 1> /dev/null
+
+    - uses: actions/cache@v5
+      with:
+        path: |
+          ./.venv
+        key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-
 
     - name: Install project dependencies
       shell: bash
-      run: uv sync --all-packages
+      run: uv sync --all-packages 1> /dev/null
 
     - name: Deploy Prefect flows
       shell: bash
       env:
-        ENVIRONMENT: ${{ inputs.environment || "dev" }}
-        PREFECT_API_URL: ${{ env.PREFECT_API_URL }}
-        FORCE_DEPLOY: ${{ inputs.force_deploy == "true" && "1" || "0" }}
+        ENVIRONMENT: ${{ inputs.environment || 'dev' }}
+        PREFECT_API_URL: ${{ secrets.PREFECT_API_URL }}
+        FORCE_DEPLOY: ${{ inputs.force_deploy == 'true' && '1' || '0' }}
         GITHUB_SHA: ${{ github.sha }}
-        LOG_LEVEL: ${{ inputs.debug == "true" && "DEBUG" || "INFO" }}
-        BATCH_SIZE: ${{ inputs.batch_size || "3" }}
-        MAX_RETRIES: ${{ inputs.max_retries || "2" }}
+        LOG_LEVEL: ${{ inputs.debug == 'true' && 'DEBUG' || 'INFO' }}
+        BATCH_SIZE: ${{ inputs.batch_size || '3' }}
+        MAX_RETRIES: ${{ inputs.max_retries || '2' }}
         PIPELINE_FILTER: ${{ inputs.pipeline_filter }}
       run: uv run .github/scripts/deploy_prefect_flows.py
