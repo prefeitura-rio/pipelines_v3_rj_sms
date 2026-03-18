@@ -1,0 +1,73 @@
+name: Deploy Prefect flows
+description: Adaptado de RJ-SMTR/pipelines_v3
+
+inputs:
+  environment:
+    description: Environment do deploy; 'dev' por padrão
+    required: false
+  force_deploy:
+    description: Força deploy de todos os flows
+    required: false
+    default: "0"
+  debug:
+    description: Printar logs de debug
+    required: false
+    default: "false"
+  batch_size:
+    description: Number of concurrent deployments
+    required: false
+    default: "3"
+  max_retries:
+    description: Maximum number of retries for failed deployments
+    required: false
+    default: "2"
+  pipeline_filter:
+    description: |
+      Filtro de flows a fazer deploy. Por exemplo:
+      "datalake/transform/dbt" (deploy somente do flow de dbt);
+      "reports" (deploy de todos os reports);
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Log in to GitHub container registry
+      uses: docker/login-action@v4
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.13"
+
+    # - uses: actions/cache@v5
+    #   with:
+    #     path: |
+    #       ~/.cache/pip
+    #     key: ${{ runner.os }}-pip-${{ hashFiles("...") }}
+    #     restore-keys: |
+    #       ${{ runner.os }}-pip-
+
+    - name: Install uv
+      shell: bash
+      run: pip install uv
+
+    - name: Install project dependencies
+      shell: bash
+      run: uv sync --all-packages
+
+    - name: Deploy Prefect flows
+      shell: bash
+      env:
+        ENVIRONMENT: ${{ inputs.environment || "dev" }}
+        PREFECT_API_URL: ${{ env.PREFECT_API_URL }}
+        FORCE_DEPLOY: ${{ inputs.force_deploy == "true" && "1" || "0" }}
+        GITHUB_SHA: ${{ github.sha }}
+        LOG_LEVEL: ${{ inputs.debug == "true" && "DEBUG" || "INFO" }}
+        BATCH_SIZE: ${{ inputs.batch_size || "3" }}
+        MAX_RETRIES: ${{ inputs.max_retries || "2" }}
+        PIPELINE_FILTER: ${{ inputs.pipeline_filter }}
+      run: uv run .github/scripts/deploy_prefect_flows.py
