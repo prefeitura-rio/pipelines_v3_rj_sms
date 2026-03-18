@@ -24,4 +24,7 @@ def weather_report(lat: float, lon: float, environment: str="dev"):
 	print_report(data=data)
 
 
-weather_report.serve(schedules=schedules)
+# Repensar como passar schedule
+# weather_report.serve(schedules=schedules)
+# talvez `wweather_report_schedules = schedules`? cruzão assim
+

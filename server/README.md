@@ -3,8 +3,7 @@
 Inclui:
 * Nginx Proxy Manager
 * Servidor Authentik
-* Servidor Prefect UI\
-  Não inclui os workers!
+* Servidor Prefect UI
 * Servidor Infisical
 
 
@@ -147,7 +146,7 @@ Navegue até "http://pipelines.dominio.local". Se tudo correu bem, você deve se
 
 
 ### Pós-instalação
-> Parte desse tutorial tem como base o [guia de intgração Prefect—Cloud Run](https://docs.prefect.io/integrations/prefect-gcp/gcp-worker-guide)
+> Parte desse tutorial tem como base o [guia de integração Prefect—Cloud Run](https://docs.prefect.io/integrations/prefect-gcp/gcp-worker-guide)
 
 É necessário configurar um Work Pool. Vá em "Work Pools" → "Create Work Pool" → "Google Cloud Run V2".
 
@@ -182,25 +181,20 @@ Ele deve te retornar algo como:
 
 O campo `access_token` é o "JWT", o token que o Prefect Worker terá que usar para passar pela tela de login do Authentik. Na configuração do Authentik, definimos que os tokens desse "client" durariam 365 dias (31,536,000 segundos); isso pode ser modificado na interface de administrador do Authentik, em "Applications" → "Providers" → "Provider for nginx" → "Token validity". Outra requisição terá que ser feita para obter o JWT com novo prazo de validade.
 
-A seguir, vamos fazer deploy do Prefect Worker no Google Cloud Run. Se você preferir, ao invés dos comandos a seguir, também é possível fazer essa etapa através do [site do Google Cloud Run](https://console.cloud.google.com/run/services):
+
+### Deploy do worker
+
+`PREFECT_API_URL` e `PREFECT_API_KEY`
+
 ```sh
-$ gcloud auth login
-# "<PROJECT_ID>" é o nome do seu projeto no Google Cloud
-$ gcloud config set project <PROJECT_ID>
-# "<BEARER_TOKEN>" é o JWT obtido acima, através de `curl`
-# "<SERVICE_ACCOUNT>" o nome da conta de serviço
-# "<WORK_POOL_NAME>" o nome da Work Pool que você criou acima
-$ gcloud run deploy prefect-worker --image=prefecthq/prefect-gcp:latest \
---set-env-vars='PREFECT_API_URL="https://pipelines.dominio.local"' \
---set-env-vars='PREFECT_API_KEY="<BEARER_TOKEN>"' \
---service-account <SERVICE_ACCOUNT>@<PROJECT_ID>.iam.gserviceaccount.com \
---no-cpu-throttling \
---min-instances 1 --max-instances 20 \
---startup-probe httpGet.port=8080,httpGet.path=/health,initialDelaySeconds=100,periodSeconds=20,timeoutSeconds=20 \
---args "prefect","worker","start","--install-policy","never","--with-healthcheck","-p","<WORK_POOL_NAME>","-t","cloud-run-v2"
+$ cat /tmp/credentials.json | docker login -u _json_key --password-stdin https://southamerica-east1-docker.pkg.dev
 ```
 
-...
+temporariamente:
+```sh
+$ python register_flows.py
+```
+
 
 
 ## Infisical
@@ -333,13 +327,7 @@ $ curl -L "https://auth.dominio.local/application/o/token/" \
 Com o novo `access_token` recebido, substitua a variável de ambiente `PREFECT_API_KEY` no deploy do Worker, [na página de configuração do Google Cloud Run](https://console.cloud.google.com/run/services).
 
 
-### `docker-credential-gcloud` not installed or not available in PATH
-**R:** Experimente apagar (ou renomear) o arquivo `~/.docker/config.json`.
-
-
 ## TODO
-- Worker Pool via Google Cloud Run ([guia](https://docs.prefect.io/integrations/prefect-gcp/gcp-worker-guide))
-  - Conta de serviço pelo Authentik?
 - Login via SSO do Google (Authentik, Infisical)
 - Funções de auxílio todas dos flows do Prefect
   - Acesso a Cloud Storage, ...
@@ -350,3 +338,5 @@ Com o novo `access_token` recebido, substitua a variável de ambiente `PREFECT_A
     (mais complicado do que parece, acho que perderia URL trocadas em transição de página)
   - Ou customizar imagem do container direto
 - WebSocket do Prefect?
+
+- Verificar se isso é importante: "PREFECT_API_KEY is provided as a plaintext environment variable. For better security, consider providing it as a secret using 'prefect_api_key_secret' or 'env_from_secrets' in your base job template"

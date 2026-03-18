@@ -1,4 +1,4 @@
-FROM prefecthq/prefect:sha-4fc6103-python3.13
+FROM prefecthq/prefect:3.6.22-python3.13
 
 # Queremos consertar o crime que é 250ms de espera a cada transição de página
 # O problema vem daqui:
@@ -9,7 +9,7 @@ FROM prefecthq/prefect:sha-4fc6103-python3.13
 #     transition: opacity 0.25s ease;
 #   }
 # Quando 'compilado' nessa imagem, vira parte do arquivo
-# `AppRouterView-jW8a5PTn.css` em (...)/site-packages/prefect/server/ui/assets
+# `AppRouterView-xxxxxxxx.css` em (...)/site-packages/prefect/server/ui/assets
 # Aqui usamos `sed` para encontrar o trecho do CSS minificado:
 #   (...)`active{transition:opacity .25s ease}.app`(...)
 # e substituir in-place (-i) por:
@@ -17,7 +17,7 @@ FROM prefecthq/prefect:sha-4fc6103-python3.13
 RUN cd /usr/local/lib/python3.13/site-packages/prefect/server/ui/assets && \
   sed -i -e \
   's/active{transition:opacity \.25s ease}\.app/active{transition:opacity 50ms ease}.app/' \
-  AppRouterView-jW8a5PTn.css
+  AppRouterView-*.css
 
 # Se o entrypoint não for modificado, ele será o mesmo da imagem base
 # Então, fora essa pequena alteração, tudo roda como antes
