@@ -33,26 +33,20 @@ inputs:
   PREFECT_API_KEY:
     description: PREFECT_API_KEY
     required: true
-  GOOGLE_CREDENTIALS_JSON:
-    description: GOOGLE_CREDENTIALS_JSON
+  GH_TOKEN:
+    description: GH_TOKEN
     required: true
 
 
 runs:
   using: composite
   steps:
-    - uses: google-github-actions/auth@v3
-      id: auth
-      with:
-        credentials_json: ${{ inputs.GOOGLE_CREDENTIALS_JSON }}
-        token_format: "access_token"
-
     - name: Log in to GitHub container registry
       uses: docker/login-action@v4
       with:
-        registry: southamerica-east1-docker.pkg.dev
-        username: oauth2accesstoken
-        password: ${{ steps.auth.outputs.access_token }}
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ inputs.GH_TOKEN }}
 
     - name: Setup Python
       uses: actions/setup-python@v6

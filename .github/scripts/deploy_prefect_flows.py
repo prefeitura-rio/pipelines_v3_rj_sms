@@ -187,7 +187,7 @@ async def main():
 				name=flow.name,
 				work_pool_name="gcp-wp",  # FIXME: não gosto que seja hardcoded assim
 				image=DockerImage(
-					name=f"southamerica-east1-docker.pkg.dev/rj-sms/pipelines-v3-rj-sms/{normalized_flow_name}",
+					name=f"ghcr.io/prefeitura-rio/pipelines_v3_rj_sms/{normalized_flow_name}",
 					tag="latest",
 					# dockerfile= TODO: variável _dockerfile mencionada acima
 				),
