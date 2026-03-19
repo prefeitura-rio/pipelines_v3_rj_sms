@@ -34,6 +34,7 @@ class ScheduleConfig(TypedDict):
 
 
 def create_schedule(
+	parameters: dict,
 	interval: Literal[
 		"hourly", "12-hours",
 		"daily", "weekly",
@@ -45,6 +46,8 @@ def create_schedule(
 	Cria schedule para um flow com o intervalo requisitado.
 
 	Args:
+		parameters(dict):
+			Parâmetros a serem passados para o flow nesse schedule.
 		interval(str):
 			Frequência a grosso modo do schedule. Espera um de alguns valores
 			pré-definidos:
@@ -81,21 +84,24 @@ def create_schedule(
 		return Interval(
 			timedelta(hours=1),
 			anchor_date=datetime(2026, 1, 1, 0, minute),
-			timezone="America/Sao_Paulo"
+			timezone="America/Sao_Paulo",
+			parameters=parameters
 		)
 
 	if interval == "12-hours":
 		return Interval(
 			timedelta(hours=12),
 			anchor_date=datetime(2026, 1, 1, hour, minute),
-			timezone="America/Sao_Paulo"
+			timezone="America/Sao_Paulo",
+			parameters=parameters
 		)
 
 	if interval == "daily":
 		return Interval(
 			timedelta(days=1),
 			anchor_date=datetime(2026, 1, 1, hour, minute),
-			timezone="America/Sao_Paulo"
+			timezone="America/Sao_Paulo",
+			parameters=parameters
 		)
 
 	if interval == "weekly":
@@ -111,21 +117,24 @@ def create_schedule(
 		return Interval(
 			timedelta(days=7),
 			anchor_date=datetime(2026, 1, 5+day_offset, hour, minute),
-			timezone="America/Sao_Paulo"
+			timezone="America/Sao_Paulo",
+			parameters=parameters
 		)
 
 	if interval == "monthly":
 		return Interval(
 			timedelta(days=30),
 			anchor_date=datetime(2026, 1, day, hour, minute),
-			timezone="America/Sao_Paulo"
+			timezone="America/Sao_Paulo",
+			parameters=parameters
 		)
 
 	if interval == "semiannual":
 		return Interval(
 			timedelta(days=6*30),
 			anchor_date=datetime(2026, month, day, hour, minute),
-			timezone="America/Sao_Paulo"
+			timezone="America/Sao_Paulo",
+			parameters=parameters
 		)
 
 	raise ValueError(f"Valor para intervalo não reconhecido: '{interval}'")
