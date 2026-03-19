@@ -27,6 +27,12 @@ inputs:
       "datalake/transform/dbt" (deploy somente do flow de dbt);
       "reports" (deploy de todos os reports);
     required: false
+  PREFECT_API_URL:
+    description: PREFECT_API_URL
+    required: true
+  PREFECT_API_KEY:
+    description: PREFECT_API_KEY
+    required: true
 
 
 runs:
@@ -64,11 +70,13 @@ runs:
       shell: bash
       env:
         ENVIRONMENT: ${{ inputs.environment || 'dev' }}
-        PREFECT_API_URL: ${{ secrets.PREFECT_API_URL }}
+        PREFECT_API_URL: ${{ inputs.PREFECT_API_URL }}
+        PREFECT_API_KEY: ${{ inputs.PREFECT_API_KEY }}
+        DO_NOT_TRACK: 1  # Prefect telemetry
         FORCE_DEPLOY: ${{ inputs.force_deploy == 'true' && '1' || '0' }}
         GITHUB_SHA: ${{ github.sha }}
         LOG_LEVEL: ${{ inputs.debug == 'true' && 'DEBUG' || 'INFO' }}
         BATCH_SIZE: ${{ inputs.batch_size || '3' }}
         MAX_RETRIES: ${{ inputs.max_retries || '2' }}
         PIPELINE_FILTER: ${{ inputs.pipeline_filter }}
-      run: uv run .github/scripts/deploy_prefect_flows.py
+      run: uv run python .github/scripts/deploy_prefect_flows.py

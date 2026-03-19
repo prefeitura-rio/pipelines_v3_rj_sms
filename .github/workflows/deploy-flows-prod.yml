@@ -8,11 +8,6 @@ on:
   #     - pipelines/**
   workflow_dispatch:
     inputs:
-      force_deploy:
-        description: "Força deploy de todos os flows"
-        required: false
-        type: boolean
-        default: false
       pipeline_filter:
         description: "Diretório sob o qual todos os flows terão deploy"
         requered: false
@@ -50,8 +45,9 @@ jobs:
         uses: ./.github/actions/deploy-prefect-flows
         with:
           environment: prod
-          force_deploy: ${{ inputs.force_deploy == 'true' && '1' || '0' }}
           debug: ${{ inputs.debug }}
           batch_size: ${{ inputs.batch_size || '3' }}
           max_retries: ${{ inputs.max_retries || '2' }}
           pipeline_filter: ${{ inputs.pipeline_filter }}
+          PREFECT_API_URL: ${{ secrets.PREFECT_API_URL }}
+          PREFECT_API_KEY: ${{ secrets.PREFECT_API_KEY }}

@@ -9,6 +9,7 @@ from pipelines.constants import constants
 # from .tasks import (
 # 	...
 # )
+from .schedules import schedules
 
 
 @flow(
@@ -35,3 +36,7 @@ def sms_execute_dbt(
 	)
 	log(path)
 	# ...
+
+
+_flows = [sms_execute_dbt]
+_schedules = schedules

@@ -152,9 +152,11 @@ Navegue até "http://pipelines.dominio.local". Se tudo correu bem, você deve se
 
 * O nome que você escolher será posteriormente usado para identificar essa Work Pool; eu recomendaria algo simples, `[a-z\-]`, como "gcp-wp".
 * É interessante configurar um limite de flows paralelos ("Flow Run Concurrency").
+* Pode ser necessário configurar "Environment Variables" da seguinte forma: `{"PREFECT_API_URL":"https://pipelines.dominio.local/api"}`.
 * Em "GcpCredentials", clique no botão de "Add +". Block Name: "prefect-cloud-run" (aqui é livre, mas faz sentido ser isso, né?); Service Account Info: copie e cole o JSON da conta de serviço. Botão de "Create".
 * Em "Service Account Name", cole o email (normalmente @&lt;projeto&gt;.iam.gserviceaccount.com) da conta de serviço.
-* Clique no botão no final da página para criar a Work Pool. Você talvez precise marcar os campos "Prefect API Key Secret" e "Prefect API Auth String Secret" como nulos para conseguir fazer isso.
+* Em "Prefect API Key Secret", será necessário inserir o token (JWT) obtido logo abaixo, via `curl`.
+* Clique no botão no final da página para criar a Work Pool. Você talvez precise marcar o campo "Prefect API Auth String Secret" como nulo para conseguir fazer isso.
 
 Vá ao painel de administrador do Authentik. Em "Applications" → "Providers" → "Provider for nginx" → "Authentication", copie o campo "Client ID". Este será substituído no comando abaixo, como `<CLIENT_ID>`. Em "Directory" → "Tokens and App passwords", copie a App Password criada anteriormente, com nome "prefect-worker-app-password". Esta será `<APP_PASSWORD>` no comando abaixo.
 
