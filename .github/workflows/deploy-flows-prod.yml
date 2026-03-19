@@ -9,22 +9,27 @@ on:
   workflow_dispatch:
     inputs:
       force_deploy:
-        description: "Force deploy all flows"
+        description: "Força deploy de todos os flows"
         required: false
         type: boolean
         default: false
+      pipeline_filter:
+        description: "Diretório sob o qual todos os flows terão deploy"
+        requered: false
+        type: string
+        default: ""
       debug:
-        description: "Enable debug logging"
+        description: "Habilita logs de debug"
         required: false
         type: boolean
         default: false
       batch_size:
-        description: "Number of concurrent deployments"
+        description: "Número de deploys paralelos"
         required: false
         type: number
         default: 3
       max_retries:
-        description: "Maximum number of retries for failed deployments"
+        description: "Número de retentativas em caso de erro no deploy"
         required: false
         type: number
         default: 2
@@ -45,7 +50,8 @@ jobs:
         uses: ./.github/actions/deploy-prefect-flows
         with:
           environment: prod
-          force_deploy: ${{ github.event.inputs.force_deploy == 'true' && '1' || '0' }}
-          debug: ${{ github.event.inputs.debug }}
-          batch_size: ${{ github.event.inputs.batch_size || '3' }}
-          max_retries: ${{ github.event.inputs.max_retries || '2' }}
+          force_deploy: ${{ inputs.force_deploy == 'true' && '1' || '0' }}
+          debug: ${{ inputs.debug }}
+          batch_size: ${{ inputs.batch_size || '3' }}
+          max_retries: ${{ inputs.max_retries || '2' }}
+          pipeline_filter: ${{ inputs.pipeline_filter }}
