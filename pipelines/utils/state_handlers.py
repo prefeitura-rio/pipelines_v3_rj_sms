@@ -19,8 +19,10 @@ from pipelines.utils.infisical import inject_bd_credentials
 from pipelines.utils.monitor import send_discord_embed
 
 
-def handle_flow_state_change(flow: Flow, flow_run: FlowRun, new_state: State):
-	log(f"[handle_flow_state_change] '{flow_run.name}' ({flow.name}) -> {new_state.name}", level="info")
+def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwargs):
+	log(f"[handle_flow_state_change] '{flow_run.name}' ({flow.name}) -> {state.name}", level="info")
+	if len(kwargs):
+		log(f"[handle_flow_state_change] kwargs={kwargs}")
 
 	environment = get_current_environment()
 
@@ -31,12 +33,12 @@ def handle_flow_state_change(flow: Flow, flow_run: FlowRun, new_state: State):
 		"flow_id": flow_run.flow_id,
 		"flow_run_id": flow_run.id,
 		"flow_parameters": json.dumps(flow_run.parameters),
-		"state": type(new_state).__name__,
-		"message": new_state.message,
+		"state": type(state).__name__,
+		"message": state.message,
 		"occurrence": datetime.now(tz=pytz.timezone("America/Sao_Paulo")).isoformat(),
 	}
 
-	if new_state.is_failed() and environment == "prod" and len(flow.get_owners()) > 0:
+	if state.is_failed() and environment == "prod" and len(flow.get_owners()) > 0:
 		message = [
 			" ".join([f"<@{owner}>" for owner in flow.get_owners()]),
 			f"> Flow Run: [{flow_run.name}](https://pipelines.dados.rio/flow-run/{info['flow_run_id']})",
@@ -107,4 +109,4 @@ def handle_flow_state_change(flow: Flow, flow_run: FlowRun, new_state: State):
 	else:
 		log(f"Rows inserted successfully")
 
-	return new_state
+	return state

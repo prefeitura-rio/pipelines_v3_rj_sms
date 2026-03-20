@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from pipelines.utils.flow import flow
 from pipelines.utils.state_handlers import handle_flow_state_change
-from pipelines.constants import constants
+from pipelines.constants import constants as consts
 
 from .tasks import (
 	fetch_weather,
@@ -15,7 +15,7 @@ from .schedules import schedules
 	name="Report: Previsão do Tempo",
 	state_handlers=[handle_flow_state_change],
 	owners=[
-		constants.AVELLAR_ID.value,
+		consts.AVELLAR_ID.value,
 	],
 )
 def weather_report(lat: float, lon: float, environment: str="dev"):
