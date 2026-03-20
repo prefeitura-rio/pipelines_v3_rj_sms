@@ -33,20 +33,20 @@ inputs:
   PREFECT_API_KEY:
     description: PREFECT_API_KEY
     required: true
-  GH_TOKEN:
-    description: GH_TOKEN
+  GOOGLE_CREDENTIALS:
+    description: GOOGLE_CREDENTIALS
     required: true
 
 
 runs:
   using: composite
   steps:
-    - name: Log in to GitHub container registry
+    - name: Login to Google Artifact Registry
       uses: docker/login-action@v4
       with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ inputs.GH_TOKEN }}
+        registry: southamerica-east1-docker.pkg.dev
+        username: _json_key
+        password: ${{ secrets.GOOGLE_CREDENTIALS }}
 
     - name: Setup Python
       uses: actions/setup-python@v6
