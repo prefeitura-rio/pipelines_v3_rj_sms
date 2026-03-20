@@ -3,7 +3,7 @@ name: Register flows (prod)
 on:
   push:
     branches:
-      - master
+      - main
     paths:
       - pipelines/**
   workflow_dispatch:
