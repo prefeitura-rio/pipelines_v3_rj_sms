@@ -14,7 +14,7 @@ WORKDIR /opt/prefect/pipelines_v3_rj_sms/
 COPY pyproject.toml uv.lock* ./
 RUN uv sync --frozen --no-dev
 # Adiciona .venv ao PATH
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/opt/prefect/pipelines_v3_rj_sms/.venv/bin:$PATH"
 
 # Copia os flows
 COPY ./pipelines /opt/prefect/pipelines_v3_rj_sms/pipelines
