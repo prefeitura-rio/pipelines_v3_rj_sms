@@ -1,11 +1,11 @@
 name: Register flows (prod)
 
 on:
-  # push:
-  #   branches:
-  #     - master
-  #   paths:
-  #     - pipelines/**
+  push:
+    branches:
+      - master
+    paths:
+      - pipelines/**
   workflow_dispatch:
     inputs:
       pipeline_filter:

@@ -152,10 +152,9 @@ Navegue até "http://pipelines.dominio.local". Se tudo correu bem, você deve se
 
 * O nome que você escolher será posteriormente usado para identificar essa Work Pool; eu recomendaria algo simples, `[a-z\-]`, como "gcp-wp".
 * É interessante configurar um limite de flows paralelos ("Flow Run Concurrency").
-* Pode ser necessário configurar "Environment Variables" da seguinte forma: `{"PREFECT_API_URL":"https://pipelines.dominio.local/api"}`.
+* Pode ser necessário configurar "Environment Variables" da seguinte forma: `{"PREFECT_API_URL":"https://pipelines.dominio.local/api","PREFECT_API_KEY":"..."}` – onde `PREFECT_API_KEY` é o token (JWT) obtido logo abaixo, via `curl`.
 * Em "GcpCredentials", clique no botão de "Add +". Block Name: "prefect-cloud-run" (aqui é livre, mas faz sentido ser isso, né?); Service Account Info: copie e cole o JSON da conta de serviço. Botão de "Create".
 * Em "Service Account Name", cole o email (normalmente @&lt;projeto&gt;.iam.gserviceaccount.com) da conta de serviço.
-* Em "Prefect API Key Secret", será necessário inserir o token (JWT) obtido logo abaixo, via `curl`.
 * Clique no botão no final da página para criar a Work Pool. Você talvez precise marcar o campo "Prefect API Auth String Secret" como nulo para conseguir fazer isso.
 
 Vá ao painel de administrador do Authentik. Em "Applications" → "Providers" → "Provider for nginx" → "Authentication", copie o campo "Client ID". Este será substituído no comando abaixo, como `<CLIENT_ID>`. Em "Directory" → "Tokens and App passwords", copie a App Password criada anteriormente, com nome "prefect-worker-app-password". Esta será `<APP_PASSWORD>` no comando abaixo.
@@ -185,18 +184,19 @@ O campo `access_token` é o "JWT", o token que o Prefect Worker terá que usar p
 
 
 ### Deploy do worker
-
-`PREFECT_API_URL` e `PREFECT_API_KEY`
+Para fazer um deploy localmente, você precisa configurar as variáveis `PREFECT_API_URL` e `PREFECT_API_KEY` no seu ambiente. Em seguida:
 
 ```sh
 $ cat /tmp/credentials.json | docker login -u _json_key --password-stdin https://southamerica-east1-docker.pkg.dev
 ```
 
-temporariamente:
+...onde `/tmp/credentials.json` é a localização do JSON de credenciais do Google Cloud a ser usado para criar a imagem no Google Artifact Registry. Configure as variáveis que achar necessário, e execute:
+
 ```sh
-$ python register_flows.py
+$ uv run python .github/scripts/deploy_prefect_flows.py
 ```
 
+Deploys "remotos" são realizados pelo Workflow de GitHub Actions do repositório. Sua configuração está na pasta `.github/`, mas ele efetivamente só executa esse mesmo script acima com alguns parâmetros pré-preenchidos.
 
 
 ## Infisical
@@ -326,19 +326,18 @@ $ curl -L "https://auth.dominio.local/application/o/token/" \
   --data "grant_type=client_credentials&client_id=<CLIENT_ID>&username=prefect-worker-service-account&password=<APP_PASSWORD>&scope=profile"
 ```
 
-Com o novo `access_token` recebido, substitua a variável de ambiente `PREFECT_API_KEY` no deploy do Worker, [na página de configuração do Google Cloud Run](https://console.cloud.google.com/run/services).
+Com o novo `access_token` recebido, substitua a variável de ambiente `PREFECT_API_KEY` onde necessário.
 
 
 ## TODO
-- Login via SSO do Google (Authentik, Infisical)
+- Autenticar WebSocket do Prefect
 - Funções de auxílio todas dos flows do Prefect
   - Acesso a Cloud Storage, ...
   - dbt
     - Ver se dá pra printar logs mais descritivos do dbt dessa vez :/
+- Login via SSO do Google (Authentik, Infisical)
 - Identificação de usuário logado no Prefect (opcional) (queria muito)
   - Ou gambiarra com `<iframe>`\
     (mais complicado do que parece, acho que perderia URL trocadas em transição de página)
   - Ou customizar imagem do container direto
-- WebSocket do Prefect?
-
-- Verificar se isso é importante: "PREFECT_API_KEY is provided as a plaintext environment variable. For better security, consider providing it as a secret using 'prefect_api_key_secret' or 'env_from_secrets' in your base job template"
+- Transformar PREFECT_API_KEY em GCP Secret?

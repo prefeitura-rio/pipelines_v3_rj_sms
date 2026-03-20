@@ -1,2 +1,11 @@
+# Ambientes
+.python-version
+env/
+venv/
+.env/
+.venv/
+
+__pycache__/
+
 # Ignore generated credentials from google-github-actions/auth
 gha-creds-*.json

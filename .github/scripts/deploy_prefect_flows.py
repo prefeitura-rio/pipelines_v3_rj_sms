@@ -16,7 +16,8 @@ from prefect.schedules import Schedule
 
 logging.basicConfig(
 	level=os.getenv("LOG_LEVEL", "INFO").upper(),
-	format="[%(levelname)s]\t%(message)s"
+	format="%(asctime)s.%(msecs)03d [%(levelname)s]\t%(message)s",
+	datefmt="%H:%M:%S"
 )
 
 
@@ -61,10 +62,14 @@ def get_flows_for_paths(paths: list[Path]) -> list[Path]:
 	# Encontra todos os flows.py nas pastas e subpastas dadas
 	flows = []
 	for path in paths:
+		# Se o pai direto é `pipelines/`, então melhor
+		# não fazer deploy de TODOS os flows né
+		if str(path) == "pipelines":
+			continue
 		for file in list(path.rglob("flows.py")):
 			flows.append(file)
-	# Deduplica, remove flows.py da raiz
-	return set(flows) - set([ Path("pipelines/flows.py") ])
+	# Deduplica
+	return list(set(flows))
 
 
 async def get_deployable_files(raw_pipeline_filter: str, commit_sha: str):
@@ -182,14 +187,14 @@ async def main():
 				normalized_flow_name += "_staging"
 
 			# TODO: paralelizar (`for` externo)
-			logging.debug(f"Fazendo deploy feito para .../{normalized_flow_name}")
+			logging.debug(f"Fazendo deploy feito para (...)/{normalized_flow_name}")
 			await flow.adeploy(
 				name=flow.name,
 				work_pool_name="gcp-wp",  # FIXME: não gosto que seja hardcoded assim
 				image=DockerImage(
 					name=f"southamerica-east1-docker.pkg.dev/rj-sms/pipelines-v3-rj-sms/{normalized_flow_name}",
 					tag="latest",
-					# dockerfile= TODO: variável _dockerfile mencionada acima
+					dockerfile="./pipelines/Dockerfile"  # TODO: variável _dockerfile mencionada acima
 				),
 				schedules=([] if environment == "dev" else schedules)
 			)

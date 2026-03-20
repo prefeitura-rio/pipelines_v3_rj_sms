@@ -5,20 +5,16 @@ inputs:
   environment:
     description: Environment do deploy; 'dev' por padrão
     required: false
-  force_deploy:
-    description: Força deploy de todos os flows
-    required: false
-    default: "0"
   debug:
     description: Printar logs de debug
     required: false
     default: "false"
   batch_size:
-    description: Number of concurrent deployments
+    description: Número de deploys paralelos
     required: false
     default: "3"
   max_retries:
-    description: Maximum number of retries for failed deployments
+    description: Número de retentativas em caso de erro no deploy
     required: false
     default: "2"
   pipeline_filter:
