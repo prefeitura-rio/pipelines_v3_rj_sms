@@ -51,4 +51,5 @@ jobs:
           pipeline_filter: ${{ inputs.pipeline_filter }}
           PREFECT_API_URL: ${{ secrets.PREFECT_API_URL }}
           PREFECT_API_KEY: ${{ secrets.PREFECT_API_KEY }}
+          PREFECT_WS_AUTH: ${{ secrets.PREFECT_WS_AUTH }}
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}

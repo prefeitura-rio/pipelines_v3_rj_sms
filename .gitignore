@@ -21,6 +21,7 @@ localrun.selected.yaml
 # Nginx Proxy Manager
 /server/data
 /server/letsencrypt
+/server/settings/ws_secret.conf
 
 # Ignore generated credentials from google-github-actions/auth
 gha-creds-*.json

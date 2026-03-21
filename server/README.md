@@ -32,6 +32,9 @@ PREFECT_SERVER_API_PORT="443"
 
 Em desenvolvimento local, é possível editar o arquivo de `hosts` da máquina para criar subdomínios que podem ajudar a seguir o passo a passo; ex. "127.0.0.1 → pipelines.dominio.local".
 
+Finalmente, crie um arquivo `ws_secret.conf` a partir do arquivo `ws_secret.conf.example`. Você precisará gerar uma chave aleatória, e pode fazer como anteriormente – p.ex. via `openssl rand -base64 32` – que será usada posteriormente pelo Prefect como `PREFECT_WS_AUTH`.
+
+---
 
 Algumas referências úteis:
 * [Install Docker Engine on Debian](https://docs.docker.com/engine/install/debian/)
@@ -151,11 +154,11 @@ Navegue até "http://pipelines.dominio.local". Se tudo correu bem, você deve se
 É necessário configurar um Work Pool. Vá em "Work Pools" → "Create Work Pool" → "Google Cloud Run V2".
 
 * O nome que você escolher será posteriormente usado para identificar essa Work Pool; eu recomendaria algo simples, `[a-z\-]`, como "gcp-wp".
-* É interessante configurar um limite de flows paralelos ("Flow Run Concurrency").
-* Pode ser necessário configurar "Environment Variables" da seguinte forma: `{"PREFECT_API_URL":"https://pipelines.dominio.local/api","PREFECT_API_KEY":"..."}` – onde `PREFECT_API_KEY` é o token (JWT) obtido logo abaixo, via `curl`.
 * Em "GcpCredentials", clique no botão de "Add +". Block Name: "prefect-cloud-run" (aqui é livre, mas faz sentido ser isso, né?); Service Account Info: copie e cole o JSON da conta de serviço. Botão de "Create".
 * Em "Service Account Name", cole o email (normalmente @&lt;projeto&gt;.iam.gserviceaccount.com) da conta de serviço.
 * Clique no botão no final da página para criar a Work Pool. Você talvez precise marcar o campo "Prefect API Auth String Secret" como nulo para conseguir fazer isso.
+
+Abra a página da Work Pool criada e clique na aba "Work Queues". Se quiser, defina um limite de execuções concorrentes para a fila "default". Crie outra fila usando o botão "+"; insira "staging" como nome, defina um limite de execuções concorrentes, e defina um valor para Priority maior que aquele na fila "default" (valor maior = prioridade menor).
 
 Vá ao painel de administrador do Authentik. Em "Applications" → "Providers" → "Provider for nginx" → "Authentication", copie o campo "Client ID". Este será substituído no comando abaixo, como `<CLIENT_ID>`. Em "Directory" → "Tokens and App passwords", copie a App Password criada anteriormente, com nome "prefect-worker-app-password". Esta será `<APP_PASSWORD>` no comando abaixo.
 
@@ -180,23 +183,23 @@ Ele deve te retornar algo como:
 }
 ```
 
-O campo `access_token` é o "JWT", o token que o Prefect Worker terá que usar para passar pela tela de login do Authentik. Na configuração do Authentik, definimos que os tokens desse "client" durariam 365 dias (31,536,000 segundos); isso pode ser modificado na interface de administrador do Authentik, em "Applications" → "Providers" → "Provider for nginx" → "Token validity". Outra requisição terá que ser feita para obter o JWT com novo prazo de validade.
+O campo `access_token` é o "JWT", o token que o Prefect Worker terá que usar para passar pela tela de login do Authentik. Para nós, esse é o `PREFECT_API_KEY`. Na configuração do Authentik, definimos que os tokens desse "client" durariam 365 dias (31,536,000 segundos); isso pode ser modificado na interface de administrador do Authentik, em "Applications" → "Providers" → "Provider for nginx" → "Token validity". Outra requisição terá que ser feita para obter o JWT com novo prazo de validade.
 
 
 ### Deploy do worker
-Para fazer um deploy localmente, você precisa configurar as variáveis `PREFECT_API_URL` e `PREFECT_API_KEY` no seu ambiente. Em seguida:
+Para fazer um deploy localmente, você precisa possuir as variáveis `PREFECT_API_URL`, `PREFECT_API_KEY` e `PREFECT_WS_AUTH` definidas no seu ambiente. Além disso, é necessário ter um arquivo JSON de credenciais do Google Cloud a ser usado para criar a imagem no Google Artifact Registry (aqui, `/tmp/credentials.json`). Em seguida, para gerar credenciais de Docker:
 
 ```sh
 $ cat /tmp/credentials.json | docker login -u _json_key --password-stdin https://southamerica-east1-docker.pkg.dev
 ```
 
-...onde `/tmp/credentials.json` é a localização do JSON de credenciais do Google Cloud a ser usado para criar a imagem no Google Artifact Registry. Configure as variáveis que achar necessário, e execute:
+Finalmente, quando quiser fazer um deploy, configure as variáveis de ambiente que julgar necessárias, e execute:
 
 ```sh
 $ uv run python .github/scripts/deploy_prefect_flows.py
 ```
 
-Deploys "remotos" são realizados pelo Workflow de GitHub Actions do repositório. Sua configuração está na pasta `.github/`, mas ele efetivamente só executa esse mesmo script acima com alguns parâmetros pré-preenchidos.
+Por sua vez, deploys "remotos" são realizados pelo Workflow de GitHub Actions do repositório. Sua configuração está na pasta `.github/`, mas ele efetivamente só executa esse mesmo script acima com alguns parâmetros pré-preenchidos. É necessário configurar secrets: na aba "Settings", em "Secrets and variables" → "Actions", é necessário definir as chaves usadas acima (`PREFECT_API_URL`, `PREFECT_API_KEY` e `PREFECT_WS_AUTH`) e também `GOOGLE_CREDENTIALS`, que possui como valor a íntegra do JSON de credenciais descrito acima. É importante minimizar o JSON – isto é, deixá-lo inteiro em uma única linha – antes de inserí-lo como secret, pois os logs são filtrados por linha individual dos secrets, e um JSON não minimizado possui linhas `{` e `}`, por exemplo.
 
 
 ## Infisical

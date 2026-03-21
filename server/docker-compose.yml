@@ -232,6 +232,7 @@ services:
       - shared-network
     volumes:
       - ./data:/data
+      - ./settings/ws_secret.conf:/var/nginx/custom/ws_secret.conf
       - ./letsencrypt:/etc/letsencrypt
 
 

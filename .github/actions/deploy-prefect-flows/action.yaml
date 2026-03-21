@@ -29,6 +29,9 @@ inputs:
   PREFECT_API_KEY:
     description: PREFECT_API_KEY
     required: true
+  PREFECT_WS_AUTH:
+    description: PREFECT_WS_AUTH
+    required: true
   GOOGLE_CREDENTIALS:
     description: GOOGLE_CREDENTIALS
     required: true
@@ -71,6 +74,7 @@ runs:
         ENVIRONMENT: ${{ inputs.environment || 'dev' }}
         PREFECT_API_URL: ${{ inputs.PREFECT_API_URL }}
         PREFECT_API_KEY: ${{ inputs.PREFECT_API_KEY }}
+        PREFECT_WS_AUTH: ${{ inputs.PREFECT_WS_AUTH }}
         DO_NOT_TRACK: 1  # Prefect telemetry
         FORCE_DEPLOY: ${{ inputs.force_deploy == 'true' && '1' || '0' }}
         GITHUB_SHA: ${{ github.sha }}

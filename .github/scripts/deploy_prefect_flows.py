@@ -103,6 +103,71 @@ def load_module_from_filename(module_name: str, filename: str):
 	return module
 
 
+def do_deploy(file_path: str, environment: str, env_vars: dict):
+	# Exemplo:
+	# era  pipelines/datalake/transform/dbt/flows.py
+	# vira pipelines.datalake.transform.dbt.flows
+	module_name = file_path.removesuffix(".py").replace("/", ".")
+	logging.debug(f"carregando '{module_name}' como módulo")
+	module = load_module_from_filename(module_name, file_path)
+	logging.debug(dir(module))
+
+	# Encontra a variável `_flows` do arquivo flows.py
+	if not hasattr(module, "_flows"):
+		raise ValueError(f"Arquivo '{file_path}' não possui lista de flows em `_flows`")
+	flows = getattr(module, "_flows")
+	flows: list[Flow]
+
+	# Encontra a variável `_schedules` do arquivo flows.py
+	if not hasattr(module, "_schedules"):
+		logging.warning(f"Arquivo '{file_path}' não possui lista de schedules em `_schedules`")
+	schedules = getattr(module, "_schedules", [])  # pode não haver schedule
+	schedules: list[Schedule]
+
+	# TODO: conferir se existe variável _dockerfile,
+	# se sim, tratar como caminho para Dockerfile do flow
+
+	logging.debug(
+		f"'{file_path}': encontrados {len(flows)} flow(s) "
+		f"e {len(schedules)} schedule(s)"
+	)
+	# Para cada flow definido no arquivo (provavelmente 1 só)
+	deploy_list = []
+	for flow in flows:
+		# Normaliza o nome para deploy
+		normalized_flow_name = re.sub(
+			r"[^a-z_\-]",
+			"",
+			(
+				unicodedata.normalize("NFD", flow.name)
+				.lower()
+				.replace(" ", "_")
+			)
+		)
+		if len(normalized_flow_name) < 1:
+			raise ValueError(f"Nome do flow '{flow.name}' é inválido!")
+
+		if environment == "dev":
+			normalized_flow_name += "_staging"
+
+		logging.debug(f"Fazendo deploy feito para (...)/{normalized_flow_name}")
+		deploy_list.append(
+			flow.adeploy(
+				name=flow.name,
+				work_pool_name="gcp-wp",  # FIXME: não gosto que seja hardcoded assim
+				work_queue_name=("default" if environment == "prod" else "staging"),
+				image=DockerImage(
+					name=f"southamerica-east1-docker.pkg.dev/rj-sms/pipelines-v3-rj-sms/{normalized_flow_name}",
+					tag="latest",
+					dockerfile="./pipelines/Dockerfile"  # TODO: variável _dockerfile mencionada acima
+				),
+				schedules=(schedules if environment == "prod" else []),
+				job_variables=({ "env": env_vars })
+			)
+		)
+	return deploy_list
+
+
 async def main():
 	# CWD: /home/runner/work/pipelines_v3_rj_sms/pipelines_v3_rj_sms
 
@@ -118,6 +183,10 @@ async def main():
 	PREFECT_API_KEY = os.getenv("PREFECT_API_KEY")
 	if not PREFECT_API_KEY:
 		raise ValueError("PREFECT_API_KEY não foi definido!")
+	PREFECT_WS_AUTH = os.getenv("PREFECT_WS_AUTH")
+	if not PREFECT_WS_AUTH:
+		raise ValueError("PREFECT_WS_AUTH não foi definido!")
+
 
 	# Descobre quais arquivos precisam de deploy:
 	# - Se recebeu um filtro (=pasta) de pipelines,
@@ -132,6 +201,8 @@ async def main():
 		f"Encontrado(s) {len(deployable_files)} arquivo(s) para deploy: "
 		f"{[ str(y) for y in deployable_files ]}"
 	)
+	if len(deployable_files) < 1:
+		sys.exit(0)
 
 	# Carrega dinamicamente módulo Python do pipelines; ele é
 	# necessário porque abaixo vamos carregar os flows como módulos,
@@ -139,65 +210,23 @@ async def main():
 	load_module_from_filename("pipelines", "./pipelines/__init__.py")
 	logging.debug("pipelines carregado como módulo")
 
-	# TODO: paralelizar
+	# Variáveis de ambiente a serem passadas para o flow
+	env_vars = {
+		"environment": environment,
+		"PREFECT_API_URL": PREFECT_API_URL,
+		"PREFECT_API_KEY": PREFECT_API_KEY,
+		"PREFECT_CLIENT_CUSTOM_HEADERS": '{"X-Prefect-WS-Auth":"' f'{PREFECT_WS_AUTH}' '"}'
+	}
+
+	# Requisita o deploy de todos os flows recebidos
+	deploy_list = []
 	for file in deployable_files:
-		# Exemplo:
-		# era  pipelines/datalake/transform/dbt/flows.py
-		# vira pipelines.datalake.transform.dbt.flows
-		module_name = file.as_posix().removesuffix(".py").replace("/", ".")
-		logging.debug(f"carregando '{module_name}' como módulo")
-		module = load_module_from_filename(module_name, file.as_posix())
-		logging.debug(dir(module))
-
-		# Encontra a variável `_flows` do arquivo flows.py
-		if not hasattr(module, "_flows"):
-			raise ValueError(f"Arquivo '{file.as_posix()}' não possui lista de flows em `_flows`")
-		flows = getattr(module, "_flows")
-		flows: list[Flow]
-
-		# Encontra a variável `_schedules` do arquivo flows.py
-		if not hasattr(module, "_schedules"):
-			logging.warning(f"Arquivo '{file.as_posix()}' não possui lista de schedules em `_schedules`")
-		schedules = getattr(module, "_schedules", [])  # pode não haver schedule
-		schedules: list[Schedule]
-
-		# TODO: conferir se existe variável _dockerfile,
-		# se sim, tratar como caminho para Dockerfile do flow
-
-		logging.debug(
-			f"'{file}': encontrados {len(flows)} flow(s) "
-			f"e {len(schedules)} schedule(s)"
+		deploy_list.extend(
+			do_deploy(file.as_posix(), environment, env_vars)
 		)
-		# Para cada flow definido no arquivo (provavelmente 1 só)
-		for flow in flows:
-			# Normaliza o nome para deploy
-			normalized_flow_name = re.sub(
-				r"[^a-z_\-]",
-				"",
-				(
-					unicodedata.normalize("NFD", flow.name)
-					.lower()
-					.replace(" ", "_")
-				)
-			)
-			if len(normalized_flow_name) < 1:
-				raise ValueError(f"Nome do flow '{flow.name}' é inválido!")
-			
-			if environment == "dev":
-				normalized_flow_name += "_staging"
-
-			# TODO: paralelizar (`for` externo)
-			logging.debug(f"Fazendo deploy feito para (...)/{normalized_flow_name}")
-			await flow.adeploy(
-				name=flow.name,
-				work_pool_name="gcp-wp",  # FIXME: não gosto que seja hardcoded assim
-				image=DockerImage(
-					name=f"southamerica-east1-docker.pkg.dev/rj-sms/pipelines-v3-rj-sms/{normalized_flow_name}",
-					tag="latest",
-					dockerfile="./pipelines/Dockerfile"  # TODO: variável _dockerfile mencionada acima
-				),
-				schedules=([] if environment == "dev" else schedules)
-			)
+	# Espera todos os deploys terminarem
+	await asyncio.gather(*deploy_list)
+	logging.info("Fim do deploy! :)")
 
 
 if __name__ == "__main__":
