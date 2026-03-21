@@ -35,6 +35,15 @@ inputs:
   GOOGLE_CREDENTIALS:
     description: GOOGLE_CREDENTIALS
     required: true
+  INFISICAL_ADDRESS:
+    description: INFISICAL_ADDRESS
+    required: true
+  INFISICAL_PROJECT_ID:
+    description: INFISICAL_PROJECT_ID
+    required: true
+  INFISICAL_TOKEN:
+    description: INFISICAL_TOKEN
+    required: true
 
 
 runs:
@@ -75,6 +84,9 @@ runs:
         PREFECT_API_URL: ${{ inputs.PREFECT_API_URL }}
         PREFECT_API_KEY: ${{ inputs.PREFECT_API_KEY }}
         PREFECT_WS_AUTH: ${{ inputs.PREFECT_WS_AUTH }}
+        INFISICAL_ADDRESS: ${{ inputs.INFISICAL_ADDRESS }}
+        INFISICAL_PROJECT_ID: ${{ inputs.INFISICAL_PROJECT_ID }}
+        INFISICAL_TOKEN: ${{ inputs.INFISICAL_TOKEN }}
         DO_NOT_TRACK: 1  # Prefect telemetry
         FORCE_DEPLOY: ${{ inputs.force_deploy == 'true' && '1' || '0' }}
         GITHUB_SHA: ${{ github.sha }}

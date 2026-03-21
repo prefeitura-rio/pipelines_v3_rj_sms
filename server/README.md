@@ -252,6 +252,8 @@ Ao criar o token, uma janelinha irá abrir com seu valor. Deve ser algo parecido
 `INFISICAL_TOKEN`. Ele só é mostrado uma vez, então se for perdido, outro terá
 que ser criado em seu lugar.
 
+Se você está configurando para deploy via GitHub Actions, esssa duas variáveis – `INFISICAL_PROJECT_ID` e `INFISICAL_TOKEN` – precisam ser adicionadas aos secrets do repositório, junto com `INFISICAL_ADDRESS`.
+
 
 #### Conta de usuários
 Para cadastrar outro usuário, é necessário ir na página da organização, na aba "Access Control", e clicar no botão "Invite Users to Organization". Um ou múltiplos endereços de email (que, novamente, não precisam ser reais) podem ser inseridos, lembrando de selecionar o projeto a qual eles pertencem.

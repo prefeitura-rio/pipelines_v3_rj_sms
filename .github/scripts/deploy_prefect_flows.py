@@ -150,7 +150,7 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 		if environment == "dev":
 			normalized_flow_name += "_staging"
 
-		logging.debug(f"Fazendo deploy feito para (...)/{normalized_flow_name}")
+		logging.debug(f"Requisitando deploy de (...)/{normalized_flow_name}")
 		deploy_list.append(
 			flow.adeploy(
 				name=flow.name,
@@ -187,6 +187,15 @@ async def main():
 	if not PREFECT_WS_AUTH:
 		raise ValueError("PREFECT_WS_AUTH não foi definido!")
 
+	INFISICAL_ADDRESS = os.getenv("INFISICAL_ADDRESS")
+	if not INFISICAL_ADDRESS:
+		raise ValueError("INFISICAL_ADDRESS não foi definido!")
+	INFISICAL_PROJECT_ID = os.getenv("INFISICAL_PROJECT_ID")
+	if not INFISICAL_PROJECT_ID:
+		raise ValueError("INFISICAL_PROJECT_ID não foi definido!")
+	INFISICAL_TOKEN = os.getenv("INFISICAL_TOKEN")
+	if not INFISICAL_TOKEN:
+		raise ValueError("INFISICAL_TOKEN não foi definido!")
 
 	# Descobre quais arquivos precisam de deploy:
 	# - Se recebeu um filtro (=pasta) de pipelines,
@@ -215,7 +224,10 @@ async def main():
 		"environment": environment,
 		"PREFECT_API_URL": PREFECT_API_URL,
 		"PREFECT_API_KEY": PREFECT_API_KEY,
-		"PREFECT_CLIENT_CUSTOM_HEADERS": '{"X-Prefect-WS-Auth":"' f'{PREFECT_WS_AUTH}' '"}'
+		"PREFECT_CLIENT_CUSTOM_HEADERS": '{"X-Prefect-WS-Auth":"' f'{PREFECT_WS_AUTH}' '"}',
+		"INFISICAL_ADDRESS": INFISICAL_ADDRESS,
+		"INFISICAL_PROJECT_ID": INFISICAL_PROJECT_ID,
+		"INFISICAL_TOKEN": INFISICAL_TOKEN,
 	}
 
 	# Requisita o deploy de todos os flows recebidos

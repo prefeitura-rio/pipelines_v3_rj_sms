@@ -112,7 +112,7 @@ def inject_bd_credentials(environment: str = "dev", force_injection=False) -> No
 	if all_variables_set and not force_injection:
 		return
 
-	log(f"ENVIROMENT: {environment}")
+	log(f"ENVIRONMENT: {environment}")
 	for secret_name in [
 		"BASEDOSDADOS_CONFIG",
 		"BASEDOSDADOS_CREDENTIALS_PROD",
