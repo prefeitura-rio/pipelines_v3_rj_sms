@@ -75,12 +75,15 @@ cases:
 Não esqueça de conferir se você está logado no seu ambiente com a sua conta certa do GitHub. Contas externas ao projeto terão restrições, por exemplo, na execução automática de workflows.
 
 1. **Branch:**
-  Sempre abra suas branchs de trabalho no formato `staging/<sua-feature>`. O título deve sempre que possível respeitar a estrutura: `[<PROJETO>] <acao>: <breve_descricao>`. Por exemplo, a adição de uma nova fonte para um projeto de previsão do tempo poderia ser `[CLIMA] feat: adiciona open-meteo`.
+Sempre abra suas branchs de trabalho no formato `staging/<sua-feature>`. O título deve sempre que possível respeitar a estrutura: `[<PROJETO>] <acao>: <breve_descricao>`. Por exemplo, a adição de uma nova fonte para um projeto de previsão do tempo poderia ser `[CLIMA] feat: adiciona open-meteo`.
 
 2. **Commits semânticos:**
-  Utilize ações semânticas convencionais. Por exemplo, `feat:` para novas features; `fix:` para consertos de bugs; `chore:` para tarefas de manutenção em geral; `docs:` para mudanças exclusivamente de documentação; etc.
+Utilize ações semânticas convencionais. Por exemplo, `feat:` para novas features; `fix:` para consertos de bugs; `chore:` para tarefas de manutenção em geral; `docs:` para mudanças exclusivamente de documentação; etc.
 
-3. Abra um **pull request**  (não é necessário incluir um reviewer).
+3. **Formatação:**
+Antes de submeter um pull request, lembre-se de usar o linter/formatador automático: `uv run task lint`.
+
+4. Abra um **pull request**  (não é necessário incluir um reviewer).
 
 > - Cada pull request em branch iniciando com `staging/` irá disparar as rotinas do Github que:
 >    - Verificam formatação
@@ -88,10 +91,10 @@ Não esqueça de conferir se você está logado no seu ambiente com a sua conta 
 > - Você acompanha o status destas rotinas na própria página do seu PR
 > - Após serem registrados, flows aparecem no servidor Prefect; você pode executá-los por lá
 
-4. Valide no Prefect o funcionamento do flow usando o projeto "staging", sempre com `environment: "dev"`!
+5. Valide no Prefect o funcionamento do flow usando o projeto "staging", sempre com `environment: "dev"`!
 
 > **Obs**: solicite endereço e credenciais do Prefect ao administrador do projeto.
 
-5. Com execução validada, acione o administrador no servidor do Discord do S/CIT.
+6. Com execução validada, acione o administrador no servidor do Discord do S/CIT.
 
 **Teste e verifique os dados!**

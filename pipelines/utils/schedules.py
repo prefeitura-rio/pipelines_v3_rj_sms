@@ -23,11 +23,14 @@ def restrict_int_interval(value, min: int, max: int, default: int = 0):
 class ScheduleConfig(TypedDict):
 	month: Optional[int]
 	weekday: Literal[
-		"monday", "tuesday", "wednesday",
-		"thursday", "friday", "saturday", "sunday",
-		"segunda", "terça", "quarta",
-		"quinta", "sexta", "sábado", "domingo",
-	]
+		"monday",    "segunda",
+		"tuesday",   "terça",
+		"wednesday", "quarta",
+		"thursday",  "quinta",
+		"friday",    "sexta",
+		"saturday",  "sábado",
+		"sunday",    "domingo",
+	]  # fmt: skip
 	day: Optional[int]
 	hour: Optional[int]
 	minute: Optional[int]
@@ -66,16 +69,19 @@ def create_schedule(
 	"""
 	if config is not None:
 		month = restrict_int_interval(config.get("month"), 1, 12, default=1)
+		_processed_weekday = str(config.get("weekday"), "").lower().strip()
 		weekday = (
 			"monday"
-			if str(config.get("weekday", "")).lower().strip() not in (
-				"monday", "tuesday", "wednesday",
-				"thursday", "friday", "saturday", "sunday",
-				"segunda", "terça", "quarta",
-				"quinta", "sexta", "sábado", "domingo",
+			if _processed_weekday not in (
+				"tuesday",   "terça",
+				"wednesday", "quarta",
+				"thursday",  "quinta",
+				"friday",    "sexta",
+				"saturday",  "sábado",
+				"sunday",    "domingo",
 			)
-			else str(config.get("weekday")).lower().strip()
-		)
+			else _processed_weekday
+		)  # fmt: skip
 		day = restrict_int_interval(config.get("day"), 1, 28, default=1)
 		hour = restrict_int_interval(config.get("hour"), 0, 23)
 		minute = restrict_int_interval(config.get("minute"), 0, 59)
@@ -106,14 +112,16 @@ def create_schedule(
 
 	if interval == "weekly":
 		# 5 jan 2026 foi segunda-feira
+		# fmt: off
 		day_offset = 0
-		if weekday in ("monday", "segunda"):     day_offset = 0
-		elif weekday in ("tuesday", "terça"):    day_offset = 1
-		elif weekday in ("wednesday", "quarta"): day_offset = 2
-		elif weekday in ("thursday", "quinta"):  day_offset = 3
-		elif weekday in ("friday", "sexta"):     day_offset = 4
-		elif weekday in ("saturday", "sábado"):  day_offset = 5
-		elif weekday in ("sunday", "domingo"):   day_offset = 6
+		if   weekday in ("monday",    "segunda"): day_offset = 0
+		elif weekday in ("tuesday",   "terça"):   day_offset = 1
+		elif weekday in ("wednesday", "quarta"):  day_offset = 2
+		elif weekday in ("thursday",  "quinta"):  day_offset = 3
+		elif weekday in ("friday",    "sexta"):   day_offset = 4
+		elif weekday in ("saturday",  "sábado"):  day_offset = 5
+		elif weekday in ("sunday",    "domingo"): day_offset = 6
+		# fmt: on
 		return Interval(
 			timedelta(days=7),
 			anchor_date=datetime(2026, 1, 5+day_offset, hour, minute),

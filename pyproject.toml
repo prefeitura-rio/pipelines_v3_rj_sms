@@ -19,6 +19,8 @@ dependencies = [
 [dependency-groups]
 dev = [
   "prefect-docker>=0.6.5",
+  "ruff>=0.15.6",
+  "taskipy>=1.14.1",
 ]
 
 [tool.uv]
@@ -27,3 +29,20 @@ exclude-newer = "1 week"
 
 [tool.prefect]
 logging.level = "INFO"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+ignore = [
+  "E701"  # https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon/
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "tab"
+line-ending = "lf"
+skip-magic-trailing-comma = true
+
+[tool.taskipy.tasks]
+lint = "ruff check --fix . && ruff format ."
