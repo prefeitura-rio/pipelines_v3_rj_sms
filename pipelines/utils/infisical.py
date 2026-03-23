@@ -9,7 +9,6 @@ from .env import get_current_environment, getenv_or_action
 from infisical_sdk import InfisicalSDKClient as InfisicalClient
 
 
-
 def get_project():
 	return getenv_or_action("INFISICAL_PROJECT_ID", action="raise")
 
@@ -21,17 +20,10 @@ def get_infisical_client() -> InfisicalClient:
 	"""
 	token = getenv_or_action("INFISICAL_TOKEN", action="raise")
 	site_url = getenv_or_action("INFISICAL_ADDRESS", action="raise")
-	return InfisicalClient(
-		token=token,
-		host=site_url,
-	)
+	return InfisicalClient(token=token, host=site_url)
 
 
-def get_secret(
-	secret_name: str,
-	environment: str = None,
-	path: str = "/",
-) -> dict:
+def get_secret(secret_name: str, environment: str = None, path: str = "/") -> dict:
 	"""
 	Obtém o secret no Infisical com nome e caminho especificados
 
@@ -58,11 +50,7 @@ def get_secret(
 	return secret_value
 
 
-def inject_env(
-	secret_name: str,
-	environment: str = None,
-	path: str = "/",
-) -> None:
+def inject_env(secret_name: str, environment: str = None, path: str = "/") -> None:
 	"""
 	Carrega secret do Infisical em variável de ambiente de mesmo nome
 
@@ -73,11 +61,7 @@ def inject_env(
 			variável de ambiente `environment`
 		path (str?): Caminho do secret; valor padrão "/"
 	"""
-	secret_value = get_secret(
-		secret_name=secret_name,
-		environment=environment,
-		path=path
-	)
+	secret_value = get_secret(secret_name=secret_name, environment=environment, path=path)
 	os.environ[secret_name] = secret_value
 
 
@@ -118,10 +102,7 @@ def inject_bd_credentials(environment: str = "dev", force_injection=False) -> No
 		"BASEDOSDADOS_CREDENTIALS_PROD",
 		"BASEDOSDADOS_CREDENTIALS_STAGING",
 	]:
-		inject_env(
-			secret_name=secret_name,
-			environment=environment,
-		)
+		inject_env(secret_name=secret_name, environment=environment)
 
 	# Salva credenciais de conta de serviço para o Google Cloud
 	service_account_name = (
@@ -137,4 +118,3 @@ def inject_bd_credentials(environment: str = "dev", force_injection=False) -> No
 	with open("/tmp/credentials.json", "wb") as credentials_file:
 		credentials_file.write(credentials)
 	os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/credentials.json"
-

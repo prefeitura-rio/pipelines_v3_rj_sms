@@ -6,10 +6,7 @@ from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 from google.cloud import bigquery
 
-from .constants import (
-	BASE_API_URL,
-	FORECAST_ENDPOINT
-)
+from .constants import BASE_API_URL, FORECAST_ENDPOINT
 
 
 @task()
@@ -26,7 +23,7 @@ def get_bairros():
 
 
 @task(retries=3, timeout_seconds=15)
-def fetch_weather(lat: float, lon: float, environment: str="dev") -> dict:
+def fetch_weather(lat: float, lon: float, environment: str = "dev") -> dict:
 	log(f"Requisitando previsão do tempo para ('{lat}', '{lon}')...", level="info")
 	data = httpx.get(
 		f"{BASE_API_URL}{FORECAST_ENDPOINT}",
@@ -46,12 +43,10 @@ def print_report(data: dict) -> None:
 	output = [
 		"",  # quebra de linha no início, formata melhor
 		"Data/hora        | Temperatura",
-		"------------------------------"
+		"------------------------------",
 	]
 
 	for time, temp in zip(times, temperatures):
-		output.append(
-			f"{time} - {temp} {temperature_unit}"
-		)
+		output.append(f"{time} - {temp} {temperature_unit}")
 
 	log("\n".join(output), level="info")

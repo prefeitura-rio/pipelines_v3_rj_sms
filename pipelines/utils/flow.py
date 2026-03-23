@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 from typing import Callable, List, Optional
-from prefect.flows import (
-  Flow as OriginalFlow,
-  FlowDecorator as OriginalFlowDecorator
-)
+from prefect.flows import Flow as OriginalFlow, FlowDecorator as OriginalFlowDecorator
 
 
 class Flow(OriginalFlow):
@@ -22,7 +19,14 @@ class FlowDecorator(OriginalFlowDecorator):
 	state_handlers: List[Callable] = None
 	owners: List[str] = None
 
-	def __init__(self, *args, name: str = None, state_handlers: List[Callable] = None, owners: Optional[List[str]] = None, **kwargs):
+	def __init__(
+		self,
+		*args,
+		name: str = None,
+		state_handlers: List[Callable] = None,
+		owners: Optional[List[str]] = None,
+		**kwargs,
+	):
 		self.name = name
 		self.state_handlers = state_handlers or []
 		self.owners = owners or []
@@ -38,7 +42,8 @@ class FlowDecorator(OriginalFlowDecorator):
 			on_crashed=[*self.state_handlers],
 			on_running=[*self.state_handlers],
 			validate_parameters=False,
-			**kwargs
+			**kwargs,
 		)
+
 
 flow = FlowDecorator

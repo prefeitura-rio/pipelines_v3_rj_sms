@@ -3,7 +3,7 @@ import os
 import re
 import shutil
 import tarfile
-from typing import Iterable, Literal
+from typing import Literal
 import requests
 
 # from pipelines.utils.prefect import authenticated_task as task
@@ -17,7 +17,7 @@ def download_gh_repo(
 	branch: str = "main",
 	destination_path: str = None,
 	if_destination_exists: Literal["delete", "raise"] = "raise",
-	repository_folder: str = None
+	repository_folder: str = None,
 ) -> str:
 	"""
 	Baixa o conteúdo de um repositório no GitHub para uma pasta local.
@@ -42,11 +42,7 @@ def download_gh_repo(
 	Returns:
 		path (str): Caminho onde o repositório baixado está.
 	"""
-	repo_format_matches = re.fullmatch(
-		r"[a-z0-9_\-]+/[a-z0-9_\-]+",
-		repo,
-		re.IGNORECASE
-	)
+	repo_format_matches = re.fullmatch(r"[a-z0-9_\-]+/[a-z0-9_\-]+", repo, re.IGNORECASE)
 	if not repo_format_matches:
 		raise ValueError(
 			f"Nome do repositório '{repo}' deve ser '<user|org>/<repo>', "
@@ -76,14 +72,8 @@ def download_gh_repo(
 	# Se chegamos aqui, não existe mais a pasta; cria
 	os.makedirs(destination_path)
 
-	tar_filename = os.path.join(
-		destination_path,
-		f"repo-{branch}.tar.gz"
-	)
-	req = requests.get(
-		f"https://github.com/{repo}/archive/refs/heads/{branch}.tar.gz",
-		stream=True
-	)
+	tar_filename = os.path.join(destination_path, f"repo-{branch}.tar.gz")
+	req = requests.get(f"https://github.com/{repo}/archive/refs/heads/{branch}.tar.gz", stream=True)
 	with open(tar_filename, "wb") as fd:
 		for chunk in req.iter_content(chunk_size=None):
 			fd.write(chunk)
@@ -104,13 +94,8 @@ def download_gh_repo(
 				yield member
 
 	with tarfile.open(tar_filename, "r:gz") as tar:
-		tar.extractall(
-			path=destination_path,
-			filter="data",
-			members=members(tar)
-		)
+		tar.extractall(path=destination_path, filter="data", members=members(tar))
 
 	os.remove(tar_filename)
 
 	return destination_path
-

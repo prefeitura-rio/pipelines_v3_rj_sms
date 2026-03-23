@@ -14,10 +14,8 @@ LEVELS_CONFIG = {
 	"critical": {"type": logging.CRITICAL, "discord_forwarding": True, "icon": "🔴"},
 }
 
-def log(
-	msg: str,
-	level: Literal["debug", "info", "warning", "error", "critical"] = "info",
-) -> None:
+
+def log(msg: str, level: Literal["debug", "info", "warning", "error", "critical"] = "info") -> None:
 	"""
 	Args:
 		msg (str):
@@ -29,7 +27,7 @@ def log(
 	"""
 	try:
 		get_run_logger().log(LEVELS_CONFIG[level]["type"], msg)
-	except MissingContextError as e:
+	except MissingContextError:
 		# Não há flow executando (ainda, ou mais)
 		# A função provavelmente foi chamada p.ex. em evento lifecycle
 		print(msg)

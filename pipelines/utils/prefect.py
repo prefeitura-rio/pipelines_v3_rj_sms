@@ -8,9 +8,9 @@ from pipelines.utils.infisical import inject_bd_credentials
 from pipelines.utils.logger import log
 
 
-def authenticated_task(fn: Callable = None, **task_init_kwargs: Any) -> Union[
-	Task, Callable[[Callable], Task]
-]:
+def authenticated_task(
+	fn: Callable = None, **task_init_kwargs: Any
+) -> Union[Task, Callable[[Callable], Task]]:
 	"""
 	Função que injeta credenciais no ambiente de uma Task.
 	Se `fn` estiver definido, retorna uma instância `Task(fn=fn, **task_init_kwargs)`.
@@ -40,14 +40,10 @@ def authenticated_task(fn: Callable = None, **task_init_kwargs: Any) -> Union[
 
 	# Instância de Task
 	if fn is not None:
-		return Task(
-			fn=inject_credential_setting_in_function(fn),
-			**task_init_kwargs
-		)
+		return Task(fn=inject_credential_setting_in_function(fn), **task_init_kwargs)
 	# Decorator
 	return lambda any_function: Task(
-		fn=inject_credential_setting_in_function(any_function),
-		**task_init_kwargs,
+		fn=inject_credential_setting_in_function(any_function), **task_init_kwargs
 	)
 
 

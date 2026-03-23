@@ -94,5 +94,3 @@ def execute_dbt(
 		"end_time": end_time,
 		"log_path": log_path,
 	}
-
-

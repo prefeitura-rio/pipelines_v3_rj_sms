@@ -15,9 +15,7 @@ from .schedules import schedules
 @flow(
 	name="DataLake - Transformação - DBT",
 	state_handlers=[handle_flow_state_change],
-	owners=[
-		constants.CIT_ID.value,
-	],
+	owners=[constants.CIT_ID.value],
 )
 def sms_execute_dbt(
 	# command: str = "test",
@@ -27,12 +25,10 @@ def sms_execute_dbt(
 	# target: str = None,
 	# rename_flow: bool = False,
 	# send_discord_report: bool = False,
-	environment: str = "dev"
+	environment: str = "dev",
 ):
 	path = download_gh_repo(
-		repo="prefeitura-rio/queries-rj-sms",
-		branch="master",
-		if_destination_exists="delete"
+		repo="prefeitura-rio/queries-rj-sms", branch="master", if_destination_exists="delete"
 	)
 	log(path)
 	# ...

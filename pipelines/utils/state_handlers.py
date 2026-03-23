@@ -7,7 +7,6 @@ from datetime import datetime
 
 from discord import Embed
 from prefect import State
-from prefect.logging import get_run_logger
 from prefect.client.schemas.objects import FlowRun
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
@@ -42,7 +41,7 @@ def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwar
 		message = [
 			" ".join([f"<@{owner}>" for owner in flow.get_owners()]),
 			f"> Flow Run: [{flow_run.name}](https://pipelines.dados.rio/flow-run/{info['flow_run_id']})",
-			f"*Parâmetros:*",
+			"*Parâmetros:*",
 		]
 		for key, value in flow_run.parameters.items():
 			message.append(f"- {key}: `{value}`")
@@ -50,11 +49,7 @@ def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwar
 		asyncio.run(
 			send_discord_embed(
 				contents=[
-					Embed(
-						title=info["flow_name"],
-						description="\n".join(message),
-						color=15158332,
-					)
+					Embed(title=info["flow_name"], description="\n".join(message), color=15158332)
 				],
 				monitor_slug="error",
 			)
@@ -107,6 +102,6 @@ def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwar
 	if errors:
 		log(f"Encountered errors while inserting rows: {errors}")
 	else:
-		log(f"Rows inserted successfully")
+		log("Rows inserted successfully")
 
 	return state

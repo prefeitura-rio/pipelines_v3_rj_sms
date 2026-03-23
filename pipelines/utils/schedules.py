@@ -15,8 +15,10 @@ def restrict_int_interval(value, min: int, max: int, default: int = 0):
 	except (ValueError, TypeError):
 		return default
 
-	if value < min: return default
-	if value > max: return default
+	if value < min:
+		return default
+	if value > max:
+		return default
 	return value
 
 
@@ -38,12 +40,8 @@ class ScheduleConfig(TypedDict):
 
 def create_schedule(
 	parameters: dict,
-	interval: Literal[
-		"hourly", "12-hours",
-		"daily", "weekly",
-		"monthly", "semiannual"
-	] = "daily",
-	config: ScheduleConfig = None
+	interval: Literal["hourly", "12-hours", "daily", "weekly", "monthly", "semiannual"] = "daily",
+	config: ScheduleConfig = None,
 ):
 	"""
 	Cria schedule para um flow com o intervalo requisitado.
@@ -91,7 +89,7 @@ def create_schedule(
 			timedelta(hours=1),
 			anchor_date=datetime(2026, 1, 1, 0, minute),
 			timezone="America/Sao_Paulo",
-			parameters=parameters
+			parameters=parameters,
 		)
 
 	if interval == "12-hours":
@@ -99,7 +97,7 @@ def create_schedule(
 			timedelta(hours=12),
 			anchor_date=datetime(2026, 1, 1, hour, minute),
 			timezone="America/Sao_Paulo",
-			parameters=parameters
+			parameters=parameters,
 		)
 
 	if interval == "daily":
@@ -107,7 +105,7 @@ def create_schedule(
 			timedelta(days=1),
 			anchor_date=datetime(2026, 1, 1, hour, minute),
 			timezone="America/Sao_Paulo",
-			parameters=parameters
+			parameters=parameters,
 		)
 
 	if interval == "weekly":
@@ -124,9 +122,9 @@ def create_schedule(
 		# fmt: on
 		return Interval(
 			timedelta(days=7),
-			anchor_date=datetime(2026, 1, 5+day_offset, hour, minute),
+			anchor_date=datetime(2026, 1, 5 + day_offset, hour, minute),
 			timezone="America/Sao_Paulo",
-			parameters=parameters
+			parameters=parameters,
 		)
 
 	if interval == "monthly":
@@ -134,15 +132,15 @@ def create_schedule(
 			timedelta(days=30),
 			anchor_date=datetime(2026, 1, day, hour, minute),
 			timezone="America/Sao_Paulo",
-			parameters=parameters
+			parameters=parameters,
 		)
 
 	if interval == "semiannual":
 		return Interval(
-			timedelta(days=6*30),
+			timedelta(days=6 * 30),
 			anchor_date=datetime(2026, month, day, hour, minute),
 			timezone="America/Sao_Paulo",
-			parameters=parameters
+			parameters=parameters,
 		)
 
 	raise ValueError(f"Valor para intervalo não reconhecido: '{interval}'")

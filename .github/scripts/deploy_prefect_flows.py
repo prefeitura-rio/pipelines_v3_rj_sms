@@ -17,16 +17,14 @@ from prefect.schedules import Schedule
 logging.basicConfig(
 	level=os.getenv("LOG_LEVEL", "INFO").upper(),
 	format="%(asctime)s.%(msecs)03d [%(levelname)s]\t%(message)s",
-	datefmt="%H:%M:%S"
+	datefmt="%H:%M:%S",
 )
 
 
 async def run_subprocess(command: list[str]) -> asyncio.subprocess.Process:
 	"""Cria e executa um subprocesso"""
 	return await asyncio.create_subprocess_exec(
-		*command,
-		stdout=asyncio.subprocess.PIPE,
-		stderr=asyncio.subprocess.PIPE,
+		*command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
 	)
 
 
@@ -39,20 +37,14 @@ async def get_changed_pipelines(sha: str) -> list[Path]:
 		stdout, stderr = await process.communicate()
 
 		if process.returncode != 0:
-				logging.warning(f"Comando git falhou: {stderr.decode().strip()}")
-				return []
+			logging.warning(f"Comando git falhou: {stderr.decode().strip()}")
+			return []
 
 		parsed_stdout = stdout.decode().strip().splitlines()
 		logging.debug(f"Comando: `{' '.join(command)}`")
 		logging.debug(f"STDOUT: {parsed_stdout}")
 
-		return list(
-			set(
-				Path(f.strip()).parent
-				for f in parsed_stdout
-				if f.strip()
-			)
-		)
+		return list(set(Path(f.strip()).parent for f in parsed_stdout if f.strip()))
 	except Exception as e:
 		logging.error(f"Erro ao obter arquivos modificados: {e}")
 		return []
@@ -77,12 +69,8 @@ async def get_deployable_files(raw_pipeline_filter: str, commit_sha: str):
 	if raw_pipeline_filter:
 		# Trata esse filtro para ser uma pasta "pipelines/(...)"
 		pipeline_filter = Path(
-			"pipelines/" + (
-				raw_pipeline_filter
-				.replace(".", "")
-				.removeprefix("pipelines")
-				.removeprefix("/")
-			)
+			"pipelines/"
+			+ (raw_pipeline_filter.replace(".", "").removeprefix("pipelines").removeprefix("/"))
 		)
 		return get_flows_for_paths([pipeline_filter])
 
@@ -127,22 +115,13 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 	# TODO: conferir se existe variável _dockerfile,
 	# se sim, tratar como caminho para Dockerfile do flow
 
-	logging.debug(
-		f"'{file_path}': encontrados {len(flows)} flow(s) "
-		f"e {len(schedules)} schedule(s)"
-	)
+	logging.debug(f"'{file_path}': encontrados {len(flows)} flow(s) e {len(schedules)} schedule(s)")
 	# Para cada flow definido no arquivo (provavelmente 1 só)
 	deploy_list = []
 	for flow in flows:
 		# Normaliza o nome para deploy
 		normalized_flow_name = re.sub(
-			r"[^a-z_\-]",
-			"",
-			(
-				unicodedata.normalize("NFD", flow.name)
-				.lower()
-				.replace(" ", "_")
-			)
+			r"[^a-z_\-]", "", (unicodedata.normalize("NFD", flow.name).lower().replace(" ", "_"))
 		)
 		if len(normalized_flow_name) < 1:
 			raise ValueError(f"Nome do flow '{flow.name}' é inválido!")
@@ -159,10 +138,10 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 				image=DockerImage(
 					name=f"southamerica-east1-docker.pkg.dev/rj-sms/pipelines-v3-rj-sms/{normalized_flow_name}",
 					tag="latest",
-					dockerfile="./pipelines/Dockerfile"  # TODO: variável _dockerfile mencionada acima
+					dockerfile="./pipelines/Dockerfile",  # TODO: variável _dockerfile mencionada acima
 				),
 				schedules=(schedules if environment == "prod" else []),
-				job_variables=({ "env": env_vars })
+				job_variables=({"env": env_vars}),
 			)
 		)
 	return deploy_list
@@ -202,13 +181,10 @@ async def main():
 	#   faz deploy de todos os flows que passam pelo filtro
 	# - Caso contrário, confere se há flows modificados
 	#   nesse commit
-	deployable_files = await get_deployable_files(
-		pipeline_filter,
-		commit_sha
-	)
+	deployable_files = await get_deployable_files(pipeline_filter, commit_sha)
 	logging.info(
 		f"Encontrado(s) {len(deployable_files)} arquivo(s) para deploy: "
-		f"{[ str(y) for y in deployable_files ]}"
+		f"{[str(y) for y in deployable_files]}"
 	)
 	if len(deployable_files) < 1:
 		sys.exit(0)
@@ -224,7 +200,7 @@ async def main():
 		"environment": environment,
 		"PREFECT_API_URL": PREFECT_API_URL,
 		"PREFECT_API_KEY": PREFECT_API_KEY,
-		"PREFECT_CLIENT_CUSTOM_HEADERS": '{"X-Prefect-WS-Auth":"' f'{PREFECT_WS_AUTH}' '"}',
+		"PREFECT_CLIENT_CUSTOM_HEADERS": f'{{"X-Prefect-WS-Auth":"{PREFECT_WS_AUTH}"}}',
 		"INFISICAL_ADDRESS": INFISICAL_ADDRESS,
 		"INFISICAL_PROJECT_ID": INFISICAL_PROJECT_ID,
 		"INFISICAL_TOKEN": INFISICAL_TOKEN,
@@ -233,9 +209,7 @@ async def main():
 	# Requisita o deploy de todos os flows recebidos
 	deploy_list = []
 	for file in deployable_files:
-		deploy_list.extend(
-			do_deploy(file.as_posix(), environment, env_vars)
-		)
+		deploy_list.extend(do_deploy(file.as_posix(), environment, env_vars))
 	# Espera todos os deploys terminarem
 	await asyncio.gather(*deploy_list)
 	logging.info("Fim do deploy! :)")
