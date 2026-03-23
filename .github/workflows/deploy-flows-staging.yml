@@ -1,0 +1,64 @@
+name: Register flows (staging)
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      pipeline_filter:
+        description: "Diretório sob o qual todos os flows terão deploy"
+        requered: false
+        type: string
+        default: ""
+      debug:
+        description: "Habilita logs de debug"
+        required: false
+        type: boolean
+        default: false
+      batch_size:
+        description: "Número de deploys paralelos"
+        required: false
+        type: number
+        default: 3
+      max_retries:
+        description: "Número de retentativas em caso de erro no deploy"
+        required: false
+        type: number
+        default: 2
+
+# [Ref] https://ashishb.net/programming/common-pitfalls-of-github-actions/
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-flow:
+    if: startsWith(github.head_ref, 'staging/') || contains(github.event.pull_request.labels.*.name, 'staging')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Deploy Prefect flows
+        uses: ./.github/actions/deploy-prefect-flows
+        with:
+          environment: dev
+          debug: ${{ inputs.debug }}
+          batch_size: ${{ inputs.batch_size || '3' }}
+          max_retries: ${{ inputs.max_retries || '2' }}
+          pipeline_filter: ${{ inputs.pipeline_filter }}
+
+          PREFECT_API_URL: ${{ secrets.PREFECT_API_URL }}
+          PREFECT_API_KEY: ${{ secrets.PREFECT_API_KEY }}
+          PREFECT_WS_AUTH: ${{ secrets.PREFECT_WS_AUTH }}
+
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+          INFISICAL_ADDRESS: ${{ secrets.INFISICAL_ADDRESS }}
+          INFISICAL_PROJECT_ID: ${{ secrets.INFISICAL_PROJECT_ID }}
+          INFISICAL_TOKEN: ${{ secrets.INFISICAL_TOKEN }}

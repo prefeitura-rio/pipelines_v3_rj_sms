@@ -112,7 +112,7 @@ def inject_bd_credentials(environment: str = "dev", force_injection=False) -> No
 	if all_variables_set and not force_injection:
 		return
 
-	log(f"ENVIRONMENT: {environment}")
+	log(f"ENVIRONMENT: {environment}", level="debug")
 	for secret_name in [
 		"BASEDOSDADOS_CONFIG",
 		"BASEDOSDADOS_CREDENTIALS_PROD",
@@ -124,7 +124,11 @@ def inject_bd_credentials(environment: str = "dev", force_injection=False) -> No
 		)
 
 	# Salva credenciais de conta de serviço para o Google Cloud
-	service_account_name = "BASEDOSDADOS_CREDENTIALS_PROD"
+	service_account_name = (
+		"BASEDOSDADOS_CREDENTIALS_PROD"
+		if environment == "prod"
+		else "BASEDOSDADOS_CREDENTIALS_STAGING"
+	)
 	credentials = base64.b64decode(os.environ[service_account_name])
 
 	if not os.path.exists("/tmp"):
