@@ -81,7 +81,7 @@ Sempre abra suas branchs de trabalho no formato `staging/<sua-feature>`. O títu
 Utilize ações semânticas convencionais. Por exemplo, `feat:` para novas features; `fix:` para consertos de bugs; `chore:` para tarefas de manutenção em geral; `docs:` para mudanças exclusivamente de documentação; etc.
 
 3. **Formatação:**
-Antes de submeter um pull request, lembre-se de usar o linter/formatador automático: `uv run task lint`.
+Antes de submeter um pull request, lembre-se de usar o linter/formatador automático: `uv run task lint` (para conferir); `uv run task lint-autofix` (para consertar o que for possível automaticamente).
 
 4. Abra um **pull request**  (não é necessário incluir um reviewer).
 

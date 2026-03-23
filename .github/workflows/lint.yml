@@ -1,0 +1,40 @@
+name: Lint
+
+on:
+  push:
+
+# [Ref] https://ashishb.net/programming/common-pitfalls-of-github-actions/
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  run-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: Setup Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.13"
+
+    - name: Install uv
+      shell: bash
+      run: pip install uv 1> /dev/null
+
+    - uses: actions/cache@v5
+      with:
+        path: |
+          ./.venv
+        key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-
+
+    - name: Install project dependencies
+      shell: bash
+      run: uv sync --all-packages 1> /dev/null
+
+    - name: Run lint/formatter
+      shell: bash
+      run: uv run task lint

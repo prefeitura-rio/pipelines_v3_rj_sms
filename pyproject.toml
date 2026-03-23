@@ -45,4 +45,5 @@ line-ending = "lf"
 skip-magic-trailing-comma = true
 
 [tool.taskipy.tasks]
-lint = "ruff check --fix . && ruff format ."
+lint = "ruff check --no-fix . && ruff format --check ."
+lint-autofix = "ruff check --fix . && ruff format ."
