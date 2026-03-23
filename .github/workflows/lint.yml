@@ -14,27 +14,32 @@ jobs:
     timeout-minutes: 30
 
     steps:
-    - name: Setup Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: "3.13"
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-    - name: Install uv
-      shell: bash
-      run: pip install uv 1> /dev/null
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
 
-    - uses: actions/cache@v5
-      with:
-        path: |
-          ./.venv
-        key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-uv-
+      - name: Install uv
+        shell: bash
+        run: pip install uv 1> /dev/null
 
-    - name: Install project dependencies
-      shell: bash
-      run: uv sync --all-packages 1> /dev/null
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ./.venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
-    - name: Run lint/formatter
-      shell: bash
-      run: uv run task lint
+      - name: Install project dependencies
+        shell: bash
+        run: uv sync --all-packages 1> /dev/null
+
+      - name: Run lint/formatter
+        shell: bash
+        run: uv run task lint
