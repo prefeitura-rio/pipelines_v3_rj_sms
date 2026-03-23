@@ -67,7 +67,7 @@ def create_schedule(
 	"""
 	if config is not None:
 		month = restrict_int_interval(config.get("month"), 1, 12, default=1)
-		_processed_weekday = str(config.get("weekday"), "").lower().strip()
+		_processed_weekday = str(config.get("weekday", "")).lower().strip()
 		weekday = (
 			"monday"
 			if _processed_weekday not in (
