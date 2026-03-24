@@ -2,8 +2,6 @@
 import asyncio
 import json
 import os
-import pytz
-from datetime import datetime
 
 from discord import Embed
 from prefect import State
@@ -11,15 +9,22 @@ from prefect.client.schemas.objects import FlowRun
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
 
-from pipelines.utils.env import get_current_environment, get_google_project_for_environment
+from pipelines.utils.datetime import now
+from pipelines.utils.env import (
+	get_current_environment,
+	get_google_project_for_environment,
+)
 from pipelines.utils.logger import log
-from pipelines.utils.flow import Flow
+from pipelines.utils.prefect import Flow
 from pipelines.utils.infisical import inject_bd_credentials
 from pipelines.utils.monitor import send_discord_embed
 
 
 def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwargs):
-	log(f"[handle_flow_state_change] '{flow_run.name}' ({flow.name}) -> {state.name}", level="info")
+	log(
+		f"[handle_flow_state_change] '{flow_run.name}' ({flow.name}) -> {state.name}",
+		level="info",
+	)
 	if len(kwargs):
 		log(f"[handle_flow_state_change] kwargs={kwargs}")
 
@@ -29,12 +34,12 @@ def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwar
 
 	info = {
 		"flow_name": flow.name,
-		"flow_id": flow_run.flow_id,
-		"flow_run_id": flow_run.id,
+		"flow_id": str(flow_run.flow_id),
+		"flow_run_id": str(flow_run.id),
 		"flow_parameters": json.dumps(flow_run.parameters),
 		"state": type(state).__name__,
 		"message": state.message,
-		"occurrence": datetime.now(tz=pytz.timezone("America/Sao_Paulo")).isoformat(),
+		"occurrence": now().isoformat(),
 	}
 
 	if state.is_failed() and environment == "prod" and len(flow.get_owners()) > 0:
@@ -49,7 +54,11 @@ def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwar
 		asyncio.run(
 			send_discord_embed(
 				contents=[
-					Embed(title=info["flow_name"], description="\n".join(message), color=15158332)
+					Embed(
+						title=info["flow_name"],
+						description="\n".join(message),
+						color=15158332,
+					)
 				],
 				monitor_slug="error",
 			)
@@ -76,7 +85,7 @@ def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwar
 	except NotFound:
 		dataset = bigquery.Dataset(dataset_ref)
 		client.create_dataset(dataset)
-		log(f"Created dataset {dataset_id}")
+		log(f"[handle_flow_state_change] Criado dataset '{dataset_id}'")
 
 	# Create Table if it does not exist
 	table_ref = dataset_ref.table(table_id)
@@ -94,14 +103,14 @@ def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwar
 		]
 		table = bigquery.Table(table_ref, schema=schema)
 		client.create_table(table)
-		log(f"Created table {table_id}")
+		log(f"[handle_flow_state_change] Criada tabela '{table_id}'")
 
 	# Insert rows
 	errors = client.insert_rows_json(table_ref, rows)
 
 	if errors:
-		log(f"Encountered errors while inserting rows: {errors}")
+		log(f"[handle_flow_state_change] Erros encontrados inserindo na tabela: {errors}")
 	else:
-		log("Rows inserted successfully")
+		log("[handle_flow_state_change] Linhas inseridas com sucesso")
 
 	return state

@@ -15,7 +15,9 @@ LEVELS_CONFIG = {
 }
 
 
-def log(msg: str, level: Literal["debug", "info", "warning", "error", "critical"] = "info") -> None:
+def log(
+	msg: str, level: Literal["debug", "info", "warning", "error", "critical"] = "info"
+) -> None:
 	"""
 	Args:
 		msg (str):

@@ -5,12 +5,14 @@ description = "Pipelines"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"  # dbt não existe pra Python 3.14+
 dependencies = [
+  "basedosdados>=2.0.3",
   "db-dtypes>=1.4.4",  # BigQuery reclama sem db-dtypes
   "dbt-bigquery>=1.11.1",
   "dbt-core>=1.11.7",
   "discord-py>=2.6.4",
   "google-cloud-bigquery>=3.40.1",
   "google-cloud-storage>=3,<3.2",  # dbt-bigquery requer google-cloud-storage<3.2
+  "gspread>=6.2.1",
   "infisicalsdk>=1.0.16",
   "pandas>=3.0.1",
   "prefect>=3.6",
@@ -31,7 +33,7 @@ exclude-newer = "1 week"
 logging.level = "INFO"
 
 [tool.ruff]
-line-length = 100
+line-length = 90
 
 [tool.ruff.lint]
 ignore = [

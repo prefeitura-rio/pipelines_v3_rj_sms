@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # fmt: off
-import pytz
+from zoneinfo import ZoneInfo
 from enum import Enum
 
 
@@ -22,8 +22,8 @@ class constants(Enum):
 		"prod": "rj-sms"
 	}
 
-	TIMEZONE = "America/Sao_Paulo"
-	PYTZ_TIMEZONE = pytz.timezone(TIMEZONE)
+	TIMEZONE_NAME = "America/Sao_Paulo"
+	TIMEZONE = ZoneInfo("America/Sao_Paulo")
 
 
 	################################

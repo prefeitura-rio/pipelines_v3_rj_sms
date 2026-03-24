@@ -1,12 +1,21 @@
 # -*- coding: utf-8 -*-
 import base64
+import json
 import os
+from typing import List
 
 from .logger import log
-from .env import get_current_environment, getenv_or_action
+from .env import (
+	get_current_environment,
+	get_google_project_for_environment,
+	getenv_or_action,
+)
+
+import basedosdados as bd
 
 # from infisical import InfisicalClient
 from infisical_sdk import InfisicalSDKClient as InfisicalClient
+from google.oauth2 import service_account
 
 
 def get_project():
@@ -118,3 +127,48 @@ def inject_bd_credentials(environment: str = "dev", force_injection=False) -> No
 	with open("/tmp/credentials.json", "wb") as credentials_file:
 		credentials_file.write(credentials)
 	os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/credentials.json"
+
+	project = get_google_project_for_environment(environment=environment)
+	bd.config.from_file = True
+	bd.config.project_config_path = "/tmp"
+	bd.config.billing_project_id = project
+
+	# Se não existir um config.toml, o basedosdados acha uma ótima ideia abrir
+	# um prompt interativo pra configurar o essas infos, o que trava o container
+	with open("/tmp/config.toml", "w") as config_file:
+		config_file.write(f"""
+bucket_name = "{project}"
+[gcloud-projects]
+  [gcloud-projects.staging]
+  name = "rj-sms-dev"
+  credentials_path = "/tmp/credentials.json"
+  [gcloud-projects.prod]
+  name = "rj-sms"
+  credentials_path = "/tmp/credentials.json"
+[api]
+url = "https://staging.api.basedosdados.org/api/v1/graphql"
+""")
+
+
+def get_credentials_from_env(scopes: List[str] = None) -> service_account.Credentials:
+	"""
+	Obtém credenciais das variáveis de ambiente
+	"""
+	env: str = os.getenv("BASEDOSDADOS_CREDENTIALS_PROD", "")
+	if env == "":
+		log(
+			"Credenciais de prod não estão carregadas; usando credenciais de dev",
+			level="warning",
+		)
+		env = os.getenv("BASEDOSDADOS_CREDENTIALS_STAGING", "")
+		if env == "":
+			raise ValueError(
+				"Variáveis BASEDOSDADOS_CREDENTIALS_PROD e _STAGING não configuradas!"
+			)
+	info: dict = json.loads(base64.b64decode(env))
+	cred: service_account.Credentials = (
+		service_account.Credentials.from_service_account_info(info)
+	)
+	if scopes:
+		cred = cred.with_scopes(scopes)
+	return cred

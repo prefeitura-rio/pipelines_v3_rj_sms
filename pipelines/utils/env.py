@@ -85,3 +85,7 @@ def getenv_or_action(key: str, *, default: str = None, action: str = "raise"):
 			pass
 
 	return value
+
+
+def get_prefect_url():
+	return getenv_or_action("PREFECT_API_URL").removesuffix("/api")
