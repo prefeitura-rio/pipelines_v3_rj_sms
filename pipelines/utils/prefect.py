@@ -3,7 +3,7 @@ import asyncio
 from typing import Any, Callable, Union, List, Optional
 
 from prefect import Task, get_client
-from prefect.context import get_run_context
+from prefect.context import FlowRunContext
 from prefect.flows import Flow as OriginalFlow, FlowDecorator as OriginalFlowDecorator
 
 from pipelines.utils.env import get_current_environment
@@ -128,10 +128,22 @@ def authenticated_wait_for_flow_run(**kwargs):
 
 @authenticated_task
 def rename_flow_run(new_name: str):
-	current_flow_run_id = get_run_context().flow_run.id
+	ctx = FlowRunContext.get()
+	if not ctx:
+		log(
+			"[rename_flow_run] Erro ao renomear flow_run; FlowRunContext inexistente",
+			level="warning",
+		)
+		return
+	if not ctx.flow_run:
+		log(
+			"[rename_flow_run] Erro ao renomear flow_run; FlowRunContext.flow_run inexistente",
+			level="warning",
+		)
+		return
 
 	async def update():
 		async with get_client() as client:
-			await client.update_flow_run(flow_run_id=current_flow_run_id, name=new_name)
+			await client.update_flow_run(flow_run_id=ctx.flow_run.id, name=new_name)
 
 	asyncio.run(update())
