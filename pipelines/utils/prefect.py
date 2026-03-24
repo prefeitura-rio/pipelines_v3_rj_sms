@@ -29,7 +29,7 @@ class Flow(OriginalFlow):
 
 class FlowDecorator(OriginalFlowDecorator):
 	name: str = None
-	description: str = None
+	description: str = ""
 	state_handlers: List[Callable] = None
 	owners: List[str] = None
 	log_prints: bool = False
@@ -38,14 +38,14 @@ class FlowDecorator(OriginalFlowDecorator):
 		self,
 		*args,
 		name: str = None,
-		description: str = None,
+		description: str = "",
 		state_handlers: List[Callable] = None,
 		owners: Optional[List[str]] = None,
 		log_prints: bool = False,
 		**kwargs,
 	):
 		self.name = name
-		self.description = description
+		self.description = description or ""
 		self.state_handlers = state_handlers or []
 		self.owners = owners or []
 		self.log_prints = log_prints

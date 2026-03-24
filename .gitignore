@@ -6,6 +6,7 @@ venv/
 .venv/
 
 __pycache__/
+.ruff_cache/
 
 # Mantém arquivo de config de debugging
 .vscode/*
