@@ -3,7 +3,7 @@
 from pipelines.utils.prefect import flow, rename_flow_run
 from pipelines.utils.git import download_gh_repo
 from pipelines.utils.state_handlers import handle_flow_state_change
-from pipelines.constants import constants
+from pipelines.constants import constants as global_consts
 
 from .schedules import schedules
 from .tasks import (
@@ -20,15 +20,15 @@ from .tasks import (
 @flow(
 	name="DataLake - Transformação - DBT",
 	state_handlers=[handle_flow_state_change],
-	owners=[constants.CIT_ID.value],
+	owners=[global_consts.CIT_ID.value],
 	log_prints=True,
 )
 def sms_execute_dbt(
 	command: str = "test",
-	select: str = None,
-	exclude: str = None,
-	flag: str = None,
-	target: str = None,
+	select: str | None = None,
+	exclude: str | None = None,
+	flag: str | None = None,
+	target: str | None = None,
 	rename_flow: bool = False,
 	send_discord_report: bool = False,
 	environment: str = "dev",

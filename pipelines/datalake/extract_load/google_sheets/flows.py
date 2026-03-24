@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pipelines.constants import constants
+from pipelines.constants import constants as global_consts
 from pipelines.utils.datalake import upload_to_cloud_storage
 from pipelines.utils.google import download_google_sheets
 from pipelines.utils.prefect import flow, rename_flow_run
@@ -12,7 +12,7 @@ from .schedules import schedules
 @flow(
 	name="DataLake - Extração e Carga de Dados - Google Sheets",
 	state_handlers=[handle_flow_state_change],
-	owners=[constants.CIT_ID.value],
+	owners=[global_consts.CIT_ID.value],
 )
 def sms_dump_url(
 	# URL da planilha
