@@ -145,7 +145,7 @@ def upload_to_cloud_storage(
 	if os.path.isfile(path):
 		blob_name = os.path.basename(path)
 		if blob_prefix:
-				blob_name = f"{blob_prefix}/{blob_name}"
+			blob_name = f"{blob_prefix}/{blob_name}"
 		blob = bucket.blob(blob_name)
 
 		# Se o arquivo já existe

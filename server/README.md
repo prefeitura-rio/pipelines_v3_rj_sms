@@ -335,14 +335,9 @@ Com o novo `access_token` recebido, substitua a variável de ambiente `PREFECT_A
 
 
 ## TODO
-- Autenticar WebSocket do Prefect
-- Funções de auxílio todas dos flows do Prefect
-  - Acesso a Cloud Storage, ...
-  - dbt
-    - Ver se dá pra printar logs mais descritivos do dbt dessa vez :/
 - Login via SSO do Google (Authentik, Infisical)
 - Identificação de usuário logado no Prefect (opcional) (queria muito)
   - Ou gambiarra com `<iframe>`\
     (mais complicado do que parece, acho que perderia URL trocadas em transição de página)
   - Ou customizar imagem do container direto
-- Transformar PREFECT_API_KEY em GCP Secret?
+- GCP Secrets
