@@ -121,7 +121,11 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 	for flow in flows:
 		# Normaliza o nome para deploy
 		normalized_flow_name = re.sub(
-			r"[^a-z_\-]", "", (unicodedata.normalize("NFD", flow.name).lower().replace(" ", "_"))
+			r"_{2,}",
+			"_",
+			re.sub(
+				r"[^a-z_]", "", (unicodedata.normalize("NFD", flow.name).lower().replace(" ", "_"))
+			),
 		)
 		if len(normalized_flow_name) < 1:
 			raise ValueError(f"Nome do flow '{flow.name}' é inválido!")
