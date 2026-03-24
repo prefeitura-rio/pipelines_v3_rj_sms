@@ -33,7 +33,7 @@ exclude-newer = "1 week"
 logging.level = "INFO"
 
 [tool.ruff]
-line-length = 100
+line-length = 90
 
 [tool.ruff.lint]
 ignore = [

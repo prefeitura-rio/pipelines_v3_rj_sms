@@ -11,7 +11,7 @@ from pipelines.utils.prefect import authenticated_task as task
 
 
 @task(retries=3, retry_delay_seconds=60)
-def upload_to_datalake(
+def upload_to_cloud_storage(
 	input_path: str,
 	dataset_id: str,
 	table_id: str,
@@ -74,7 +74,10 @@ def upload_to_datalake(
 		log(f"Procurando por arquivos em '{reference_path}'...")
 
 		if len(glob.glob(reference_path, recursive=True)) == 0:
-			log(f"Nenhum arquivo '{source_format}' encontrado em '{input_path}'", level="warning")
+			log(
+				f"Nenhum arquivo '{source_format}' encontrado em '{input_path}'",
+				level="warning",
+			)
 			if exception_on_missing_input_file:
 				raise FileNotFoundError(f"Nenhum arquivo em '{input_path}'")
 			return
@@ -136,7 +139,9 @@ def upload_to_datalake(
 				log(f"OVERWRITE: TABELA APAGADA DO BIGQUERY:\n{table_staging}\n")
 			else:
 				deleted_tables = [
-					tb.table_full_name[key] for key in tb.table_full_name.keys() if key != "all"
+					tb.table_full_name[key]
+					for key in tb.table_full_name.keys()
+					if key != "all"
 				]
 				log(f"OVERWRITE: TABELAS APAGADAS DO BIGQUERY:\n{deleted_tables}\n")
 

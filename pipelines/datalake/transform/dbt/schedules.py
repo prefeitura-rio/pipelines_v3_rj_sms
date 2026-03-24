@@ -19,7 +19,11 @@ daily_parameters = [
 		config={"hour": 6, "minute": 30},
 	),
 	create_schedule(
-		parameters={"command": "source freshness", "environment": "prod", "rename_flow": True},
+		parameters={
+			"command": "source freshness",
+			"environment": "prod",
+			"rename_flow": True,
+		},
 		interval="daily",
 		config={"hour": 6, "minute": 30},
 	),

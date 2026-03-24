@@ -42,7 +42,9 @@ class ScheduleConfig(TypedDict):
 
 def create_schedule_list(
 	parameters_list: List[dict],
-	interval: Literal["hourly", "12-hours", "daily", "weekly", "monthly", "semiannual"] = "daily",
+	interval: Literal[
+		"hourly", "12-hours", "daily", "weekly", "monthly", "semiannual"
+	] = "daily",
 	config: ScheduleConfig = None,
 ):
 	return [
@@ -53,7 +55,9 @@ def create_schedule_list(
 
 def create_schedule(
 	parameters: dict,
-	interval: Literal["hourly", "12-hours", "daily", "weekly", "monthly", "semiannual"] = "daily",
+	interval: Literal[
+		"hourly", "12-hours", "daily", "weekly", "monthly", "semiannual"
+	] = "daily",
 	config: ScheduleConfig = None,
 ):
 	"""
@@ -144,7 +148,9 @@ def create_schedule(
 	if interval == "12-hours":
 		return Interval(
 			timedelta(hours=12),
-			anchor_date=datetime(2026, 1, 1, hour, minute, tzinfo=constants.TIMEZONE.value),
+			anchor_date=datetime(
+				2026, 1, 1, hour, minute, tzinfo=constants.TIMEZONE.value
+			),
 			timezone=constants.TIMEZONE_NAME.value,
 			parameters=parameters,
 		)
@@ -152,7 +158,9 @@ def create_schedule(
 	if interval == "daily":
 		return Interval(
 			timedelta(days=1),
-			anchor_date=datetime(2026, 1, 1, hour, minute, tzinfo=constants.TIMEZONE.value),
+			anchor_date=datetime(
+				2026, 1, 1, hour, minute, tzinfo=constants.TIMEZONE.value
+			),
 			timezone=constants.TIMEZONE_NAME.value,
 			parameters=parameters,
 		)
@@ -181,7 +189,9 @@ def create_schedule(
 	if interval == "monthly":
 		return Interval(
 			timedelta(days=30),
-			anchor_date=datetime(2026, 1, day, hour, minute, tzinfo=constants.TIMEZONE.value),
+			anchor_date=datetime(
+				2026, 1, day, hour, minute, tzinfo=constants.TIMEZONE.value
+			),
 			timezone=constants.TIMEZONE_NAME.value,
 			parameters=parameters,
 		)
@@ -189,7 +199,9 @@ def create_schedule(
 	if interval == "semiannual":
 		return Interval(
 			timedelta(days=6 * 30),
-			anchor_date=datetime(2026, month, day, hour, minute, tzinfo=constants.TIMEZONE.value),
+			anchor_date=datetime(
+				2026, month, day, hour, minute, tzinfo=constants.TIMEZONE.value
+			),
 			timezone=constants.TIMEZONE_NAME.value,
 			parameters=parameters,
 		)

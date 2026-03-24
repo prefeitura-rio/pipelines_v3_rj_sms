@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from pipelines.constants import constants
-from pipelines.utils.datalake import upload_to_datalake
+from pipelines.utils.datalake import upload_to_cloud_storage
+from pipelines.utils.google import download_google_sheets
 from pipelines.utils.prefect import flow, rename_flow_run
-from pipelines.utils.io import create_data_folders, download_google_sheets
+from pipelines.utils.io import create_data_folders
 from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
@@ -50,7 +51,7 @@ def sms_dump_url(
 	#####################################
 	# Parte 2 - Upload do dado
 	#####################################
-	upload_to_datalake(
+	upload_to_cloud_storage(
 		input_path=create_folders_task["raw"],
 		dataset_id=dataset_id,
 		table_id=table_id,

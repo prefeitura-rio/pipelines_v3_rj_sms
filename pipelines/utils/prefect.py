@@ -32,6 +32,7 @@ class FlowDecorator(OriginalFlowDecorator):
 	description: str = None
 	state_handlers: List[Callable] = None
 	owners: List[str] = None
+	log_prints: bool = False
 
 	def __init__(
 		self,
@@ -40,12 +41,14 @@ class FlowDecorator(OriginalFlowDecorator):
 		description: str = None,
 		state_handlers: List[Callable] = None,
 		owners: Optional[List[str]] = None,
+		log_prints: bool = False,
 		**kwargs,
 	):
 		self.name = name
 		self.description = description
 		self.state_handlers = state_handlers or []
 		self.owners = owners or []
+		self.log_prints = log_prints
 
 	def __call__(self, *args, **kwargs):
 		return Flow(
@@ -53,6 +56,7 @@ class FlowDecorator(OriginalFlowDecorator):
 			name=self.name,
 			description=self.description,
 			owners=self.owners,
+			log_prints=self.log_prints,
 			on_completion=[*self.state_handlers],
 			on_failure=[*self.state_handlers],
 			on_cancellation=[*self.state_handlers],

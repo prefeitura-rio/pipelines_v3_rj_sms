@@ -42,3 +42,16 @@ def remove_column_accents(dataframe: pd.DataFrame) -> list:
 		.str.lower()
 		.map(guarantee_proper_column_name)
 	)
+
+
+def process_null_str(val: str | None) -> str | None:
+	"""
+	Retorna `None` caso o valor seja `None` ou `""`;
+	caso contrário, retorna `valor.strip()`.
+	"""
+	if not val:
+		return None
+	val = str(val).strip()
+	if not val:
+		return None
+	return val

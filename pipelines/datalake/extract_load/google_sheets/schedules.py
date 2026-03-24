@@ -318,14 +318,18 @@ semiannual_parameters = [
 
 schedules = [
 	*create_schedule_list(parameters_list=hourly_parameters, interval="hourly"),
-	*create_schedule_list(parameters_list=daily_parameters, interval="daily", config={"minute": 1}),
+	*create_schedule_list(
+		parameters_list=daily_parameters, interval="daily", config={"minute": 1}
+	),
 	*create_schedule_list(
 		parameters_list=weekly_parameters,
 		interval="weekly",
 		config={"weekday": "domingo", "minute": 1},
 	),
 	*create_schedule_list(
-		parameters_list=monthly_parameters, interval="monthly", config={"day": 15, "minute": 1}
+		parameters_list=monthly_parameters,
+		interval="monthly",
+		config={"day": 15, "minute": 1},
 	),
 	*create_schedule_list(
 		parameters_list=semiannual_parameters,

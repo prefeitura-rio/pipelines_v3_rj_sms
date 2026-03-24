@@ -62,8 +62,8 @@ def download_gh_repo(
 			raise FileExistsError(f"Diretório destino '{destination_path}' já existe!")
 		# Senão, apaga a pasta e conteúdos
 		elif if_destination_exists == "delete":
-			if not if_destination_exists.startswith("/tmp"):
-				log(f"Apagando pasta '{if_destination_exists}'...", level="warning")
+			if not destination_path.startswith("/tmp"):
+				log(f"Apagando pasta '{destination_path}'...", level="warning")
 			shutil.rmtree(destination_path)
 		else:
 			raise ValueError(
@@ -73,7 +73,9 @@ def download_gh_repo(
 	os.makedirs(destination_path)
 
 	tar_filename = os.path.join(destination_path, f"repo-{branch}.tar.gz")
-	req = requests.get(f"https://github.com/{repo}/archive/refs/heads/{branch}.tar.gz", stream=True)
+	req = requests.get(
+		f"https://github.com/{repo}/archive/refs/heads/{branch}.tar.gz", stream=True
+	)
 	with open(tar_filename, "wb") as fd:
 		for chunk in req.iter_content(chunk_size=None):
 			fd.write(chunk)

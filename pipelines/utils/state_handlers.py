@@ -2,7 +2,6 @@
 import asyncio
 import json
 import os
-from datetime import datetime
 
 from discord import Embed
 from prefect import State
@@ -10,8 +9,11 @@ from prefect.client.schemas.objects import FlowRun
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
 
-from pipelines.constants import constants
-from pipelines.utils.env import get_current_environment, get_google_project_for_environment
+from pipelines.utils.datetime import now
+from pipelines.utils.env import (
+	get_current_environment,
+	get_google_project_for_environment,
+)
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import Flow
 from pipelines.utils.infisical import inject_bd_credentials
@@ -19,7 +21,10 @@ from pipelines.utils.monitor import send_discord_embed
 
 
 def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwargs):
-	log(f"[handle_flow_state_change] '{flow_run.name}' ({flow.name}) -> {state.name}", level="info")
+	log(
+		f"[handle_flow_state_change] '{flow_run.name}' ({flow.name}) -> {state.name}",
+		level="info",
+	)
 	if len(kwargs):
 		log(f"[handle_flow_state_change] kwargs={kwargs}")
 
@@ -34,7 +39,7 @@ def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwar
 		"flow_parameters": json.dumps(flow_run.parameters),
 		"state": type(state).__name__,
 		"message": state.message,
-		"occurrence": datetime.now(tz=constants.TIMEZONE.value).isoformat(),
+		"occurrence": now().isoformat(),
 	}
 
 	if state.is_failed() and environment == "prod" and len(flow.get_owners()) > 0:
@@ -49,7 +54,11 @@ def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwar
 		asyncio.run(
 			send_discord_embed(
 				contents=[
-					Embed(title=info["flow_name"], description="\n".join(message), color=15158332)
+					Embed(
+						title=info["flow_name"],
+						description="\n".join(message),
+						color=15158332,
+					)
 				],
 				monitor_slug="error",
 			)

@@ -19,6 +19,7 @@ cases:
   #  EXTRACT/LOAD                #
   ################################
 
+  # Extração Google Sheets
   - case_slug: "datalake-extract-google-sheets"
     flow_path: "pipelines.datalake.extract_load.google_sheets.flows"
     flow_name: "sms_dump_url"
@@ -41,8 +42,11 @@ cases:
     flow_path: "pipelines.datalake.transform.dbt.flows"
     flow_name: "sms_execute_dbt"
     params:
-      environment: "dev"
-      # command: "run"
-      # rename_flow: true
-      # send_discord_report: true
-      # ...
+      environment: dev
+      command: test
+      select: null
+      exclude: null
+      flag: null
+      target: null
+      rename_flow: false
+      send_discord_report: false
