@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import csv
 import os
-from typing import Iterator, List
+from typing import Iterator, List, Literal
 
 import gspread
 import pandas as pd
@@ -110,3 +110,77 @@ def download_from_bucket(
 
 	log(f"Baixado(s) {len(downloaded_files)} arquivo(s) do bucket '{bucket_name}'")
 	return downloaded_files
+
+
+def upload_to_cloud_storage(
+	path: str,
+	bucket_name: str,
+	blob_prefix: str = None,
+	if_exists: Literal["raise", "replace", "pass"] = "replace",
+):
+	"""
+	Faz upload de arquivo ou pasta para o Google Cloud Storage
+
+	Args:
+		path (str):
+			Caminho do arquivo ou pasta a ser enviado.
+		bucket_name (str):
+			Nome do bucket no Google Cloud Storage.
+		blob_prefix (str?):
+			Caminho no bucket para o arquivo. Por padrão, é `None`.
+		if_exists (str?):
+			O que fazer se o dado já existir no GCS: `"raise"` dispara erro de conflito;
+			`"replace"` substitui o dado; `"pass"` não faz nada. Por padrão, é `"replace"`.
+	"""
+	client = storage.Client()
+	bucket = client.get_bucket(bucket_name)
+
+	if if_exists not in ["raise", "replace", "pass"]:
+		raise ValueError(
+			f"Valor para `if_exist`, '{if_exists}', inválido;"
+			"use 'raise', 'replace' ou 'pass'."
+		)
+
+	# Upload de um único arquivo
+	if os.path.isfile(path):
+		blob_name = os.path.basename(path)
+		if blob_prefix:
+				blob_name = f"{blob_prefix}/{blob_name}"
+		blob = bucket.blob(blob_name)
+
+		# Se o arquivo já existe
+		if blob.exists():
+			if if_exists == "pass":
+				return
+			if if_exists == "raise":
+				raise FileExistsError(
+					f"Arquivo '{blob_name}' já existe no bucket '{bucket_name}'!"
+				)
+		# Se estamos aqui, ou não existe arquivo, ou tudo bem substituí-lo
+		blob.upload_from_filename(path)
+		return
+
+	# Upload de uma pasta inteira
+	if os.path.isdir(path):
+		for root, _, files in os.walk(path):
+			for file in files:
+				file_path = os.path.join(root, file)
+				blob_name = os.path.relpath(file_path, path)
+				if blob_prefix:
+					blob_name = f"{blob_prefix}/{blob_name}"
+				blob = bucket.blob(blob_name)
+
+				# Se o arquivo já existe
+				if blob.exists():
+					if if_exists == "pass":
+						continue
+					if if_exists == "raise":
+						raise FileExistsError(
+							f"Arquivo '{blob_name}' já existe no bucket '{bucket_name}'!"
+						)
+
+				# Se estamos aqui, ou não existe arquivo, ou tudo bem substituí-lo
+				blob.upload_from_filename(file_path)
+		return
+
+	raise ValueError(f"Caminho '{path}' não é nem diretório, nem arquivo!")

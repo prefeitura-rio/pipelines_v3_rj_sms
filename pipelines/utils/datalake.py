@@ -11,7 +11,7 @@ from pipelines.utils.prefect import authenticated_task as task
 
 
 @task(retries=3, retry_delay_seconds=60)
-def upload_to_cloud_storage(
+def upload_to_datalake(
 	input_path: str,
 	dataset_id: str,
 	table_id: str,
@@ -51,7 +51,7 @@ def upload_to_cloud_storage(
 			substitui a tabela; `"pass"` não faz nada. Por padrão, é `"replace"`.
 		if_storage_data_exists (str?):
 			O que fazer se o dado já existir no GCS: `"raise"` dispara erro de conflito;
-			`"replace"` substitui a tabela; `"pass"` não faz nada. Por padrão, é `"replace"`.
+			`"replace"` substitui o dado; `"pass"` não faz nada. Por padrão, é `"replace"`.
 		biglake_table (bool?):
 			Se a tabela é BigLake – i.e. permite consultas mesmo sem ser materializada.
 			Por padrão, é `True`.

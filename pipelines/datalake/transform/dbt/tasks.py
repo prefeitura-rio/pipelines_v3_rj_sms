@@ -12,10 +12,10 @@ from prefect.states import Failed
 
 from pipelines.utils.api import convert_usd_to_brl
 from pipelines.utils.cleanup import process_null_str
-from pipelines.utils.datalake import upload_to_cloud_storage
+from pipelines.utils.datalake import upload_to_datalake
 from pipelines.utils.datetime import now
 from pipelines.utils.env import environment_is_valid, get_google_project_for_environment
-from pipelines.utils.google import download_from_bucket
+from pipelines.utils.google import download_from_bucket, upload_to_cloud_storage
 from pipelines.utils.logger import log
 
 # from pipelines.utils.monitor import send_discord_message

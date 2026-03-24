@@ -85,7 +85,7 @@ def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwar
 	except NotFound:
 		dataset = bigquery.Dataset(dataset_ref)
 		client.create_dataset(dataset)
-		log(f"Created dataset {dataset_id}")
+		log(f"[handle_flow_state_change] Criado dataset '{dataset_id}'")
 
 	# Create Table if it does not exist
 	table_ref = dataset_ref.table(table_id)
@@ -103,14 +103,14 @@ def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwar
 		]
 		table = bigquery.Table(table_ref, schema=schema)
 		client.create_table(table)
-		log(f"Created table {table_id}")
+		log(f"[handle_flow_state_change] Criada tabela '{table_id}'")
 
 	# Insert rows
 	errors = client.insert_rows_json(table_ref, rows)
 
 	if errors:
-		log(f"Encountered errors while inserting rows: {errors}")
+		log(f"[handle_flow_state_change] Erros encontrados inserindo na tabela: {errors}")
 	else:
-		log("Rows inserted successfully")
+		log("[handle_flow_state_change] Linhas inseridas com sucesso")
 
 	return state
