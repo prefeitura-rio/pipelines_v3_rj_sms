@@ -35,7 +35,7 @@ def sms_dump_url(
 	credentials = inject_bd_credentials(environment=environment)
 
 	if rename_flow:
-		rename_flow_run(f"Dump URL: {dataset_id}.{table_id}")
+		rename_flow_run(new_name=f"Dump URL: {dataset_id}.{table_id}")
 
 	####################################
 	# Parte 1 - Obter o dado
