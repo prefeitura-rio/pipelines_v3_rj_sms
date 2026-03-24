@@ -29,6 +29,7 @@ class Flow(OriginalFlow):
 
 class FlowDecorator(OriginalFlowDecorator):
 	name: str = None
+	description: str = None
 	state_handlers: List[Callable] = None
 	owners: List[str] = None
 
@@ -36,11 +37,13 @@ class FlowDecorator(OriginalFlowDecorator):
 		self,
 		*args,
 		name: str = None,
+		description: str = None,
 		state_handlers: List[Callable] = None,
 		owners: Optional[List[str]] = None,
 		**kwargs,
 	):
 		self.name = name
+		self.description = description
 		self.state_handlers = state_handlers or []
 		self.owners = owners or []
 
@@ -48,6 +51,7 @@ class FlowDecorator(OriginalFlowDecorator):
 		return Flow(
 			*args,
 			name=self.name,
+			description=self.description,
 			owners=self.owners,
 			on_completion=[*self.state_handlers],
 			on_failure=[*self.state_handlers],

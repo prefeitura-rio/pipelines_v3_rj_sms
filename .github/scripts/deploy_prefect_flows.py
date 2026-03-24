@@ -119,24 +119,28 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 	# Para cada flow definido no arquivo (provavelmente 1 só)
 	deploy_list = []
 	for flow in flows:
+		flow_name = flow.name
 		# Normaliza o nome para deploy
 		normalized_flow_name = re.sub(
 			r"_{2,}",
 			"_",
 			re.sub(
-				r"[^a-z_]", "", (unicodedata.normalize("NFD", flow.name).lower().replace(" ", "_"))
+				r"[^a-z_]", "", (unicodedata.normalize("NFD", flow_name).lower().replace(" ", "_"))
 			),
 		)
 		if len(normalized_flow_name) < 1:
-			raise ValueError(f"Nome do flow '{flow.name}' é inválido!")
+			raise ValueError(f"Nome do flow '{flow_name}' é inválido!")
 
 		if environment == "dev":
+			flow_name += " (stg)"
 			normalized_flow_name += "_staging"
 
 		logging.debug(f"Requisitando deploy de (...)/{normalized_flow_name}")
 		deploy_list.append(
 			flow.adeploy(
-				name=flow.name,
+				name=flow_name,
+				description=flow.description,
+				tags=([] if environment == "prod" else ["staging"]),
 				work_pool_name="gcp-wp",  # FIXME: não gosto que seja hardcoded assim
 				work_queue_name=("default" if environment == "prod" else "staging"),
 				image=DockerImage(

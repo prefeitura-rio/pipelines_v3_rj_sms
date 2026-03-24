@@ -19,8 +19,8 @@ def upload_to_datalake(
 	delete_mode: Literal["staging", "all"] = "all",
 	source_format: Literal["csv", "parquet"] = "csv",
 	csv_delimiter: str = ";",
-	if_exists: str = "replace",
-	if_storage_data_exists: str = "replace",
+	if_exists: Literal["replace", "raise", "pass"] = "replace",
+	if_storage_data_exists: Literal["replace", "raise", "pass"] = "replace",
 	biglake_table: bool = True,
 	dataset_is_public: bool = False,
 	exception_on_missing_input_file: bool = False,
@@ -31,37 +31,35 @@ def upload_to_datalake(
 
 	Args:
 		input_path (str):
-			The path to the input data file. It can be a folder or a file.
+			Caminho para o arquivo com dados; pode ser pasta ou arquivo
 		dataset_id (str):
-			The ID of the BigQuery dataset.
+			Nome do dataset no BigQuery
 		table_id (str):
-			The ID of the BigQuery table.
+			Nome da tabela no BigQuery
 		dump_mode (str?):
-			The dump mode for the table. Defaults to "append". Accepted values are "append" and "overwrite".
+			Como criar os dados: `"append"` não apaga dados existentes, `"overwrite"` substitui
+			tudo que existia. Por padrão, é `"append"`.
 		delete_mode (str?):
-			Whether to delete both `_staging` and prod tables ("all"), or only `_staging` ("staging").
-			Defaults to "all".
+			`"all"` apaga tanto a tabela externa (`_staging`) quanto a materializada;
+			`"staging"` apaga somente a tabela externa. Por padrão, é `"all"`.
 		source_format (str?):
-			The format of the input data. Defaults to "csv". Accepted values are "csv" and "parquet".
+			Formato dos dados (`"csv"` ou `"parquet"`). Por padrão, é `"csv"`.
 		csv_delimiter (str?):
-			The delimiter used in the CSV file. Defaults to ";".
+			Separador usado no arquivo CSV. Por padrão, é `";"`.
 		if_exists (str?):
-			The behavior if the table already exists. Defaults to "replace".
+			O que fazer se a tabela já existir: `"raise"` dispara erro de conflito; `"replace"`
+			substitui a tabela; `"pass"` não faz nada. Por padrão, é `"replace"`.
 		if_storage_data_exists (str?):
-			The behavior if the storage data already exists. Defaults to "replace".
+			O que fazer se o dado já existir no GCS: `"raise"` dispara erro de conflito;
+			`"replace"` substitui a tabela; `"pass"` não faz nada. Por padrão, é `"replace"`.
 		biglake_table (bool?):
-			Whether the table is a BigLake table. Defaults to True.
+			Se a tabela é BigLake – i.e. permite consultas mesmo sem ser materializada.
+			Por padrão, é `True`.
 		dataset_is_public (bool?):
-			Whether the dataset is public. Defaults to False.
+			Se o dataset é público. Por padrão, é `False`.
 		exception_on_missing_input_file (bool?):
-			If True, raises `FileNotFoundError` if `input_path` is an empty string or
-			directory with no files. Defaults to False.
-
-	Raises:
-		RuntimeError: If an error occurs during the upload process.
-
-	Returns:
-		None
+			Se deve disparar um `FileNotFoundError` caso `input_path` seja string vazia ou
+			uma pasta sem arquivos. Por padrão, é `False`.
 	"""
 	if input_path == "":
 		log("`input_path` vazio; nada para fazer upload", level="warning")
@@ -73,7 +71,7 @@ def upload_to_datalake(
 		log(f"`input_path` é diretório: '{input_path}'")
 
 		reference_path = os.path.join(input_path, f"**/*.{source_format}")
-		log(f"Procurando por arquivos '{reference_path}'")
+		log(f"Procurando por arquivos em '{reference_path}'...")
 
 		if len(glob.glob(reference_path, recursive=True)) == 0:
 			log(f"Nenhum arquivo '{source_format}' encontrado em '{input_path}'", level="warning")
@@ -81,6 +79,7 @@ def upload_to_datalake(
 				raise FileNotFoundError(f"Nenhum arquivo em '{input_path}'")
 			return
 
+	log("Montando referências à tabela e ao GCS...")
 	tb = bd.Table(dataset_id=dataset_id, table_id=table_id)
 	table_staging = f"{tb.table_full_name['staging']}"
 
@@ -91,7 +90,8 @@ def upload_to_datalake(
 		f"/staging/{dataset_id}/{table_id}"
 	)
 	log(
-		f"Fazendo upload de arquivo '{input_path}' para '{storage_path}' com formato '{source_format}'"
+		f"Fazendo upload de arquivo '{input_path}' para '{storage_path}' "
+		f"com formato '{source_format}'"
 	)
 
 	try:

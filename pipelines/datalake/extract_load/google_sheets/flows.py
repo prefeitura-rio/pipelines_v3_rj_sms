@@ -2,7 +2,6 @@
 from pipelines.constants import constants
 from pipelines.utils.datalake import upload_to_datalake
 from pipelines.utils.prefect import flow, rename_flow_run
-from pipelines.utils.infisical import inject_bd_credentials
 from pipelines.utils.io import create_data_folders, download_google_sheets
 from pipelines.utils.state_handlers import handle_flow_state_change
 
@@ -32,8 +31,6 @@ def sms_dump_url(
 	#####################################
 	# Configura ambiente
 	####################################
-	credentials = inject_bd_credentials(environment=environment)
-
 	if rename_flow:
 		rename_flow_run(new_name=f"Dump URL: {dataset_id}.{table_id}")
 
@@ -47,7 +44,7 @@ def sms_dump_url(
 		file_path=create_folders_task["raw"],
 		file_name=table_id,
 		gsheets_sheet_name=gsheets_sheet_name,
-		wait_for=[credentials, create_folders_task],
+		wait_for=[create_folders_task],
 	)
 
 	#####################################

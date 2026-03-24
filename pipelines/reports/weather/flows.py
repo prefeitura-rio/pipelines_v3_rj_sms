@@ -9,6 +9,7 @@ from .schedules import schedules
 
 @flow(
 	name="Report: Previsão do Tempo",
+	description="Prevê o tempo dado latitude/longitude :) Printa bairros do Rio também",
 	state_handlers=[handle_flow_state_change],
 	owners=[consts.AVELLAR_ID.value],
 )

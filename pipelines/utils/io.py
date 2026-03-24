@@ -97,9 +97,9 @@ def download_google_sheets(
 	dataframe.columns = new_header
 
 	log(f">>>>> Dataframe shape: {dataframe.shape}")
-	log(f">>>>> Dataframe columns (cruas):    {dataframe.columns}")
+	log(f">>>>> Dataframe colunas (cruas):    {dataframe.columns}")
 	dataframe.columns = remove_column_accents(dataframe)
-	log(f">>>>> Dataframe columns (tratadas): {dataframe.columns}")
+	log(f">>>>> Dataframe colunas (tratadas): {dataframe.columns}")
 
 	dataframe.to_csv(
 		filepath, index=False, sep=csv_delimiter, encoding="utf-8", quoting=csv.QUOTE_ALL
