@@ -15,6 +15,9 @@ __pycache__/
 .env
 localrun.selected.yaml
 
+# Arquivos criados ao executar alguns flows
+/data/
+
 # Authentik
 /server/certs
 /server/custom-templates

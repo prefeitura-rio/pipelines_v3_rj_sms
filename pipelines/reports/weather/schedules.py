@@ -24,7 +24,7 @@ schedules = [
 	# 	# A cada 3 dias
 	# 	timedelta(days=3),
 	# 	# ...contados a partir do dia 1/jan, roda às 10:50
-	# 	anchor_date=datetime(2026, 1, 1, 10, 50),
-	# 	timezone="America/Sao_Paulo"
+	# 	anchor_date=datetime(2026, 1, 1, 10, 50, tzinfo=constants.TIMEZONE.value),
+	# 	timezone=constants.TIMEZONE_NAME.value,
 	# )
 ]

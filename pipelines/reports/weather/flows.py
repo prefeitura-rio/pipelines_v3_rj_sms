@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pipelines.utils.flow import flow
+from pipelines.utils.prefect import flow
 from pipelines.utils.state_handlers import handle_flow_state_change
 from pipelines.constants import constants as consts
 

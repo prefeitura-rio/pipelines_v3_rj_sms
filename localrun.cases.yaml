@@ -16,6 +16,23 @@ cases:
 
 
   ################################
+  #  EXTRACT/LOAD                #
+  ################################
+
+  - case_slug: "datalake-extract-google-sheets"
+    flow_path: "pipelines.datalake.extract_load.google_sheets.flows"
+    flow_name: "sms_dump_url"
+    params:
+      environment: dev
+      # url: https://docs.google.com/spreadsheets/d/...
+      # gsheets_sheet_name: ...
+      dataset_id: brutos_sheets
+      # table_id: ...
+      rename_flow: true
+
+
+
+  ################################
   #  TRANSFORM                   #
   ################################
 

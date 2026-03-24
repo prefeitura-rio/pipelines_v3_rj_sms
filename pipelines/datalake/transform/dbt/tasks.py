@@ -68,9 +68,9 @@ def execute_dbt(
 		log(f"Executando comando dbt: '{' '.join(cli_args)}'")
 
 	dbt_runner = dbtRunner()
-	start_time = datetime.now(tz=constants.PYTZ_TIMEZONE)
+	start_time = datetime.now(tz=constants.TIMEZONE.value)
 	running_result: dbtRunnerResult = dbt_runner.invoke(cli_args)
-	end_time = datetime.now(tz=constants.PYTZ_TIMEZONE)
+	end_time = datetime.now(tz=constants.TIMEZONE.value)
 	execution_time = (end_time - start_time).total_seconds()
 
 	log_path = os.path.join(repository_path, "logs", "dbt.log")

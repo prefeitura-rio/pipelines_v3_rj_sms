@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from pipelines.utils.flow import flow
+from pipelines.utils.prefect import flow
 from pipelines.utils.git import download_gh_repo
 from pipelines.utils.logger import log
 from pipelines.utils.state_handlers import handle_flow_state_change

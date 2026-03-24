@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 import base64
+import json
 import os
+from typing import List
 
 from .logger import log
 from .env import get_current_environment, getenv_or_action
 
 # from infisical import InfisicalClient
 from infisical_sdk import InfisicalSDKClient as InfisicalClient
+from google.oauth2 import service_account
 
 
 def get_project():
@@ -118,3 +121,20 @@ def inject_bd_credentials(environment: str = "dev", force_injection=False) -> No
 	with open("/tmp/credentials.json", "wb") as credentials_file:
 		credentials_file.write(credentials)
 	os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/credentials.json"
+
+
+def get_credentials_from_env(scopes: List[str] = None) -> service_account.Credentials:
+	"""
+	Obtém credenciais das variáveis de ambiente
+	"""
+	env: str = os.getenv("BASEDOSDADOS_CREDENTIALS_PROD", "")
+	if env == "":
+		log("Credenciais de prod não estão carregadas; usando credenciais de dev")
+		env = os.getenv("BASEDOSDADOS_CREDENTIALS_STAGING", "")
+		if env == "":
+			raise ValueError("BASEDOSDADOS_CREDENTIALS_PROD env var not set!")
+	info: dict = json.loads(base64.b64decode(env))
+	cred: service_account.Credentials = service_account.Credentials.from_service_account_info(info)
+	if scopes:
+		cred = cred.with_scopes(scopes)
+	return cred
