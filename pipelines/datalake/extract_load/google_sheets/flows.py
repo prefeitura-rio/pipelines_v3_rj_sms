@@ -24,7 +24,7 @@ def sms_dump_url(
 	# Tabela no BigQuery
 	table_id: str,
 	# Renomear flow para nome legível
-	rename_flow: bool = False,
+	rename_flow: bool = True,
 	# url_type: str = "google_sheet"  (removido por ser redundante)
 	# csv_delimiter: str = ";"        (removido por ser redundante)
 	environment: str = "dev",
