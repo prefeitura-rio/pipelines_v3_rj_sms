@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-import hashlib
 import os
-
-from prefect.variables import Variable
 
 from pipelines.utils.cleanup import prettify_byte_size
 from pipelines.utils.google import dissect_gcs_uri, upload_to_cloud_storage
@@ -45,17 +42,3 @@ def upload_result(original_uri: str, filepath: str):
 	# Faz upload do arquivo no mesmo bucket e caminho
 	# do arquivo original
 	upload_to_cloud_storage(filepath, bucket, blob)
-
-	(_, filename) = filepath.rsplit("/", maxsplit=1)
-	Variable.set(
-		# Salvamos o hash da URI original (sabida)
-		# para depois recuperar o URI do arquivo convertido
-		hashlib.sha1(original_uri.encode()).hexdigest(),
-		(
-			f"gs://{bucket}/{blob}/{filename}"
-			if len(blob) > 0
-			else f"gs://{bucket}/{filename}"
-		),
-		tags=["gcs", "conversão", "dbc2csv"],
-		overwrite=True,
-	)
