@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import hashlib
 import os
 
 from prefect.variables import Variable
@@ -47,12 +48,14 @@ def upload_result(original_uri: str, filepath: str):
 
 	(_, filename) = filepath.rsplit("/", maxsplit=1)
 	Variable.set(
-		original_uri,
+		# Salvamos o hash da URI original (sabida)
+		# para depois recuperar o URI do arquivo convertido
+		hashlib.sha1(original_uri.encode()).hexdigest(),
 		(
 			f"gs://{bucket}/{blob}/{filename}"
 			if len(blob) > 0
 			else f"gs://{bucket}/{filename}"
 		),
 		tags=["gcs", "conversão", "dbc2csv"],
-		overwrite=True
+		overwrite=True,
 	)
