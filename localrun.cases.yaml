@@ -14,12 +14,11 @@ cases:
       lon: -43.2105
 
 
-
   ################################
   #  EXTRACT/LOAD                #
   ################################
 
-  # Extração Google Sheets
+  # Extração Google Sheets (URL) -> tabela staging
   - case_slug: "datalake-extract-google-sheets"
     flow_path: "pipelines.datalake.extract_load.google_sheets.flows"
     flow_name: "sms_dump_url"
@@ -31,6 +30,13 @@ cases:
       # table_id: ...
       rename_flow: true
 
+  # Extração de DBC/DBF (GCS) -> CSV (GCS)
+  - case_slug: "datalake-extract-dbc"
+    flow_path: "pipelines.datalake.extract_load.dbc.flows"
+    flow_name: "extract_dbc"
+    params:
+      environment: dev
+      # file_gs_uri: gs://...
 
 
   ################################

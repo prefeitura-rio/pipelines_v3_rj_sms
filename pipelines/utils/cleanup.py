@@ -128,3 +128,43 @@ def jsonify_dataframe(
 	# Em teoria teremos o mesmo número de linhas, na mesma ordem, ...
 	_tmp_df = pd.merge(df_json, df_keep, left_index=True, right_index=True)
 	return _tmp_df
+
+
+def prettify_byte_size(byte_size: int, precision: int = 1):
+	"""
+	Converte um valor em bytes para uma unidade mais compacta
+
+	>>> prettify_byte_size(10)
+	'10 B'
+	>>> prettify_byte_size(500_000)
+	'488.3 KiB'
+	>>> prettify_byte_size(5_000_000)
+	'4.8 MiB'
+	>>> prettify_byte_size(5_000_000, precision=0)
+	'5 MiB'
+	>>> prettify_byte_size(5_000_000, precision=2)
+	'4.77 MiB'
+	>>> prettify_byte_size(5_000_000, precision=4)
+	'4.7684 MiB'
+	>>> prettify_byte_size(500_000_000_000)
+	'465.7 GiB'
+	"""
+	# [Ref] https://stackoverflow.com/a/58467404/4824627
+	byte_size = int(byte_size)
+	if byte_size <= 0:
+		return "0 B"
+
+	units = ("KiB", "MiB", "GiB", "TiB")
+	# Cria lista com o valor em todas as unidades
+	size_list = [f"{byte_size:,} B"]  # B separado porque não é :.1f
+	size_list.extend(
+		[
+			f"{byte_size / (1024.0 ** (i + 1)):,.{precision}f} {unit}"
+			for i, unit in enumerate(units)
+		]
+	)
+	# Pega o último valor que não começa com "0." ou,
+	# no caso de precision=0, que não começa com "0 "
+	return [
+		size for size in size_list if not (size.startswith("0.") or size.startswith("0 "))
+	][-1]

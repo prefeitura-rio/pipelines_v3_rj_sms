@@ -14,7 +14,7 @@ from pipelines.utils.api import convert_usd_to_brl
 from pipelines.utils.cleanup import process_null_str
 from pipelines.utils.datetime import now
 from pipelines.utils.env import environment_is_valid, get_google_project_for_environment
-from pipelines.utils.google import download_from_bucket, upload_to_cloud_storage
+from pipelines.utils.google import download_path_from_bucket, upload_to_cloud_storage
 from pipelines.utils.logger import log
 
 # from pipelines.utils.monitor import send_discord_message
@@ -279,7 +279,7 @@ def download_dbt_artifacts_from_gcs(dbt_path: str, environment: str):
 		os.makedirs(target_base_path)
 
 	try:
-		download_from_bucket(target_base_path, gcs_bucket)
+		download_path_from_bucket(target_base_path, gcs_bucket)
 		log(f"dbt artifacts baixados do bucket: {gcs_bucket}")
 		return target_base_path
 	except Exception as e:

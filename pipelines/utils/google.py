@@ -9,14 +9,14 @@ import pandas as pd
 from google.cloud import storage
 from google.cloud.storage.blob import Blob
 
-from pipelines.utils.cleanup import remove_column_accents
+from pipelines.utils.cleanup import prettify_byte_size, remove_column_accents
 from pipelines.utils.infisical import get_credentials_from_env
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
 
 @task()
-def download_google_sheets(
+def download_google_sheets_task(
 	url: str,
 	file_path: str,
 	file_name: str,
@@ -77,7 +77,7 @@ def download_google_sheets(
 	)
 
 
-def download_from_bucket(
+def download_path_from_bucket(
 	path: str, bucket_name: str, blob_prefix: str = None
 ) -> List[str]:
 	"""
@@ -112,12 +112,85 @@ def download_from_bucket(
 	return downloaded_files
 
 
+def dissect_gcs_uri(uri: str):
+	if uri is None:
+		raise ValueError("URI nula!")
+
+	uri = str(uri).removeprefix("gs://")
+	if len(uri) <= 0:
+		raise ValueError("URI vazia!")
+
+	# Separa caminho e nome do arquivo
+	# ex.: 'bucket_name/path/to/file/BACKUP.GDB'
+	#      => [ 'bucket_name/path/to/file', 'BACKUP.GDB' ]
+	(gcs_full_path, filename) = uri.rsplit("/", maxsplit=1)
+
+	# Separa bucket e caminho ("blob")
+	if "/" in gcs_full_path:
+		# 'bucket_name/path/to/file'
+		# => [ 'bucket_name', 'path/to/file' ]
+		(bucket_name, blob_name) = gcs_full_path.split("/", maxsplit=1)
+	else:
+		# Arquivo na raiz do bucket
+		(bucket_name, blob_name) = (gcs_full_path, "")
+
+	# 'VERY.IMPORTANT.BACKUP.GDB'
+	# => [ 'VERY.IMPORTANT.BACKUP', 'GDB' ]
+	if "." in filename:
+		(raw_filename, suffix) = filename.rsplit(".", maxsplit=1)
+	else:
+		(raw_filename, suffix) = (filename, "")
+
+	return {
+		"bucket": bucket_name,
+		"blob": blob_name,
+		"full_path": f"{blob_name}/{filename}" if blob_name else filename,
+		"filename": filename,
+		"filename_no_ext": raw_filename,
+		"file_ext": suffix,
+	}
+
+
+def download_file_from_bucket(gcs_uri: str, to_dir: str = "/tmp/data"):
+	"""
+	Baixa um único arquivo do Google Cloud Storage a partir de um
+	URI 'gs://...' para um arquivo local, e retorna seu caminho
+	"""
+	uri = dissect_gcs_uri(gcs_uri)
+
+	client = storage.Client()
+	bucket = client.get_bucket(uri["bucket"])
+	blob = bucket.blob(uri["full_path"])
+
+	os.makedirs(to_dir, exist_ok=True)
+	full_file_path = f"{to_dir}/{uri['filename']}"
+	if os.path.exists(full_file_path):
+		log(f"Arquivo já existe em '{full_file_path}'! Sobrescrevendo...")
+	with open(full_file_path, "w") as f:
+		file_path = f.name
+		log(f"Downloading '{gcs_uri}' to file '{file_path}'")
+		blob.download_to_filename(file_path)
+
+	filesize = os.path.getsize(full_file_path)
+	log(f"Arquivo '{full_file_path}' tem tamanho {prettify_byte_size(filesize)}")
+	return full_file_path
+
+
+@task
+def download_file_from_bucket_task(gcs_uri: str):
+	"""
+	Baixa um único arquivo do Google Cloud Storage a partir de um
+	URI 'gs://...' para um arquivo local, e retorna seu caminho
+	"""
+	return download_file_from_bucket(gcs_uri)
+
+
 def upload_to_cloud_storage(
 	path: str,
 	bucket_name: str,
 	blob_prefix: str = None,
 	if_exists: Literal["raise", "replace", "pass"] = "replace",
-):
+) -> None:
 	"""
 	Faz upload de arquivo ou pasta para o Google Cloud Storage
 
@@ -158,6 +231,7 @@ def upload_to_cloud_storage(
 				)
 		# Se estamos aqui, ou não existe arquivo, ou tudo bem substituí-lo
 		blob.upload_from_filename(path)
+		log(f"Upload de '{path}' terminado")
 		return
 
 	# Upload de uma pasta inteira
@@ -181,6 +255,7 @@ def upload_to_cloud_storage(
 
 				# Se estamos aqui, ou não existe arquivo, ou tudo bem substituí-lo
 				blob.upload_from_filename(file_path)
+		log(f"Upload de '{path}' terminado")
 		return
 
 	raise ValueError(f"Caminho '{path}' não é nem diretório, nem arquivo!")
