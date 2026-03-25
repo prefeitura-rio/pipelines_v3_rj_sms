@@ -168,7 +168,7 @@ def download_file_from_bucket(gcs_uri: str, to_dir: str = "/tmp/data"):
 		log(f"Arquivo já existe em '{full_file_path}'! Sobrescrevendo...")
 	with open(full_file_path, "w") as f:
 		file_path = f.name
-		log(f"Downloading '{gcs_uri}' to file '{file_path}'")
+		log(f"Baixando '{gcs_uri}' para '{file_path}'")
 		blob.download_to_filename(file_path)
 
 	filesize = os.path.getsize(full_file_path)
