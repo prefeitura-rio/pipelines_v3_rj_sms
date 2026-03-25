@@ -11,7 +11,7 @@ from pipelines.utils.prefect import authenticated_task as task
 
 
 @task(retries=3, retry_delay_seconds=60)
-def upload_to_datalake(
+def upload_to_datalake_task(
 	input_path: str,
 	dataset_id: str,
 	table_id: str,

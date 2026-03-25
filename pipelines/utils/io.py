@@ -8,7 +8,7 @@ from pipelines.utils.prefect import authenticated_task as task
 
 
 @task
-def create_data_folders() -> dict[str, str]:
+def create_data_folders_task() -> dict[str, str]:
 	"""
 	Cria duas pastas, './data/raw' e './data/partition_directory',
 	e retorna seus caminhos completos. Caso uma pasta já exista,

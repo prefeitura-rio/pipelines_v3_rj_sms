@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from pipelines.constants import constants as global_consts
-from pipelines.utils.datalake import upload_to_datalake
-from pipelines.utils.google import download_google_sheets
+from pipelines.utils.datalake import upload_to_datalake_task
+from pipelines.utils.google import download_google_sheets_task
 from pipelines.utils.prefect import flow, rename_flow_run
-from pipelines.utils.io import create_data_folders
+from pipelines.utils.io import create_data_folders_task
 from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
@@ -38,9 +38,9 @@ def sms_dump_url(
 	####################################
 	# Parte 1 - Obter o dado
 	#####################################
-	create_folders_task = create_data_folders()
+	create_folders_task = create_data_folders_task()
 
-	download_task = download_google_sheets(
+	download_task = download_google_sheets_task(
 		url=url,
 		file_path=create_folders_task["raw"],
 		file_name=table_id,
@@ -51,7 +51,7 @@ def sms_dump_url(
 	#####################################
 	# Parte 2 - Upload do dado
 	#####################################
-	upload_to_datalake(
+	upload_to_datalake_task(
 		input_path=create_folders_task["raw"],
 		dataset_id=dataset_id,
 		table_id=table_id,
