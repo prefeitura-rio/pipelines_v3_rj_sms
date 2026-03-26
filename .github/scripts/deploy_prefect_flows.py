@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import inspect
 import os
 import re
 import sys
@@ -144,6 +145,22 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 		if environment == "dev":
 			flow_name += " (stg)"
 			normalized_flow_name += "_staging"
+		elif environment == "prod":
+			# Parâmetros com valores padrão AINDA precisam ser passados
+			# pelo schedule (????) senão dá `SignatureMismatchError` :s
+			# Então aqui garantimos que todos os schedules possuem todos
+			# os parâmetros do flow, com valores padrão pros que vierem
+			# faltando
+			for schedule in schedules:
+				default_params = {
+					name: param.default
+					for name, param in inspect.signature(flow.fn).parameters.items()
+					if param.default is not inspect.Parameter.empty
+				}
+				schedule.parameters = {
+					**default_params,
+					**schedule.parameters
+				}
 
 		logging.debug(f"Requisitando deploy de (...)/{normalized_flow_name}")
 		deploy_list.append(

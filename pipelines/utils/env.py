@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from os import getenv
 
+from prefect.context import FlowRunContext
+
 from pipelines.constants import constants
 
 from .logger import log
@@ -8,8 +10,8 @@ from .logger import log
 
 def environment_is_valid(environment: str = None, raise_if_not: bool = True):
 	"""
-	Garante que o valor de environment é válido; permite que um erro seja emitido
-	caso não seja
+	Garante que o valor de environment é válido; permite que um erro
+	seja disparado caso não
 	"""
 	if environment not in constants.ALLOWED_ENVIRONMENTS.value:
 		if raise_if_not:
@@ -23,7 +25,19 @@ def get_current_environment() -> str:
 	Retorna o valor da variável de ambiente `environment`, se possuir
 	valor válido; caso contrário, dá erro
 	"""
-	environment = getenv_or_action("environment", action="raise")
+	environment = None
+	# Tenta pegar o contexto da Flow Run atual
+	fr_ctx = FlowRunContext.get()
+	if fr_ctx:
+		# Se conseguiu, tenta pegar o parâmetro `environment`
+		# passado para o flow
+		environment = fr_ctx.parameters.get("environment")
+	# Se não conseguiu o contexto, ou não existe/não foi preenchido
+	# o parâmetro `environment`
+	if not fr_ctx or not environment:
+		# Pega da variável de ambiente, que é passada no deploy
+		# e depende se o flow é de prod ou staging
+		environment = getenv_or_action("environment", action="raise")
 	# Garante que o environment é válido antes de retornar
 	environment_is_valid(environment=environment)
 	return environment
