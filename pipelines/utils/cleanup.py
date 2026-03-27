@@ -1,48 +1,81 @@
 # -*- coding: utf-8 -*-
 import re
 from typing import List, Optional
+import unicodedata
 import pandas as pd
 
 
-def guarantee_proper_column_name(column: str) -> str:
+def cleanup_bigquery_name(name: str) -> str:
 	"""
-	Remove todos os caracteres não-alfanuméricos (+ `_`).
-	Caso a coluna só possua dígitos após a remoção, adiciona um `_` no início.
+	Limpa nome de colunas ou tabelas no BigQuery
+	- Remove acentos de letras
+	- Nome inteiro em lowercase
+	- Substitui tudo que não seja letra ou dígito por `_`
 	"""
-	column_normalized = re.sub(r"[^a-zA-Z0-9_]+", "", column)
-	if len(column_normalized) <= 0:
-		raise ValueError(f"Coluna '{column}' só possui caracteres inválidos!")
-	try:
-		int(column_normalized)
-		return f"_{column_normalized}"
-	except ValueError as _:
-		return column_normalized
-
-
-def remove_column_accents(dataframe: pd.DataFrame) -> list:
-	"""
-	Remove acentos e outras marcas (p.ex. cedilha) de colunas de um DataFrame
-	"""
-	columns = [str(column) for column in dataframe.columns]
-	dataframe.columns = columns
-	return list(
-		dataframe.columns.str.normalize("NFKD")
-		.str.encode("ascii", errors="ignore")
-		.str.decode("utf-8")
-		.map(lambda x: x.strip())
-		.str.replace(" ", "_")
-		.str.replace("/", "_")
-		.str.replace("-", "_")
-		.str.replace("\a", "_")
-		.str.replace("\b", "_")
-		.str.replace("\n", "_")
-		.str.replace("\t", "_")
-		.str.replace("\v", "_")
-		.str.replace("\f", "_")
-		.str.replace("\r", "_")
-		.str.lower()
-		.map(guarantee_proper_column_name)
+	stripped = str(name).strip()
+	if not name or len(stripped) <= 0:
+		raise ValueError("Nome não pode ser nulo ou vazio!")
+	# Normaliza + lowercase: Á -> A´ -> A -> a
+	lower_normalized = (
+		# Separa acentos das letras
+		unicodedata.normalize("NFKD", stripped)
+		# Apaga tudo que não seja ASCII (p.ex. acentos, cedilha, ...)
+		.encode("ascii", errors="ignore")
+		.decode("utf-8")
+		# Lowercase
+		.lower()
 	)
+	# Troca símbolos, espaços, etc por '_'
+	only_alphanumeric = re.sub(r"[^a-z0-9_]", "_", lower_normalized)
+	# Remove underlines excessivos i.e. 'a_______b___' -> 'a__b'
+	no_excessive_underlines = re.sub(r"_{3,}", "__", only_alphanumeric).strip("_")
+	if len(no_excessive_underlines) <= 0:
+		raise ValueError(f"Nome '{name}' fica vazio após limpeza!")
+	# Se só sobraram dígitos, precisamos prefixar com '_'
+	if re.fullmatch(r"[0-9]+", no_excessive_underlines):
+		return f"_{no_excessive_underlines}"
+	# Senão, já está pronto
+	return no_excessive_underlines
+
+
+def cleanup_columns_for_bigquery(df: pd.DataFrame, raise_on_repeats: bool = False):
+	"""
+	Remove acentos e outras marcas (p.ex. cedilha) de colunas de um DataFrame,
+	preparando-o para upload para o BigQuery. A substituição é feita in-place;
+	isto é, as colunas do DataFrame passado serão modificadas pela função.
+
+	Em caso de colunas com nomes repetidos pós tratamento, por padrão,
+	a função irá adicionar "_1" à duplicata (incrementando em caso de mais
+	repetições). Para, ao invés disso, disparar um erro, passe
+	`raise_on_repeats=True`.
+	"""
+	column_mapping = dict()
+	existing_columns = set()
+	for col in df.columns:
+		# Limpa nome da coluna
+		clean_col = cleanup_bigquery_name(col)
+		# Se o nome da coluna já estiver em uso, adiciona
+		# sufixo '_1', '_2', ... progressivamente até não
+		# haver mais repetições
+		clean_col_no_repeats = clean_col  # Nome começa sem sufixo
+		repeat_count = 0
+		while clean_col_no_repeats in existing_columns:  # Se aparece no Set
+			# Se o usuário não quer sufixos nas colunas, morre aqui
+			if raise_on_repeats:
+				raise ValueError(
+					f"Coluna '{col}' se torna '{clean_col}' após tratamento, "
+					"nome já em uso no DataFrame!"
+				)
+			# Caso contrário, soma 1 ao contador e retenta com novo sufixo
+			repeat_count += 1
+			clean_col_no_repeats = f"{clean_col}_{repeat_count}"
+		# Salva nome novo da coluna garantidamente não repetido
+		existing_columns.add(clean_col_no_repeats)
+		# Cria mapeamento do nome original -> tratado
+		column_mapping[col] = clean_col_no_repeats
+	# Após processar todas as colunas, substitui nomes no DataFrame
+	df.rename(columns=column_mapping, inplace=True)
+	return df
 
 
 def process_null_str(val: str | None) -> str | None:

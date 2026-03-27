@@ -9,7 +9,7 @@ import pandas as pd
 from google.cloud import storage
 from google.cloud.storage.blob import Blob
 
-from pipelines.utils.cleanup import prettify_byte_size, remove_column_accents
+from pipelines.utils.cleanup import prettify_byte_size, cleanup_columns_for_bigquery
 from pipelines.utils.infisical import get_credentials_from_env
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
@@ -69,7 +69,7 @@ def download_google_sheets_task(
 
 	log(f">>>>> Dataframe shape: {dataframe.shape}")
 	log(f">>>>> Dataframe colunas (cruas):    {dataframe.columns}")
-	dataframe.columns = remove_column_accents(dataframe)
+	dataframe.columns = cleanup_columns_for_bigquery(dataframe, raise_on_repeats="raise")
 	log(f">>>>> Dataframe colunas (tratadas): {dataframe.columns}")
 
 	dataframe.to_csv(

@@ -2,9 +2,34 @@
 import os
 import shutil
 import sys
+from typing import List
+import uuid
+import zipfile
 
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
+
+
+def create_tmp_data_folder(prefix: str = None, suffix: str = None) -> str:
+	"""
+	Cria uma pasta em `/tmp/data` com nome aleatório para uso geral.
+	Opcionalmente recebe um prefixo ou sufixo, adicionados em volta
+	dos caracteres aleatórios.
+
+	Retorna o caminho da pasta.
+	"""
+	if not prefix:
+		prefix = "pipelines_"
+	if not suffix:
+		suffix = ""
+
+	# ou criamos uma pasta que não existia antes or we die trying
+	while True:
+		path = f"/tmp/data/{prefix}{os.urandom(8).hex()}{suffix}"
+		if os.path.exists(path):
+			continue
+		os.makedirs(path)
+		return path
 
 
 @task
@@ -82,3 +107,55 @@ def list_files_in_folder_task(folder: str, endswith: str = None, recursive: bool
 			arquivos em subpastas
 	"""
 	return list_files_in_folder(folder, endswith=endswith, recursive=recursive)
+
+
+def zip_files_from_list(filelist: List[str], output_path: str = None) -> str:
+	"""
+	Recebe uma lista de caminhos absolutos de arquivos e retorna o caminho
+	absoluto de um arquivo ZIP contendo os arquivos passados.
+	"""
+	if not output_path:
+		output_path = create_tmp_data_folder()
+	output_path.rstrip("/")
+	zip_filepath = f"{output_path}/{uuid.uuid4()}.zip"
+
+	with zipfile.ZipFile(zip_filepath, "w", zipfile.ZIP_DEFLATED) as zipf:
+		for file_path in filelist:
+			if not os.path.exists(file_path):
+				log(f"Arquivo '{file_path}' não existe!", level="error")
+				continue
+			zipf.write(file_path, arcname=os.path.basename(file_path))
+	return zip_filepath
+
+
+@task
+def zip_files_from_list_task(filelist: List[str], output_path: str = None):
+	"""
+	Recebe uma lista de caminhos absolutos de arquivos e retorna o caminho
+	absoluto de um arquivo ZIP contendo os arquivos passados.
+	"""
+	return zip_files_from_list(filelist, output_path=output_path)
+
+
+def unzip_file(filepath: str, output_path: str = None) -> str:
+	"""
+	Recebe o caminho absoluto de um ZIP, extrai todo o conteúdo dele,
+	e retorna o caminho absoluto da pasta contendo os arquivos
+	"""
+	if not output_path:
+		output_path = create_tmp_data_folder()
+	output_path.rstrip("/")
+
+	try:
+		with zipfile.ZipFile(filepath, "r") as zip_ref:
+			log(f"Extraindo conteúdo do ZIP para '{output_path}'")
+			zip_ref.extractall(output_path)
+	except Exception as e:
+		log("Erro extraindo arquivo!", level="error")
+		raise e
+	return output_path
+
+
+@task
+def unzip_file_task(filepath: str, output_path: str = None):
+	return unzip_file(filepath=filepath, output_path=output_path)
