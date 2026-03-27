@@ -174,7 +174,7 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 						"./pipelines/Dockerfile"
 						if dockerfile is None or not dockerfile
 						else dockerfile
-					)
+					),
 				),
 				schedules=(schedules if environment == "prod" else []),
 				job_variables=({"env": env_vars}),

@@ -3,7 +3,7 @@ import asyncio
 import selectors
 import subprocess
 import sys
-from typing import IO, Dict, List, cast
+from typing import IO, Dict, List, TextIO, cast
 
 from pipelines.utils.logger import log
 
@@ -41,12 +41,12 @@ async def async_run_command(command: List[str], raise_on_error: bool = True) -> 
 						streams.pop(sub_stream)
 						continue
 
-					sys_stream = selected.data
+					sys_stream: TextIO = selected.data
 					sys_stream.write(line)
 					sys_stream.flush()
 
 					if sys_stream is sys.stdout:
-						log(f"[subproc.STDOUT] {line}", line)
+						log(f"[subproc.STDOUT] {line}")
 					else:
 						log(f"[subproc.STDERR] {line}", level="error")
 

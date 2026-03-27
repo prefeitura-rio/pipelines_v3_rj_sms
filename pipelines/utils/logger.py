@@ -16,11 +16,11 @@ LEVELS_CONFIG = {
 
 
 def log(
-	msg: str, level: Literal["debug", "info", "warning", "error", "critical"] = "info"
+	*args, level: Literal["debug", "info", "warning", "error", "critical"] = "info"
 ) -> None:
 	"""
 	Args:
-		msg (str):
+		*args (...):
 			Mensagem a ser logada.
 		level (Literal["debug", "info", "warning", "error", "critical"]):
 			Nível de gravidade da mensagem.
@@ -28,10 +28,10 @@ def log(
 		None
 	"""
 	try:
-		get_run_logger().log(LEVELS_CONFIG[level]["type"], msg)
+		get_run_logger().log(LEVELS_CONFIG[level]["type"], *args)
 	except MissingContextError:
 		# Não há flow executando (ainda, ou mais)
 		# A função provavelmente foi chamada p.ex. em evento lifecycle
-		print(msg)
+		print(*args)
 
 	# TODO: discord
