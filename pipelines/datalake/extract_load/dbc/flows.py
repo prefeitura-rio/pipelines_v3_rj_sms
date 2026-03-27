@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 from pipelines.constants import constants as global_consts
-from pipelines.utils.google import download_file_from_bucket_task
+from pipelines.utils.google import (
+	dissect_gcs_uri,
+	download_file_from_bucket_task,
+	upload_to_cloud_storage_task,
+)
 from pipelines.utils.prefect import flow
 from pipelines.utils.state_handlers import handle_flow_state_change
 
-from .tasks import run_conversion, upload_result
+from .tasks import run_conversion
 
 
 @flow(
@@ -19,7 +23,10 @@ def extract_dbc(file_gs_uri: str, environment: str = "dev"):
 	# Em seguida, fazemos a descompressão/conversão
 	csv_filepath = run_conversion(filepath=dbc_filepath)
 	# Por fim, upload dos resultados para o bucket novamente
-	upload_result(original_uri=file_gs_uri, filepath=csv_filepath)
+	uri = dissect_gcs_uri(file_gs_uri)
+	upload_to_cloud_storage_task(
+		path=csv_filepath, bucket_name=uri["bucket"], blob_prefix=uri["blob"]
+	)
 
 
 _flows = [extract_dbc]

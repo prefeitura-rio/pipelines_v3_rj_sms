@@ -151,16 +151,23 @@ def dissect_gcs_uri(uri: str):
 	}
 
 
-def download_file_from_bucket(gcs_uri: str, to_dir: str = "/tmp/data"):
+def download_file_from_bucket(gcs_uri: str, to_dir: str = None):
 	"""
 	Baixa um único arquivo do Google Cloud Storage a partir de um
-	URI 'gs://...' para um arquivo local, e retorna seu caminho
+	URI 'gs://...' para um arquivo local, e retorna seu caminho.
+	Se `to_dir` não for passado, uma pasta em /tmp/data será criada
 	"""
 	uri = dissect_gcs_uri(gcs_uri)
 
 	client = storage.Client()
 	bucket = client.get_bucket(uri["bucket"])
 	blob = bucket.blob(uri["full_path"])
+
+	if not to_dir:
+		# urandom(S) gera S bytes = S*2 caracteres
+		# UUID aqui seria mais "confiável", mas esses arquivos não devem
+		# persistir por tempo o suficiente pra 16^10 opções não bastarem
+		to_dir = f"/tmp/data/pipelines_{os.urandom(5).hex()}"
 
 	os.makedirs(to_dir, exist_ok=True)
 	full_file_path = f"{to_dir}/{uri['filename']}"
@@ -205,6 +212,7 @@ def upload_to_cloud_storage(
 			O que fazer se o dado já existir no GCS: `"raise"` dispara erro de conflito;
 			`"replace"` substitui o dado; `"pass"` não faz nada. Por padrão, é `"replace"`.
 	"""
+	log(f"Fazendo upload de '{path}' para 'gs://{bucket_name}/{blob_prefix}'")
 	client = storage.Client()
 	bucket = client.get_bucket(bucket_name)
 
@@ -259,3 +267,29 @@ def upload_to_cloud_storage(
 		return
 
 	raise ValueError(f"Caminho '{path}' não é nem diretório, nem arquivo!")
+
+
+@task
+def upload_to_cloud_storage_task(
+	path: str,
+	bucket_name: str,
+	blob_prefix: str = None,
+	if_exists: Literal["raise", "replace", "pass"] = "replace",
+) -> None:
+	"""
+	Faz upload de arquivo ou pasta para o Google Cloud Storage
+
+	Args:
+		path (str):
+			Caminho do arquivo ou pasta a ser enviado.
+		bucket_name (str):
+			Nome do bucket no Google Cloud Storage.
+		blob_prefix (str?):
+			Caminho no bucket para o arquivo. Por padrão, é `None`.
+		if_exists (str?):
+			O que fazer se o dado já existir no GCS: `"raise"` dispara erro de conflito;
+			`"replace"` substitui o dado; `"pass"` não faz nada. Por padrão, é `"replace"`.
+	"""
+	return upload_to_cloud_storage(
+		path, bucket_name, blob_prefix=blob_prefix, if_exists=if_exists
+	)
