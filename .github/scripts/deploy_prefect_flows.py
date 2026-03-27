@@ -119,8 +119,8 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 	schedules = getattr(module, "_schedules", [])  # pode não haver schedule
 	schedules: list[Schedule]
 
-	# TODO: conferir se existe variável _dockerfile,
-	# se sim, tratar como caminho para Dockerfile do flow
+	dockerfile = getattr(module, "_dockerfile", None)  # pode não haver dockerfile
+	dockerfile: str | None
 
 	logging.debug(
 		f"'{file_path}': encontrados {len(flows)} flow(s) e {len(schedules)} schedule(s)"
@@ -157,10 +157,7 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 					for name, param in inspect.signature(flow.fn).parameters.items()
 					if param.default is not inspect.Parameter.empty
 				}
-				schedule.parameters = {
-					**default_params,
-					**schedule.parameters
-				}
+				schedule.parameters = {**default_params, **schedule.parameters}
 
 		logging.debug(f"Requisitando deploy de (...)/{normalized_flow_name}")
 		deploy_list.append(
@@ -173,7 +170,11 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 				image=DockerImage(
 					name=f"southamerica-east1-docker.pkg.dev/rj-sms/pipelines-v3-rj-sms/{normalized_flow_name}",
 					tag="latest",
-					dockerfile="./pipelines/Dockerfile",  # TODO: variável _dockerfile mencionada acima
+					dockerfile=(
+						"./pipelines/Dockerfile"
+						if dockerfile is None or not dockerfile
+						else dockerfile
+					)
 				),
 				schedules=(schedules if environment == "prod" else []),
 				job_variables=({"env": env_vars}),
