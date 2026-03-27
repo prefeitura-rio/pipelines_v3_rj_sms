@@ -54,7 +54,7 @@ runs:
       with:
         registry: southamerica-east1-docker.pkg.dev
         username: _json_key
-        password: ${{ secrets.GOOGLE_CREDENTIALS }}
+        password: ${{ inputs.GOOGLE_CREDENTIALS }}
 
     - name: Setup Python
       uses: actions/setup-python@v6

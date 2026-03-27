@@ -18,9 +18,7 @@ def run_conversion(filepath: str):
 		f'"{filepath}"',
 	]
 	log(f"Executando comando '{' '.join(command)}' via subprocesso")
-	stdout = run_command(command)
-	if stdout:
-		log(f"Output:\n{stdout}")
+	run_command(command)  # Se deu erro, dispara aqui mesmo
 	# Se não deu erro, então aqui devemos ter um arquivo CSV
 	# com mesmo nome do DBC/DBF original
 	(filepath, _) = filepath.rsplit(".", maxsplit=1)
