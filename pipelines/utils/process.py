@@ -8,7 +8,12 @@ from typing import IO, Dict, List, TextIO, cast
 from pipelines.utils.logger import log
 
 
-async def async_run_command(command: List[str], raise_on_error: bool = True) -> bool:
+async def async_run_command(
+	command: List[str],
+	raise_on_error: bool = True,
+	print_stdout: bool = True,
+	print_stderr: bool = True,
+) -> bool:
 	"""
 	Inicia um subprocesso executando o comando especificado, recebido como
 	lista de strings (ex.: [ "git", "diff", "HEAD^" ]). Opcionalmente pode
@@ -24,7 +29,10 @@ async def async_run_command(command: List[str], raise_on_error: bool = True) -> 
 
 		assert sub.stdout and sub.stderr
 
-		streams: Dict[IO[str], IO[str]] = {sub.stdout: sys.stdout, sub.stderr: sys.stderr}
+		streams: Dict[IO[str], IO[str]] = {
+			**({sub.stdout: sys.stdout} if print_stdout else {}),
+			**({sub.stderr: sys.stderr} if print_stderr else {}),
+		}
 
 		with selectors.DefaultSelector() as selector:
 			for sub_stream, sys_stream in streams.items():
@@ -67,6 +75,18 @@ async def async_run_command(command: List[str], raise_on_error: bool = True) -> 
 		return False
 
 
-def run_command(command: List[str], raise_on_error: bool = True):
+def run_command(
+	command: List[str],
+	raise_on_error: bool = True,
+	print_stdout: bool = True,
+	print_stderr: bool = True,
+) -> bool:
 	"""Inicia um subprocesso executando o comando especificado"""
-	return asyncio.run(async_run_command(command, raise_on_error=raise_on_error))
+	return asyncio.run(
+		async_run_command(
+			command,
+			raise_on_error=raise_on_error,
+			print_stdout=print_stdout,
+			print_stderr=print_stderr,
+		)
+	)

@@ -1,26 +1,107 @@
 # -*- coding: utf-8 -*-
 import os
-import re
 from time import sleep
-import unicodedata
+from typing import Literal
 
 import pandas as pd
 
-from pipelines.utils.cleanup import cleanup_columns_for_bigquery, jsonify_dataframe
+from pipelines.utils.cleanup import (
+	cleanup_bigquery_name,
+	cleanup_columns_for_bigquery,
+	jsonify_dataframe,
+)
 from pipelines.utils.datalake import upload_df_to_datalake_task
 from pipelines.utils.datetime import now
+from pipelines.utils.io import create_tmp_data_folder
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
+from pipelines.utils.process import run_command
 
 from .utils import format_reference_date
 
 
 @task
 def run_conversion(filepath: str):
-	# TODO
-	log(f"Convertendo '{filepath}'....")
-	log("(é mentira)")
-	return "/tmp/data"
+	# Passo a passo:
+	# - Carregar variáveis de ambiente de 32-bit
+	# - `gbak` pra converter GDB pra FBK
+	# - Carregar variáveis de ambiente de 64-bit
+	# - `gbak` pra converter FBK pra FDB
+	# - Executa gdb2csv.py
+
+	# Pegamos o PATH antes de adicionar o Firebird 32-bit;
+	# vamos usar ele em breve quando trocarmos pra 64-bit
+	no_firebird_path = os.environ["PATH"]
+
+	def set_env_vars(original_path: str, bitness: Literal["32bit", "64bit"]):
+		os.environ["PATH"] = (
+			f"/opt/{bitness}/firebird"
+			f":/opt/{bitness}/firebird/bin"
+			f":/opt/{bitness}/firebird/lib"
+			f":{original_path}"
+		)
+		os.environ["FIREBIRD"] = f"/opt/{bitness}/firebird"
+		os.environ["LD_LIBRARY_PATH"] = f"/opt/{bitness}/firebird/lib"
+
+	# Carrega variáveis 32-bit
+	set_env_vars(no_firebird_path, "32bit")
+	log("Criando backup (GDB→FBK, 32-bit)...")
+	directory = os.path.dirname(filepath)
+	fbk_filepath = os.path.join(directory, "backup.fbk")
+	run_command(
+		[
+			# Usamos o caminho absoluto por via das dúvidas
+			"/opt/32bit/firebird/bin/gbak",
+			"-backup_database",
+			"-verify",
+			"-transportable",  # Agnóstico a versões/plataformas
+			filepath,
+			fbk_filepath,
+			"-user",
+			"SYSDBA",
+			"-password",
+			"masterkey",
+		],
+		print_stdout=False,
+	)
+	# Apaga GDB agora que já foi exportado
+	os.remove(filepath)
+
+	# Carrega variáveis 64-bit
+	set_env_vars(no_firebird_path, "64bit")
+	log("Carregando backup (FBK→FDB, 64-bit)...")
+	fdb_filepath = os.path.join(directory, "backup.fdb")
+	run_command(
+		[
+			"/opt/64bit/firebird/bin/gbak",
+			"-create_database",
+			"-verify",
+			fbk_filepath,
+			fdb_filepath,
+			"-user",
+			"SYSDBA",
+			"-password",
+			"masterkey",
+		],
+		print_stdout=False,
+	)
+	# Apaga FBK agora que já foi carregado
+	os.remove(fbk_filepath)
+
+	output_folder = create_tmp_data_folder()
+	log("Executando script de conversão FDB→CSV")
+	run_command(
+		[
+			"uv",
+			"run",
+			"--script",
+			"pipelines/datalake/extract_load/gdb/scripts/fdb2csv.py",
+			fdb_filepath,
+			output_folder,
+		]
+	)
+
+	return output_folder
 
 
 # TODO: transformar isso em função genérica
@@ -38,11 +119,7 @@ def upload_csv_as_table(
 	filename = os.path.basename(csv_path)
 	table_name = filename.removesuffix(".csv").strip()
 	# Remove potenciais caracteres problemáticos em nomes de tabelas
-	table_name = re.sub(
-		r"_{3,}",
-		"__",  # Limita underlines consecutivos a 2
-		re.sub(r"[^a-z0-9_]", "_", unicodedata.normalize("NFKD", table_name).lower()),
-	)
+	table_name = cleanup_bigquery_name(table_name)
 
 	csv_reader = pd.read_csv(
 		csv_path, dtype="unicode", na_filter=False, chunksize=LINES_PER_CHUNK

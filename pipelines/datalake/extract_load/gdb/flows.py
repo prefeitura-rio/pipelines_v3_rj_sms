@@ -64,7 +64,9 @@ def extract_gdb(
 
 	# Também faz upload de cada um deles como tabelas no BigQuery
 	bq_futures = [
-		upload_csv_as_table.submit(filepath, gcs_uri, data_referencia, lines_per_chunk)
+		upload_csv_as_table.submit(
+			filepath, dataset, gcs_uri, data_referencia, lines_per_chunk
+		)
 		for filepath in csv_files
 	]
 	# Espera todos os uploads terminarem
@@ -73,3 +75,4 @@ def extract_gdb(
 
 _flows = [extract_gdb]
 _schedules = []
+_dockerfile = "./pipelines/datalake/extract_load/gdb/Dockerfile"

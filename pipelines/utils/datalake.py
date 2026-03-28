@@ -9,6 +9,7 @@ import uuid
 import basedosdados as bd
 import pandas as pd
 
+from pipelines.utils.io import create_tmp_data_folder
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
@@ -313,8 +314,7 @@ def upload_df_to_datalake_task(
 		)
 		return None
 
-	root_folder = f"/tmp/data/pipelines_{uuid.uuid4()}"
-	os.makedirs(root_folder, exist_ok=True)
+	root_folder = create_tmp_data_folder()
 	log(f"Usando diretório '{root_folder}'")
 
 	# Converte todas as colunas para string

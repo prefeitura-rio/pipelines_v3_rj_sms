@@ -6,6 +6,7 @@ from typing import List
 import uuid
 import zipfile
 
+from pipelines.utils.cleanup import prettify_byte_size
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
@@ -25,6 +26,10 @@ def create_tmp_data_folder(prefix: str = None, suffix: str = None) -> str:
 
 	# ou criamos uma pasta que não existia antes or we die trying
 	while True:
+		# urandom(S) gera S bytes = S*2 caracteres
+		# UUID aqui seria mais "confiável" (e mais lento), mas
+		# esses arquivos não devem persistir por tempo o
+		# suficiente pra 16^10 opções não bastarem....
 		path = f"/tmp/data/{prefix}{os.urandom(8).hex()}{suffix}"
 		if os.path.exists(path):
 			continue
@@ -119,12 +124,16 @@ def zip_files_from_list(filelist: List[str], output_path: str = None) -> str:
 	output_path.rstrip("/")
 	zip_filepath = f"{output_path}/{uuid.uuid4()}.zip"
 
+	log(f"Criando ZIP de {len(filelist)} arquivo(s)...")
 	with zipfile.ZipFile(zip_filepath, "w", zipfile.ZIP_DEFLATED) as zipf:
 		for file_path in filelist:
 			if not os.path.exists(file_path):
 				log(f"Arquivo '{file_path}' não existe!", level="error")
 				continue
 			zipf.write(file_path, arcname=os.path.basename(file_path))
+
+	filesize = os.path.getsize(zip_filepath)
+	log(f"Arquivo '{zip_filepath}' tem tamanho {prettify_byte_size(filesize)}")
 	return zip_filepath
 
 

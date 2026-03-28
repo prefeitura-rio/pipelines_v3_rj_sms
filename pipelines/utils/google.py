@@ -11,6 +11,7 @@ from google.cloud.storage.blob import Blob
 
 from pipelines.utils.cleanup import prettify_byte_size, cleanup_columns_for_bigquery
 from pipelines.utils.infisical import get_credentials_from_env
+from pipelines.utils.io import create_tmp_data_folder
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
@@ -164,10 +165,7 @@ def download_file_from_bucket(gcs_uri: str, to_dir: str = None):
 	blob = bucket.blob(uri["full_path"])
 
 	if not to_dir:
-		# urandom(S) gera S bytes = S*2 caracteres
-		# UUID aqui seria mais "confiável", mas esses arquivos não devem
-		# persistir por tempo o suficiente pra 16^10 opções não bastarem
-		to_dir = f"/tmp/data/pipelines_{os.urandom(5).hex()}"
+		to_dir = create_tmp_data_folder()
 
 	os.makedirs(to_dir, exist_ok=True)
 	full_file_path = f"{to_dir}/{uri['filename']}"

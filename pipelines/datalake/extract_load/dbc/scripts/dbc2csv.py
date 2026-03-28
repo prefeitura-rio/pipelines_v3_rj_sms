@@ -29,9 +29,7 @@ from dbfread import DBF
 
 
 def standardize_filename(filepath: str):
-	filepath = (
-		filepath.removeprefix('"').removeprefix("'").removesuffix('"').removesuffix("'")
-	)
+	filepath = str(filepath).strip("\"' ")
 	# Confere se arquivo realmente existe
 	if not os.path.exists(filepath):
 		raise RuntimeError(f"Arquivo '{filepath}' não existe!")
