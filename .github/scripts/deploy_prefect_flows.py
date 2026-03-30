@@ -151,13 +151,34 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 			# Então aqui garantimos que todos os schedules possuem todos
 			# os parâmetros do flow, com valores padrão pros que vierem
 			# faltando
+			new_schedules = []
 			for schedule in schedules:
+				# Descobre os parâmetros com valores padrão inspecionando função
+				# Cria um dicionário com { [nome do parâmetro]: [valor padrão] }
 				default_params = {
 					name: param.default
 					for name, param in inspect.signature(flow.fn).parameters.items()
 					if param.default is not inspect.Parameter.empty
 				}
-				schedule.parameters = {**default_params, **schedule.parameters}
+				# Primeiro expandimos os valores padrão, depois os do schedule
+				# Assim os passados pro schedule sobrescrevem os padrão, mas
+				# deixando os faltantes com valor padrão
+				new_parameters = {**default_params, **schedule.parameters}
+				# Em uma utopia, aqui faríamos só `schedule.parameters = new_parameters`
+				# Mas dá `dataclasses.FrozenInstanceError`, então precisa re-instanciar
+				new_schedules.append(
+					Schedule(
+						interval=schedule.interval,
+						cron=schedule.cron,
+						rrule=schedule.rrule,
+						timezone=schedule.timezone,
+						anchor_date=schedule.anchor_date,
+						day_or=schedule.day_or,
+						active=schedule.active,
+						parameters=new_parameters,
+					)
+				)
+			schedules = new_schedules
 
 		logging.debug(f"Requisitando deploy de (...)/{normalized_flow_name}")
 		deploy_list.append(
