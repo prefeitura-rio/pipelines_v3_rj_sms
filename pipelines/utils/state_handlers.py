@@ -13,6 +13,7 @@ from pipelines.utils.datetime import now
 from pipelines.utils.env import (
 	get_current_environment,
 	get_google_project_for_environment,
+	get_prefect_url,
 )
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import Flow
@@ -43,9 +44,10 @@ def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwar
 	}
 
 	if state.is_failed() and environment == "prod" and len(flow.get_owners()) > 0:
+		prefect_url = get_prefect_url()
 		message = [
 			" ".join([f"<@{owner}>" for owner in flow.get_owners()]),
-			f"> Flow Run: [{flow_run.name}](https://pipelines.dados.rio/flow-run/{info['flow_run_id']})",
+			f"> Flow (v3): [{flow_run.name}]({prefect_url}/flow-run/{info['flow_run_id']})",
 			"*Parâmetros:*",
 		]
 		for key, value in flow_run.parameters.items():

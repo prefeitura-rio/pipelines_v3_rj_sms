@@ -58,8 +58,11 @@ def download_google_sheets_task(
 	gspread_client = gspread.authorize(credentials)
 	# Cria dataframe a partir da planilha
 	dataframe = pd.DataFrame(
-		gspread_client.open_by_url(url).worksheet(gsheets_sheet_name).get_values()
-	)  # fmt=skip
+		gspread_client
+		.open_by_url(url)
+		.worksheet(gsheets_sheet_name)
+		.get_values()
+	)  # fmt: skip
 	# Primeira linha contém cabeçalho
 	new_header = dataframe.iloc[0]
 	# Remove cabeçalho dos dados
