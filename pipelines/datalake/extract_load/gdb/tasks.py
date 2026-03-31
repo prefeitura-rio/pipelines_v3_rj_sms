@@ -10,7 +10,7 @@ from pipelines.utils.cleanup import (
 	cleanup_columns_for_bigquery,
 	jsonify_dataframe,
 )
-from pipelines.utils.datalake import upload_df_to_datalake_task
+from pipelines.utils.datalake import upload_df_to_datalake
 from pipelines.utils.datetime import now
 from pipelines.utils.io import create_tmp_data_folder, get_file_size
 from pipelines.utils.logger import log
@@ -163,8 +163,8 @@ def upload_csv_as_table(
 		while True:
 			attempt += 1
 			try:
-				# Chama a task de upload
-				upload_df_to_datalake_task.run(
+				# Tenta fazer upload
+				upload_df_to_datalake(
 					df=df,
 					dataset_id=dataset,
 					table_id=table_name,
@@ -184,6 +184,6 @@ def upload_csv_as_table(
 				if attempt > MAX_UPLOAD_ATTEMPTS:
 					raise e
 				# Senão, pausa por uns segundos e tenta de novo
-				log(f"{repr(e)}; esperando 5s e  and retrying", level="warning")
+				log(f"{repr(e)}; esperando 5s", level="warning")
 				sleep(5)
 	# Fim!
