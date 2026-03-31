@@ -53,7 +53,9 @@ def extract_gdb(
 
 		# Coloca os CSVs em um ZIP, faz upload de volta para o GCS
 		uri = dissect_gcs_uri(gcs_uri)
-		zip_path = zip_files_from_list_task(filelist=csv_files)
+		zip_path = zip_files_from_list_task(
+			filelist=csv_files, output_filename=uri["filename_no_ext"]
+		)
 		upload_to_cloud_storage_task(
 			path=zip_path, bucket_name=uri["bucket"], blob_prefix=uri["blob"]
 		)

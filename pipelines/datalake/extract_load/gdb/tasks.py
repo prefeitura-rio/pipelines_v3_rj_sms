@@ -168,7 +168,7 @@ def upload_csv_as_table(
 					df=df,
 					dataset_id=dataset,
 					table_id=table_name,
-					partition_column="data_particao",
+					date_partition_column="data_particao",
 					dump_mode="append",
 				)
 				break

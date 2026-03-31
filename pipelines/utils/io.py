@@ -3,7 +3,6 @@ import os
 import shutil
 import sys
 from typing import List
-import uuid
 import zipfile
 
 from pipelines.utils.cleanup import prettify_byte_size
@@ -113,15 +112,24 @@ def list_files_in_folder_task(folder: str, endswith: str = None, recursive: bool
 	return list_files_in_folder(folder, endswith=endswith, recursive=recursive)
 
 
-def zip_files_from_list(filelist: List[str], output_path: str = None) -> str:
+def zip_files_from_list(
+	filelist: List[str], output_path: str = None, output_filename: str = None
+) -> str:
 	"""
 	Recebe uma lista de caminhos absolutos de arquivos e retorna o caminho
 	absoluto de um arquivo ZIP contendo os arquivos passados.
+	Opcionalmente recebe o nome do arquivo a ser criado em `output_filename`.
 	"""
 	if not output_path:
 		output_path = create_tmp_data_folder()
 	output_path.rstrip("/")
-	zip_filepath = f"{output_path}/{uuid.uuid4()}.zip"
+
+	if not output_filename:
+		output_filename = f"{os.urandom(8).hex()}.zip"
+	elif not output_filename.endswith(".zip"):
+		output_filename = f"{output_filename}.zip"
+
+	zip_filepath = f"{output_path}/{output_filename}"
 
 	log(f"Criando ZIP de {len(filelist)} arquivo(s)...")
 	with zipfile.ZipFile(zip_filepath, "w", zipfile.ZIP_DEFLATED) as zipf:
@@ -137,7 +145,9 @@ def zip_files_from_list(filelist: List[str], output_path: str = None) -> str:
 
 
 @task
-def zip_files_from_list_task(filelist: List[str], output_path: str = None):
+def zip_files_from_list_task(
+	filelist: List[str], output_path: str = None, output_filename: str = None
+):
 	"""
 	Recebe uma lista de caminhos absolutos de arquivos e retorna o caminho
 	absoluto de um arquivo ZIP contendo os arquivos passados.
