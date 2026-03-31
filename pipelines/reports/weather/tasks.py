@@ -18,7 +18,7 @@ def get_bairros():
 	log(f"Executando query '{sql}'")
 	df: DataFrame = client.query_and_wait(sql).to_dataframe()
 
-	log(f"{df.sample(5)}")
+	log(f"Exemplo de 5 bairros:\n{df.sample(5)}", fwd_discord=True)
 	return 0
 
 

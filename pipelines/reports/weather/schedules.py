@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-from pipelines.utils.schedules import create_schedule
+# from pipelines.utils.schedules import create_schedule
 
 
 schedules = [
-	create_schedule(
-		parameters={"environment": "dev", "lat": -22.91122, "lon": -43.20562},
-		interval="hourly",
-		config={"minute": 30},
-	)
+	## Exemplo de hora em hora, no minuto 30 (9:30, 10:30, ...):
+	# create_schedule(
+	# 	parameters={"environment": "dev", "lat": -22.91122, "lon": -43.20562},
+	# 	interval="hourly",
+	# 	config={"minute": 30},
+	# ),
 	## Exemplo semanal:
 	# create_schedule(
 	# 	interval="weekly",

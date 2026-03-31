@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
+import os
 import re
 from typing import List
 
 import pandas as pd
 
+from pipelines.utils.io import create_tmp_data_folder
 from pipelines.utils.logger import log
 
 
@@ -61,7 +63,10 @@ def log_to_file(logs: pd.DataFrame, levels: List[str] = None) -> str:
 	report = "\n".join(report)
 	log(f"Logs do DBT: {report}")
 
-	with open("dbt_log.txt", "w+", encoding="utf-8") as log_file:
+	dirpath = create_tmp_data_folder()
+	filepath = os.path.join(dirpath, "dbt_log.txt")
+
+	with open(filepath, "w+", encoding="utf-8") as log_file:
 		log_file.write(report)
 
-	return "dbt_log.txt"
+	return filepath

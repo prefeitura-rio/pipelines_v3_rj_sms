@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from os import getenv
+import os
+from typing import Literal
 
 from prefect.context import FlowRunContext
 
@@ -60,7 +62,9 @@ def get_google_project_for_environment(environment: str = None):
 	return project
 
 
-def getenv_or_action(key: str, *, default: str = None, action: str = "raise"):
+def getenv_or_action(
+	key: str, *, default: str = None, action: Literal["raise", "warnignore"] = "raise"
+):
 	"""
 	Retorna o valor da variável de ambiente com uma dada chave, o valor padrão,
 	ou o executa uma determinada ação caso nenhum desses tenha sido definido
@@ -92,9 +96,9 @@ def getenv_or_action(key: str, *, default: str = None, action: str = "raise"):
 
 	if value is None:
 		if action == "raise":
-			raise ValueError(f"Environment variable '{key}' is not set")
+			raise ValueError(f"Variável de ambiente '{key}' não está definida")
 		elif action == "warn":
-			log(f"WARNING: Environment variable '{key}' is not set", level="warning")
+			log(f"[!] Variável de ambiente '{key}' não está definida", level="warning")
 		elif action == "ignore":
 			pass
 
@@ -102,4 +106,6 @@ def getenv_or_action(key: str, *, default: str = None, action: str = "raise"):
 
 
 def get_prefect_url():
-	return getenv_or_action("PREFECT_API_URL").removesuffix("/api")
+	# Não precisa dar erro se estamos executando localmente
+	default = "localhost" if os.environ.get("IN_DEBUGGER") else None
+	return getenv_or_action("PREFECT_API_URL", default=default).removesuffix("/api")

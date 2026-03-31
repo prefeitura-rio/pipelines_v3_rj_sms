@@ -254,11 +254,11 @@ def get_dbt_target_from_environment(environment: str, requested_target: str = No
 	# Nem todo target existe/é permitido
 	# https://github.com/prefeitura-rio/queries-rj-sms/blob/master/profiles.yml
 	allowed_targets = [
-		"prod",  # rj-sms     (dataset.table)
-		"dev",  # rj-sms-dev (username__dataset.table)
-		"ci",  # rj-sms-dev (dataset.table)
-		"sandbox",  # rj-sms-sandbox (dataset.table)
-	]  # fmt=skip
+		"prod",    # rj-sms     (dataset.table)
+		"dev",     # rj-sms-dev (username__dataset.table)
+		"ci",      # rj-sms-dev (dataset.table)
+		"sandbox", # rj-sms-sandbox (dataset.table)
+	]  # fmt: skip
 
 	if requested_target in allowed_targets:
 		return requested_target
