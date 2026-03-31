@@ -15,9 +15,13 @@ ENV PATH="/opt/prefect/pipelines_v3_rj_sms/.venv/bin:$PATH"
 # Copia os flows
 COPY ./pipelines /opt/prefect/pipelines_v3_rj_sms/pipelines
 
+
 #####################
 ## Firebird
 #####################
+# Adiciona dependência específica desse projeto
+RUN uv add 'fdb==2.0.4'
+
 # Situação: os arquivos que recebemos são gerados na versão 1.5
 # do Firebird, via Windows 32-bit; nossos flows são Linux 64-bit
 # Além disso, a versão 1.5 é de 2009[1]. Então, o passo a passo é:
@@ -58,7 +62,8 @@ RUN wget -q https://github.com/FirebirdSQL/firebird/releases/download/R2_5_9/Fir
 	rm -rf FirebirdCS-2.5.9.27139-0.i686* && \
 	mv /opt/32bit/firebird/tmp/usr/lib/* /usr/lib && \
 	mv /opt/32bit/firebird/tmp/usr/include/* /usr/include && \
-	mv /opt/32bit/firebird/tmp/opt/firebird/* /opt/32bit/firebird
+	mv /opt/32bit/firebird/tmp/opt/firebird/* /opt/32bit/firebird && \
+	rm -rf /opt/32bit/firebird/tmp
 
 # Repete os mesmos passos pra versão 64-bit
 RUN wget -q https://github.com/FirebirdSQL/firebird/releases/download/R2_5_9/FirebirdCS-2.5.9.27139-0.amd64.tar.gz && \
@@ -68,9 +73,12 @@ RUN wget -q https://github.com/FirebirdSQL/firebird/releases/download/R2_5_9/Fir
 	rm -rf FirebirdCS-2.5.9.27139-0.amd64* && \
 	mv /opt/64bit/firebird/tmp/usr/lib64/* /usr/lib64 && \
 	mv /opt/64bit/firebird/tmp/usr/include/* /usr/include && \
-	mv /opt/64bit/firebird/tmp/opt/firebird/* /opt/64bit/firebird
+	mv /opt/64bit/firebird/tmp/opt/firebird/* /opt/64bit/firebird && \
+	rm -rf /opt/64bit/firebird/tmp
 
-# Linking de bibliotecas que ele reclama
+# Queremos executar no modo embedded, sem precisar de um servidor rodando
+# Aqui sobrescrevemos libfbclient com libfbembed e em teoria tudo funciona
+# igual, mas sem o servidor :0)
 RUN /sbin/ldconfig -n /opt/32bit/firebird/lib && \
 	ln -sf /opt/32bit/firebird/lib/libfbembed.so.2.5 /opt/32bit/firebird/lib/libfbclient.so.2 && \
 	ln -sf /opt/32bit/firebird/lib/libfbembed.so.2.5 /opt/32bit/firebird/lib/libfbclient.so
@@ -78,12 +86,16 @@ RUN /sbin/ldconfig -n /opt/64bit/firebird/lib && \
 	ln -sf /opt/64bit/firebird/lib/libfbembed.so.2.5 /opt/64bit/firebird/lib/libfbclient.so.2 && \
 	ln -sf /opt/64bit/firebird/lib/libfbembed.so.2.5 /opt/64bit/firebird/lib/libfbclient.so
 
-# Permissão abrangente pro flow conseguir rodar o gbak sem estresse
+# Permissão abrangente pro flow conseguir rodar o gbak sem reclamar
 RUN chmod -R 777 /opt/32bit/firebird && \
 	chmod -R 777 /opt/64bit/firebird
 
 # Ainda é preciso configurar algumas variáveis de ambiente:
 ## ENV PATH="/opt/32bit/firebird:/opt/32bit/firebird/bin:/opt/32bit/firebird/lib:$PATH"
 ## ENV FIREBIRD="/opt/32bit/firebird"
-## ENV LD_LIBRARY_PATH="/opt/32bit/firebird/lib"
 # Mas porque a gente precisa trocar de 32 pra 64 bit, carregamos via código
+
+# Em específico `LD_LIBRARY_PATH` precisa ser configurada antes da
+# execução do código, porque quem usa é a biblioteca fdb, pelo Python
+# Nos outros casos, estamos executando um binário solto via subprocesso
+ENV LD_LIBRARY_PATH="/opt/64bit/firebird/lib"

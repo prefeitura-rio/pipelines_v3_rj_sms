@@ -17,7 +17,7 @@ from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 from pipelines.utils.process import run_command
 
-from .utils import format_reference_date
+from .utils import fdb2csv, format_reference_date
 
 
 @task
@@ -100,17 +100,7 @@ def run_conversion(filepath: str):
 
 	output_folder = create_tmp_data_folder()
 	log("Executando script de conversão FDB→CSV")
-	run_command(
-		[
-			"uv",
-			"run",
-			"--script",
-			"pipelines/datalake/extract_load/gdb/scripts/fdb2csv.py",
-			fdb_filepath,
-			output_folder,
-		]
-	)
-
+	fdb2csv(fdb_filepath, output_folder)
 	output_files = os.listdir(output_folder)
 	log(
 		f"Pasta de destino '{output_folder}' possui "
