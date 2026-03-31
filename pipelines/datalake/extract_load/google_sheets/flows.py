@@ -64,5 +64,4 @@ def sms_dump_url(
 	)
 
 
-_flows = [sms_dump_url]
-_schedules = schedules
+_flows = [{"flow": sms_dump_url, "schedules": schedules}]

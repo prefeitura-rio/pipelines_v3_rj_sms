@@ -73,6 +73,10 @@ def extract_gdb(
 	wait(bq_futures)
 
 
-_flows = [extract_gdb]
-_schedules = []
-_dockerfile = "./pipelines/datalake/extract_load/gdb/Dockerfile"
+_flows = [
+	{
+		"flow": extract_gdb,
+		"schedules": [],
+		"dockerfile": "./pipelines/datalake/extract_load/gdb/Dockerfile",
+	}
+]

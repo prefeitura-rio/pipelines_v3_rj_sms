@@ -109,26 +109,21 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 	if not hasattr(module, "_flows"):
 		raise ValueError(f"Arquivo '{file_path}' não possui lista de flows em `_flows`")
 	flows = getattr(module, "_flows")
-	flows: list[Flow]
+	flows: list[dict]
 
-	# Encontra a variável `_schedules` do arquivo flows.py
-	if not hasattr(module, "_schedules"):
-		logging.warning(
-			f"Arquivo '{file_path}' não possui lista de schedules em `_schedules`"
-		)
-	schedules = getattr(module, "_schedules", [])  # pode não haver schedule
-	schedules: list[Schedule]
-
-	dockerfile = getattr(module, "_dockerfile", None)  # pode não haver dockerfile
-	dockerfile: str | None
-
-	logging.debug(
-		f"'{file_path}': encontrados {len(flows)} flow(s) e {len(schedules)} schedule(s)"
-	)
+	logging.debug(f"'{file_path}': encontrado(s) {len(flows)} flow(s)")
 	# Para cada flow definido no arquivo (provavelmente 1 só)
 	deploy_list = []
-	for flow in flows:
-		flow_name = flow.name
+	for i, flow_config in enumerate(flows):
+		flow: Flow = flow_config.get("flow")
+		if not flow:
+			logging.warning(
+				f"'{file_path}': Função principal do flow #{i + 1} não foi definida; "
+				"use `_flows = [{ 'flow': (...), ... }]`"
+			)
+			continue
+
+		flow_name = flow.name.strip()
 		# Normaliza o nome para deploy
 		normalized_flow_name = re.sub(
 			r"_{2,}",
@@ -140,17 +135,32 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 			),
 		)
 		if len(normalized_flow_name) < 1:
-			raise ValueError(f"Nome do flow '{flow_name}' é inválido!")
+			raise ValueError(
+				f"'{file_path}': Nome do flow #{i + 1} '{flow_name}' é inválido!"
+			)
+
+		dockerfile = flow_config.get("dockerfile")
+		if dockerfile:
+			current_dir = os.getcwd()
+			dockerfile_path = os.path.join(current_dir, dockerfile)
+			if not os.path.exists(dockerfile_path) or not os.path.isfile(dockerfile_path):
+				logging.warning(
+					f"'{file_path}': Dockerfile '{dockerfile_path}' não existe!"
+				)
+				dockerfile = None
 
 		if environment == "dev":
 			flow_name += " (stg)"
 			normalized_flow_name += "_staging"
+			schedules = []
 		elif environment == "prod":
 			# Parâmetros com valores padrão AINDA precisam ser passados
 			# pelo schedule (????) senão dá `SignatureMismatchError` :s
 			# Então aqui garantimos que todos os schedules possuem todos
 			# os parâmetros do flow, com valores padrão pros que vierem
 			# faltando
+			schedules = flow_config.get("schedules", [])
+			schedules: list[Schedule]
 			new_schedules = []
 			for schedule in schedules:
 				# Descobre os parâmetros com valores padrão inspecionando função

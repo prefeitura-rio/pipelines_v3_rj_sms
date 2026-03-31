@@ -19,5 +19,4 @@ def weather_report(lat: float, lon: float, environment: str = "dev"):
 	print_report(data=data)
 
 
-_flows = [weather_report]
-_schedules = schedules
+_flows = [{"flow": weather_report, "schedules": schedules}]
