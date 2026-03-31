@@ -12,7 +12,7 @@ from pipelines.utils.cleanup import (
 )
 from pipelines.utils.datalake import upload_df_to_datalake_task
 from pipelines.utils.datetime import now
-from pipelines.utils.io import create_tmp_data_folder
+from pipelines.utils.io import create_tmp_data_folder, get_file_size
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 from pipelines.utils.process import run_command
@@ -64,6 +64,9 @@ def run_conversion(filepath: str):
 		],
 		print_stdout=False,
 	)
+	# Garante que o arquivo de saída existe, possui conteúdo
+	fbk_size = get_file_size(fbk_filepath, pretty=True, raise_if_missing=True, raise_if_not_file=True)
+	log(f"Arquivo '{fbk_filepath}' possui tamanho {fbk_size}")
 	# Apaga GDB agora que já foi exportado
 	os.remove(filepath)
 
@@ -85,6 +88,9 @@ def run_conversion(filepath: str):
 		],
 		print_stdout=False,
 	)
+	# Garante que o arquivo de saída existe, possui conteúdo
+	fdb_size = get_file_size(fdb_filepath, pretty=True, raise_if_missing=True, raise_if_not_file=True)
+	log(f"Arquivo '{fdb_filepath}' possui tamanho {fdb_size}")
 	# Apaga FBK agora que já foi carregado
 	os.remove(fbk_filepath)
 
@@ -99,6 +105,13 @@ def run_conversion(filepath: str):
 			fdb_filepath,
 			output_folder,
 		]
+	)
+
+	output_files = os.listdir(output_folder)
+	log(
+		f"Pasta de destino '{output_folder}' possui "
+		f"{len(output_files)} arquivo(s): "
+		f"{output_files[:10]} (primeiros 10)"
 	)
 
 	return output_folder

@@ -30,8 +30,8 @@ async def async_run_command(
 		assert sub.stdout and sub.stderr
 
 		streams: Dict[IO[str], IO[str]] = {
-			**({sub.stdout: sys.stdout} if print_stdout else {}),
-			**({sub.stderr: sys.stderr} if print_stderr else {}),
+			sub.stdout: sys.stdout,
+			sub.stderr: sys.stderr,
 		}
 
 		with selectors.DefaultSelector() as selector:
@@ -54,9 +54,10 @@ async def async_run_command(
 					sys_stream.flush()
 
 					if sys_stream is sys.stdout:
-						log(f"[subproc.STDOUT] {line}")
-					else:
-						log(f"[subproc.STDERR] {line}", level="error")
+						if print_stdout:
+							log(f"[subproc.STDOUT] {line}")
+					elif print_stderr:
+							log(f"[subproc.STDERR] {line}", level="error")
 
 		exit_code = sub.wait()
 

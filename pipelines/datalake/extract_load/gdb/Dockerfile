@@ -78,6 +78,10 @@ RUN /sbin/ldconfig -n /opt/64bit/firebird/lib && \
 	ln -sf /opt/64bit/firebird/lib/libfbembed.so.2.5 /opt/64bit/firebird/lib/libfbclient.so.2 && \
 	ln -sf /opt/64bit/firebird/lib/libfbembed.so.2.5 /opt/64bit/firebird/lib/libfbclient.so
 
+# Permissão abrangente pro flow conseguir rodar o gbak sem estresse
+RUN chmod -R 777 /opt/32bit/firebird && \
+	chmod -R 777 /opt/64bit/firebird
+
 # Ainda é preciso configurar algumas variáveis de ambiente:
 ## ENV PATH="/opt/32bit/firebird:/opt/32bit/firebird/bin:/opt/32bit/firebird/lib:$PATH"
 ## ENV FIREBIRD="/opt/32bit/firebird"

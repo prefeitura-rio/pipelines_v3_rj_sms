@@ -24,17 +24,16 @@ def create_tmp_data_folder(prefix: str = None, suffix: str = None) -> str:
 	if not suffix:
 		suffix = ""
 
-	# ou criamos uma pasta que não existia antes or we die trying
-	while True:
-		# urandom(S) gera S bytes = S*2 caracteres
-		# UUID aqui seria mais "confiável" (e mais lento), mas
-		# esses arquivos não devem persistir por tempo o
-		# suficiente pra 16^10 opções não bastarem....
-		path = f"/tmp/data/{prefix}{os.urandom(8).hex()}{suffix}"
-		if os.path.exists(path):
-			continue
-		os.makedirs(path)
-		return path
+	# UUID aqui seria mais "confiável" (e mais lento), mas
+	# esses arquivos não vão persistir por muito tempo
+	# (cada flow run é um container novo), e `urandom(S)`
+	# gera S bytes = S*2 caracteres = 16^(S*2) opções...
+	path = f"/tmp/data/{prefix}{os.urandom(8).hex()}{suffix}"
+	if os.path.exists(path):
+		log(f"Uh oh! '{path}' já existia; deletando...")
+		shutil.rmtree(path)
+	os.makedirs(path)
+	return path
 
 
 @task
@@ -168,3 +167,30 @@ def unzip_file(filepath: str, output_path: str = None) -> str:
 @task
 def unzip_file_task(filepath: str, output_path: str = None):
 	return unzip_file(filepath=filepath, output_path=output_path)
+
+
+def get_file_size(
+	path: str,
+	raise_if_missing: bool = False,
+	raise_if_not_file: bool = False,
+	pretty: bool = False
+) -> str | int:
+	"""
+	Retorna tamanho do arquivo especificado. Por padrão, caso o arquivo
+	não exista ou o caminho não seja um arquivo, retorna 0; opcionalmente
+	dispara `RuntimeError`s nesses casos.
+
+	Se `pretty=True`, retorna string já formatada (ex.: '4.8 MiB').
+	"""
+	if not os.path.exists(path):
+		if raise_if_missing:
+			raise RuntimeError(f"Arquivo '{path}' não existe!")
+		return 0
+	if not os.path.isfile(path):
+		if raise_if_not_file:
+			raise RuntimeError(f"'{path}' não é um arquivo!")
+		return 0
+	size = os.path.getsize(path)
+	if pretty:
+		return prettify_byte_size(size)
+	return size

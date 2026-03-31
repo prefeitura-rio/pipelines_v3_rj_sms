@@ -15,6 +15,21 @@ import sys
 import fdb
 
 
+def detect_charset(input_file: str):
+	with fdb.connect(
+		database=input_file, user="SYSDBA", password="masterkey", charset="NONE"
+	) as conn:
+		cur = conn.cursor()
+		cur.execute("SELECT RDB$CHARACTER_SET_NAME FROM RDB$DATABASE;")
+		result = cur.fetchone()
+		if result and result[0]:
+			charset = result[0].strip() or "NONE"
+			print(f"Charset é '{charset}'")
+			return charset
+	print("Charset não definido; retornando 'NONE'")
+	return "NONE"
+
+
 def fdb2csv(input_file: str, output_dir: str):
 	input_file = str(input_file).strip("\"' ")
 	# Garante que arquivo de entrada existe
@@ -29,10 +44,11 @@ def fdb2csv(input_file: str, output_dir: str):
 	# Garante existência da pasta de saída
 	output_dir = str(output_dir).strip("\"' ")
 	os.makedirs(output_dir, exist_ok=True)
+	charset = detect_charset(input_file)
 
 	# Cria conexão com o arquivo FDB
 	with fdb.connect(
-		database=input_file, user="SYSDBA", password="masterkey", charset="ISO8859_1"
+		database=input_file, user="SYSDBA", password="masterkey", charset=charset
 	) as conn:
 		try:
 			cur = conn.cursor()
