@@ -65,7 +65,9 @@ def run_conversion(filepath: str):
 		print_stdout=False,
 	)
 	# Garante que o arquivo de saída existe, possui conteúdo
-	fbk_size = get_file_size(fbk_filepath, pretty=True, raise_if_missing=True, raise_if_not_file=True)
+	fbk_size = get_file_size(
+		fbk_filepath, pretty=True, raise_if_missing=True, raise_if_not_file=True
+	)
 	log(f"Arquivo '{fbk_filepath}' possui tamanho {fbk_size}")
 	# Apaga GDB agora que já foi exportado
 	os.remove(filepath)
@@ -89,7 +91,9 @@ def run_conversion(filepath: str):
 		print_stdout=False,
 	)
 	# Garante que o arquivo de saída existe, possui conteúdo
-	fdb_size = get_file_size(fdb_filepath, pretty=True, raise_if_missing=True, raise_if_not_file=True)
+	fdb_size = get_file_size(
+		fdb_filepath, pretty=True, raise_if_missing=True, raise_if_not_file=True
+	)
 	log(f"Arquivo '{fdb_filepath}' possui tamanho {fdb_size}")
 	# Apaga FBK agora que já foi carregado
 	os.remove(fbk_filepath)

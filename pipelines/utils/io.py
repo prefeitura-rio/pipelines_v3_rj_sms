@@ -173,7 +173,7 @@ def get_file_size(
 	path: str,
 	raise_if_missing: bool = False,
 	raise_if_not_file: bool = False,
-	pretty: bool = False
+	pretty: bool = False,
 ) -> str | int:
 	"""
 	Retorna tamanho do arquivo especificado. Por padrão, caso o arquivo

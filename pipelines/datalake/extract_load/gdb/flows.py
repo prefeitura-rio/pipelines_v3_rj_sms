@@ -65,7 +65,11 @@ def extract_gdb(
 	# Também faz upload de cada um deles como tabelas no BigQuery
 	bq_futures = [
 		upload_csv_as_table.submit(
-			filepath, dataset, gcs_uri, data_referencia, lines_per_chunk
+			csv_path=filepath,
+			dataset=dataset,
+			uri=gcs_uri,
+			refdate=data_referencia,
+			lines_per_chunk=lines_per_chunk,
 		)
 		for filepath in csv_files
 	]
