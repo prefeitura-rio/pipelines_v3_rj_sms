@@ -36,7 +36,18 @@ cases:
     flow_name: "extract_dbc"
     params:
       environment: dev
-      # file_gs_uri: gs://...
+      # gcs_uri: gs://...
+
+  # Extração de GDB (GCS) -> ZIP de CSVs (GCS) + tabelas (BigQuery)
+  - case_slug: "datalake-extract-gdb"
+    flow_path: "pipelines.datalake.extract_load.gdb.flows"
+    flow_name: "extract_gdb"
+    params:
+      environment: dev
+      # gcs_uri: gs://...
+      # dataset: brutos_gdb_{cnes/sih/sia}
+      # lines_per_chunk: 100000
+      # data_referencia: ...
 
 
   ################################

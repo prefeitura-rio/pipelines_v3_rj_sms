@@ -2,7 +2,6 @@
 import os
 
 from pipelines.utils.cleanup import prettify_byte_size
-from pipelines.utils.google import dissect_gcs_uri, upload_to_cloud_storage
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 from pipelines.utils.process import run_command
@@ -29,14 +28,3 @@ def run_conversion(filepath: str):
 	filesize = os.path.getsize(output_filepath)
 	log(f"Arquivo '{output_filepath}' tem tamanho {prettify_byte_size(filesize)}")
 	return output_filepath
-
-
-@task
-def upload_result(original_uri: str, filepath: str):
-	uri = dissect_gcs_uri(original_uri)
-	bucket = uri["bucket"]
-	blob = uri["blob"]
-	log(f"Fazendo upload de '{filepath}' para 'gs://{bucket}/{blob}'")
-	# Faz upload do arquivo no mesmo bucket e caminho
-	# do arquivo original
-	upload_to_cloud_storage(filepath, bucket, blob)
