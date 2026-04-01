@@ -127,7 +127,7 @@ def fdb2csv(input_file: str, output_dir: str):
 			tables = [row[0].strip() for row in cur.fetchall()]
 			log(f"Encontrada(s) {len(tables)} tabela(s)")
 
-			for table in tables:
+			for table in ["RDB$RELATION_FIELDS", *tables]:
 				csv_filepath = os.path.join(output_dir, f"{table}.csv")
 				cur.execute(f'SELECT * FROM "{table}"')
 				headers = [col_desc[0] for col_desc in cur.description]

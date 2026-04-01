@@ -152,7 +152,9 @@ def zip_files_from_list_task(
 	Recebe uma lista de caminhos absolutos de arquivos e retorna o caminho
 	absoluto de um arquivo ZIP contendo os arquivos passados.
 	"""
-	return zip_files_from_list(filelist, output_path=output_path)
+	return zip_files_from_list(
+		filelist, output_path=output_path, output_filename=output_filename
+	)
 
 
 def unzip_file(filepath: str, output_path: str = None) -> str:

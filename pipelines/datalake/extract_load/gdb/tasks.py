@@ -100,6 +100,7 @@ def run_conversion(filepath: str):
 
 	output_folder = create_tmp_data_folder()
 	log("Executando script de conversão FDB→CSV")
+	# Faz a extração de tabelas
 	fdb2csv(fdb_filepath, output_folder)
 	output_files = os.listdir(output_folder)
 	log(
@@ -107,6 +108,8 @@ def run_conversion(filepath: str):
 		f"{len(output_files)} arquivo(s): "
 		f"{output_files[:10]} (primeiros 10)"
 	)
+	# Apaga FDB agora que já foi extraído
+	os.remove(fdb_filepath)
 
 	return output_folder
 
