@@ -5,7 +5,7 @@ from pipelines.utils.google import (
 	download_file_from_bucket_task,
 	upload_to_cloud_storage_task,
 )
-from pipelines.utils.prefect import flow
+from pipelines.utils.prefect import flow, flow_config
 from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .tasks import run_conversion
@@ -29,4 +29,8 @@ def extract_dbc(gcs_uri: str, environment: str = "dev"):
 	)
 
 
-_flows = [{"flow": extract_dbc}]
+_flows = [
+	flow_config(
+		flow= extract_dbc
+	)
+]

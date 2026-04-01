@@ -190,6 +190,25 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 				)
 			schedules = new_schedules
 
+		memory_label = flow_config.get("memory") or "small"
+		# [Ref] https://docs.cloud.google.com/run/docs/configuring/jobs/memory-limits#cpu-minimum
+		#  NºCPUs |  Intervalo RAM
+		# --------------------------
+		#  1 vCPU | 128 MiB - 4 GiB
+		#  2 vCPU | 128 MiB - 8 GiB
+		#  4 vCPU | 2 - 16 GiB
+		#  6 vCPU | 4 - 24 GiB
+		#  8 vCPU | 4 - 32 GiB
+		infra_map = {
+			"small":  { "memory":  "4Gi", "cpu": "1" },
+			"medium": { "memory": "16Gi", "cpu": "4" },
+			"large":  { "memory": "24Gi", "cpu": "6" },
+		}  # fmt: skip
+		infra = infra_map.get(memory_label)
+		if not infra:
+			logging.warning(f"Requisição de memória '{memory_label}' desconhecida!")
+			infra = {"memory": "4Gi", "cpu": "1"}
+
 		logging.debug(f"Requisitando deploy de (...)/{normalized_flow_name}")
 		deploy_list.append(
 			flow.adeploy(
@@ -208,7 +227,7 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 					),
 				),
 				schedules=(schedules if environment == "prod" else []),
-				job_variables=({"env": env_vars}),
+				job_variables=({"env": env_vars, **infra}),
 			)
 		)
 	return deploy_list

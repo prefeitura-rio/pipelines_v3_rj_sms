@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from pipelines.utils.prefect import flow, rename_flow_run
+from pipelines.utils.prefect import flow, flow_config, rename_flow_run
 from pipelines.utils.git import download_gh_repo
 from pipelines.utils.state_handlers import handle_flow_state_change
 from pipelines.constants import constants as global_consts
@@ -101,5 +101,9 @@ def sms_execute_dbt(
 		)
 
 
-_flows = [sms_execute_dbt]
-_schedules = schedules
+_flows = [
+	flow_config(
+		flow=sms_execute_dbt,
+		schedules=schedules
+	)
+]

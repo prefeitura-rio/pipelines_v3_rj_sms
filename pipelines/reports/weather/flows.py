@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pipelines.utils.prefect import flow
+from pipelines.utils.prefect import flow, flow_config
 from pipelines.utils.state_handlers import handle_flow_state_change
 from pipelines.constants import constants as global_consts
 
@@ -19,4 +19,9 @@ def weather_report(lat: float, lon: float, environment: str = "dev"):
 	print_report(data=data)
 
 
-_flows = [{"flow": weather_report, "schedules": schedules}]
+_flows = [
+	flow_config(
+		flow=weather_report,
+		schedules=schedules
+	)
+]

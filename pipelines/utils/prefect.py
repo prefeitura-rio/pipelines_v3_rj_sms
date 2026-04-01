@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import asyncio
-from typing import Any, Callable, Union, List, Optional
+from typing import Any, Callable, Literal, Union, List, Optional
 
 from prefect import Task, get_client
 from prefect.context import FlowRunContext
 from prefect.flows import Flow as OriginalFlow, FlowDecorator as OriginalFlowDecorator
+from prefect.schedules import Schedule
 
 from pipelines.utils.env import get_current_environment
 from pipelines.utils.infisical import inject_bd_credentials
@@ -155,3 +156,47 @@ def rename_flow_run(new_name: str):
 			await client.update_flow_run(flow_run_id=ctx.flow_run.id, name=new_name)
 
 	asyncio.run(update())
+
+
+def flow_config(
+	flow: Flow,
+	schedules: list[Schedule] = None,
+	dockerfile: str = None,
+	memory: Literal["small", "medium", "large"] = "small",
+) -> dict:
+	"""
+	Retorna uma configuração de flow, a ser usada na variável
+	`_flows`: `_flows = [ flow_config(...), ... ]`
+
+	Args:
+		flow(Flow):
+			O flow a ser executado.
+		schedules(list[Schedule]):
+			Lista de schedules para o flow; pode ser vazia/None.
+		dockerfile(str):
+			Caminho do Dockerfile customizado que executa o flow.
+			Pode ser vazio/None. Ex.: `"./pipelines/datalake/..."`
+		memory(Literal["small", "medium", "large"]):
+			Quantidade de memória RAM disponibilizada para a VM
+			executando o flow. Atenção: em Google Cloud Run Jobs,
+			não existe disco rígido; o filesystem reside na
+			própria memória RAM.
+			* Para `memory="small"` (valor padrão), é alocado 4 GB
+				de RAM, ideal para flows que não fazem escrita de
+				muitos dados em "disco".
+			* Para `memory="medium"`, são alocados 12 GB de RAM
+			* Para `memory="large"`, são alocados 24 GB de RAM
+	"""
+	if not schedules:
+		schedules = []
+
+	memory = str(memory).strip().lower()
+	if memory not in ("small", "medium", "large"):
+		raise ValueError(f"'{memory}' não é um valor válido para `memory`!")
+
+	return {
+		"flow": flow,
+		"schedules": schedules,
+		"dockerfile": dockerfile,
+		"memory": memory,
+	}

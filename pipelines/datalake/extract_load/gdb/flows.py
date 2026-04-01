@@ -13,7 +13,7 @@ from pipelines.utils.io import (
 	unzip_file_task,
 	zip_files_from_list_task,
 )
-from pipelines.utils.prefect import flow
+from pipelines.utils.prefect import flow, flow_config
 from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .tasks import run_conversion, upload_csv_as_table
@@ -86,9 +86,10 @@ def extract_gdb(
 
 
 _flows = [
-	{
-		"flow": extract_gdb,
-		"schedules": [],
-		"dockerfile": "./pipelines/datalake/extract_load/gdb/Dockerfile",
-	}
+	flow_config(
+		flow=extract_gdb,
+		schedules=[],
+		dockerfile="./pipelines/datalake/extract_load/gdb/Dockerfile",
+		memory="large",
+	)
 ]

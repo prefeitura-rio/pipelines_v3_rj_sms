@@ -2,7 +2,7 @@
 from pipelines.constants import constants as global_consts
 from pipelines.utils.datalake import upload_to_datalake_task
 from pipelines.utils.google import download_google_sheets_task
-from pipelines.utils.prefect import flow, rename_flow_run
+from pipelines.utils.prefect import flow, flow_config, rename_flow_run
 from pipelines.utils.io import create_data_folders_task
 from pipelines.utils.state_handlers import handle_flow_state_change
 
@@ -64,4 +64,9 @@ def sms_dump_url(
 	)
 
 
-_flows = [{"flow": sms_dump_url, "schedules": schedules}]
+_flows = [
+	flow_config(
+		flow=sms_dump_url,
+		schedules=schedules
+	)
+]
