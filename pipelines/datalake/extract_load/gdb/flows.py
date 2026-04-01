@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from prefect.futures import wait
+from prefect.concurrency.sync import rate_limit
 
 from pipelines.constants import constants as global_consts
 from pipelines.utils.google import (
@@ -65,16 +66,21 @@ def extract_gdb(
 		csv_files = list_files_in_folder_task(folder=csv_folder, endswith=".csv")
 
 	# Também faz upload de cada um deles como tabelas no BigQuery
-	bq_futures = [
-		upload_csv_as_table.submit(
-			csv_path=filepath,
-			dataset=dataset,
-			uri=gcs_uri,
-			refdate=data_referencia,
-			lines_per_chunk=lines_per_chunk,
+	bq_futures = []
+	for filepath in csv_files:
+		# Limita tasks a uma por segundo para não sobrecarregar
+		# o Infisical ou os limites do Google
+		# Nome configurado na aba 'Concurrency' na UI do Prefect
+		rate_limit("um-por-segundo")
+		bq_futures.append(
+			upload_csv_as_table.submit(
+				csv_path=filepath,
+				dataset=dataset,
+				uri=gcs_uri,
+				refdate=data_referencia,
+				lines_per_chunk=lines_per_chunk,
+			)
 		)
-		for filepath in csv_files
-	]
 	# Espera todos os uploads terminarem
 	wait(bq_futures)
 
