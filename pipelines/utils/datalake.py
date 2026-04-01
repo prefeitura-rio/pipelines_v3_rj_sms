@@ -230,6 +230,7 @@ def create_date_partitions(
 	partition_column: str,
 	file_format: Literal["csv", "parquet"] = "csv",
 	root_folder: str = "/tmp/data/",
+	csv_delimiter: str = ";",
 ):
 	""""""
 	dataframe[partition_column] = pd.to_datetime(dataframe[partition_column])
@@ -252,7 +253,7 @@ def create_date_partitions(
 		file_folder = os.path.join(partition_folder, f"{uuid.uuid4()}.{file_format}")
 
 		if file_format == "csv":
-			dataframe.to_csv(file_folder, index=False)
+			dataframe.to_csv(file_folder, index=False, sep=csv_delimiter)
 		elif file_format == "parquet":
 			# FIXME
 			# safe_export_df_to_parquet.run(df=dataframe, output_path=file_folder)
@@ -326,6 +327,7 @@ def upload_df_to_datalake(
 			partition_column=date_partition_column,
 			file_format=source_format,
 			root_folder=root_folder,
+			csv_delimiter=csv_delimiter,
 		)
 	else:
 		log(f"Criando partição única para dataframe com {df.shape[0]} linhas")
