@@ -29,8 +29,4 @@ def extract_dbc(gcs_uri: str, environment: str = "dev"):
 	)
 
 
-_flows = [
-	flow_config(
-		flow= extract_dbc
-	)
-]
+_flows = [flow_config(flow=extract_dbc)]

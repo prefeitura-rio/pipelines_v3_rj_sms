@@ -101,9 +101,4 @@ def sms_execute_dbt(
 		)
 
 
-_flows = [
-	flow_config(
-		flow=sms_execute_dbt,
-		schedules=schedules
-	)
-]
+_flows = [flow_config(flow=sms_execute_dbt, schedules=schedules)]

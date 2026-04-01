@@ -64,9 +64,4 @@ def sms_dump_url(
 	)
 
 
-_flows = [
-	flow_config(
-		flow=sms_dump_url,
-		schedules=schedules
-	)
-]
+_flows = [flow_config(flow=sms_dump_url, schedules=schedules)]
