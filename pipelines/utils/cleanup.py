@@ -9,24 +9,21 @@ def cleanup_bigquery_name(name: str) -> str:
 	"""
 	Limpa nome de colunas ou tabelas no BigQuery
 	- Remove acentos de letras
-	- Nome inteiro em lowercase
 	- Substitui tudo que não seja letra ou dígito por `_`
 	"""
 	stripped = str(name).strip()
 	if not name or len(stripped) <= 0:
 		raise ValueError("Nome não pode ser nulo ou vazio!")
-	# Normaliza + lowercase: Á -> A´ -> A -> a
-	lower_normalized = (
+	# Normaliza: Á -> A´ -> A
+	normalized = (
 		# Separa acentos das letras
 		unicodedata.normalize("NFKD", stripped)
 		# Apaga tudo que não seja ASCII (p.ex. acentos, cedilha, ...)
 		.encode("ascii", errors="ignore")
 		.decode("utf-8")
-		# Lowercase
-		.lower()
 	)
 	# Troca símbolos, espaços, etc por '_'
-	only_alphanumeric = re.sub(r"[^a-z0-9_]", "_", lower_normalized)
+	only_alphanumeric = re.sub(r"[^A-Za-z0-9_]", "_", normalized)
 	# Remove underlines excessivos i.e. 'a_______b___' -> 'a__b'
 	no_excessive_underlines = re.sub(r"_{3,}", "__", only_alphanumeric).strip("_")
 	if len(no_excessive_underlines) <= 0:
@@ -53,7 +50,7 @@ def cleanup_columns_for_bigquery(df: pd.DataFrame, raise_on_repeats: bool = Fals
 	existing_columns = set()
 	for col in df.columns:
 		# Limpa nome da coluna
-		clean_col = cleanup_bigquery_name(col)
+		clean_col = cleanup_bigquery_name(col).lower()
 		# Se o nome da coluna já estiver em uso, adiciona
 		# sufixo '_1', '_2', ... progressivamente até não
 		# haver mais repetições
