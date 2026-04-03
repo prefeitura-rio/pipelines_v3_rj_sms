@@ -52,7 +52,7 @@ def process_google_drive_file(
 			source_parent = posixpath.dirname(relative_path)
 
 			for file_path in files_to_upload:
-				extracted_relative_path = os.path.relpath(file_path, extracted_dir)
+				extracted_relative_path = os.path.relpath(file_path, extracted_dir).replace("\\", "/")
 				blob_path = normalize_blob_path(
 					blob_prefix,
 					source_parent,
