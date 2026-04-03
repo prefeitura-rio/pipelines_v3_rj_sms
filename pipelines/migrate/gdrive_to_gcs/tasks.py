@@ -14,24 +14,16 @@ from .utils import build_result, normalize_blob_path
 
 @task
 def process_google_drive_file(
-	item: dict,
-	bucket_name: str,
-	blob_prefix: str = None,
+	item: dict, bucket_name: str, blob_prefix: str = None
 ) -> dict:
 	relative_path = item.get("relative_path") or item.get("name")
 	if not relative_path:
 		return build_result(
-			item=item,
-			status="failed",
-			error_detail="Item sem 'relative_path' ou 'name'.",
+			item=item, status="failed", error_detail="Item sem 'relative_path' ou 'name'."
 		)
 
 	if not item.get("id"):
-		return build_result(
-			item=item,
-			status="failed",
-			error_detail="Item sem 'id'.",
-		)
+		return build_result(item=item, status="failed", error_detail="Item sem 'id'.")
 
 	tmp_root = create_tmp_data_folder(prefix="gdrive_to_gcs_")
 	uploaded_paths = []
@@ -40,8 +32,7 @@ def process_google_drive_file(
 		download_path = os.path.join(tmp_root, relative_path)
 		log(f"Baixando arquivo do Google Drive para '{download_path}'")
 		downloaded_file = download_google_drive_file(
-			file_id=item["id"],
-			destination_path=download_path,
+			file_id=item["id"], destination_path=download_path
 		)
 
 		if downloaded_file.lower().endswith(".zip"):
@@ -52,18 +43,16 @@ def process_google_drive_file(
 			source_parent = posixpath.dirname(relative_path)
 
 			for file_path in files_to_upload:
-				extracted_relative_path = os.path.relpath(file_path, extracted_dir).replace("\\", "/")
+				extracted_relative_path = os.path.relpath(
+					file_path, extracted_dir
+				).replace("\\", "/")
 				blob_path = normalize_blob_path(
-					blob_prefix,
-					source_parent,
-					extracted_relative_path,
+					blob_prefix, source_parent, extracted_relative_path
 				)
 				blob_dir = posixpath.dirname(blob_path) or None
 
 				upload_to_cloud_storage(
-					path=file_path,
-					bucket_name=bucket_name,
-					blob_prefix=blob_dir,
+					path=file_path, bucket_name=bucket_name, blob_prefix=blob_dir
 				)
 				uploaded_paths.append(blob_path)
 		else:
@@ -71,17 +60,11 @@ def process_google_drive_file(
 			blob_dir = posixpath.dirname(blob_path) or None
 
 			upload_to_cloud_storage(
-				path=downloaded_file,
-				bucket_name=bucket_name,
-				blob_prefix=blob_dir,
+				path=downloaded_file, bucket_name=bucket_name, blob_prefix=blob_dir
 			)
 			uploaded_paths.append(blob_path)
 
-		return build_result(
-			item=item,
-			status="success",
-			uploaded_paths=uploaded_paths,
-		)
+		return build_result(item=item, status="success", uploaded_paths=uploaded_paths)
 	except zipfile.BadZipFile as exc:
 		log(f"Arquivo ZIP corrompido em '{relative_path}': {repr(exc)}", level="error")
 		return build_result(

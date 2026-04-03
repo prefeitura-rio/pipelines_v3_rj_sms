@@ -58,7 +58,9 @@ def from_relative_date(
 		else:
 			result = datetime.date(current_date.year - quantity, 1, 1)
 	else:
-		log("The input dated is not a relative date, converting to datetime", level="info")
+		log(
+			"The input dated is not a relative date, converting to datetime", level="info"
+		)
 		result = datetime.datetime.fromisoformat(relative_date)
 
 	log(f"Relative date is {relative_date}, returning {result}", level="info")

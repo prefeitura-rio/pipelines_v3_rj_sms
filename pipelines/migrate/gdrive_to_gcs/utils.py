@@ -10,10 +10,7 @@ def normalize_blob_path(*parts: str) -> str:
 
 
 def build_result(
-	item: dict,
-	status: str,
-	error_detail: str = None,
-	uploaded_paths: list = None,
+	item: dict, status: str, error_detail: str = None, uploaded_paths: list = None
 ) -> dict:
 	relative_path = item.get("relative_path") or item.get("name") or ""
 	relative_dir = posixpath.dirname(relative_path)

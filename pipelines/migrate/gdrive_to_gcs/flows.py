@@ -26,14 +26,12 @@ def gdrive_to_gcs(
 	blob_prefix: str = None,
 ):
 	resolved_bucket_name = get_fully_qualified_bucket_name(
-		bucket_name=bucket_name,
-		environment=environment,
+		bucket_name=bucket_name, environment=environment
 	)
 	log(f"Nome do Bucket final: '{resolved_bucket_name}'")
 
 	items = list_google_drive_files(
-		folder_id=root_folder_id,
-		last_modified_date=last_modified_date,
+		folder_id=root_folder_id, last_modified_date=last_modified_date
 	)
 	log(f"Encontrado(s) {len(items)} arquivo(s) no Google Drive")
 
@@ -41,9 +39,7 @@ def gdrive_to_gcs(
 	for item in items:
 		results.append(
 			process_google_drive_file(
-				item=item,
-				bucket_name=resolved_bucket_name,
-				blob_prefix=blob_prefix,
+				item=item, bucket_name=resolved_bucket_name, blob_prefix=blob_prefix
 			)
 		)
 

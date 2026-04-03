@@ -300,16 +300,21 @@ def upload_to_cloud_storage_task(
 		path, bucket_name, blob_prefix=blob_prefix, if_exists=if_exists
 	)
 
+
 def get_fully_qualified_bucket_name(bucket_name: str, environment: str):
-    log(f"Getting fully qualified bucket name for {bucket_name} in {environment}", level="info")
+	log(
+		f"Getting fully qualified bucket name for {bucket_name} in {environment}",
+		level="info",
+	)
 
-    if environment in ["prod", "local-prod"]:
-        fq_bucket_name = bucket_name
-    else:
-        fq_bucket_name = f"{bucket_name}_{environment}"
-    log(f"Fully qualified bucket name: {fq_bucket_name}", level="info")
+	if environment in ["prod", "local-prod"]:
+		fq_bucket_name = bucket_name
+	else:
+		fq_bucket_name = f"{bucket_name}_{environment}"
+	log(f"Fully qualified bucket name: {fq_bucket_name}", level="info")
 
-    return fq_bucket_name
+	return fq_bucket_name
+
 
 ###########################
 ##      Google Drive     ##
@@ -338,18 +343,24 @@ def list_google_drive_files(
 	if isinstance(modified_since, datetime.datetime):
 		modified_since = modified_since.date()
 
-	def _list_files(current_folder_id: str, parent_path: str = "") -> List[dict[str, str]]:
+	def _list_files(
+		current_folder_id: str, parent_path: str = ""
+	) -> List[dict[str, str]]:
 		files = []
 		page_token = None
 
 		while True:
-			response = service.files().list(
-				q=f"'{current_folder_id}' in parents and trashed = false",
-				fields="nextPageToken, files(id, name, mimeType, modifiedTime)",
-				pageToken=page_token,
-				supportsAllDrives=True,
-				includeItemsFromAllDrives=True,
-			).execute()
+			response = (
+				service.files()
+				.list(
+					q=f"'{current_folder_id}' in parents and trashed = false",
+					fields="nextPageToken, files(id, name, mimeType, modifiedTime)",
+					pageToken=page_token,
+					supportsAllDrives=True,
+					includeItemsFromAllDrives=True,
+				)
+				.execute()
+			)
 
 			for item in response.get("files", []):
 				relative_path = (
@@ -398,11 +409,11 @@ def download_google_drive_file(file_id: str, destination_path: str = None) -> st
 		str: Caminho local final do arquivo baixado.
 	"""
 	service = get_google_drive_service()
-	file_metadata = service.files().get(
-		fileId=file_id,
-		fields="name",
-		supportsAllDrives=True,
-	).execute()
+	file_metadata = (
+		service.files()
+		.get(fileId=file_id, fields="name", supportsAllDrives=True)
+		.execute()
+	)
 
 	if not destination_path:
 		destination_path = os.path.join(create_tmp_data_folder(), file_metadata["name"])
