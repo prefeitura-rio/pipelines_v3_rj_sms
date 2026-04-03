@@ -300,6 +300,17 @@ def upload_to_cloud_storage_task(
 		path, bucket_name, blob_prefix=blob_prefix, if_exists=if_exists
 	)
 
+def get_fully_qualified_bucket_name(bucket_name: str, environment: str):
+    log(f"Getting fully qualified bucket name for {bucket_name} in {environment}", level="info")
+
+    if environment in ["prod", "local-prod"]:
+        fq_bucket_name = bucket_name
+    else:
+        fq_bucket_name = f"{bucket_name}_{environment}"
+    log(f"Fully qualified bucket name: {fq_bucket_name}", level="info")
+
+    return fq_bucket_name
+
 ###########################
 ##      Google Drive     ##
 ###########################
