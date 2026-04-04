@@ -175,7 +175,7 @@ def update_pipeline_status_from_gdrive_to_gcs(
 		and cnes = @cnes
 	"""
 
-	current_timestamp = now()
+	current_timestamp = now().replace(tzinfo=None)
 	total_updated = 0
 	for item in matched_items:
 		cnes = item.get("cnes")
