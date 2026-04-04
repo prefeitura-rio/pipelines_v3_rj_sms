@@ -109,7 +109,7 @@ def populate_pipeline_status_table(
 	).result()
 	existing_cnes = {str(row.cnes) for row in existing_rows}
 
-	current_timestamp = now().isoformat()
+	current_timestamp = now().replace(tzinfo=None).isoformat(sep=" ")
 	rows_to_insert = []
 	for unit in expected_units:
 		cnes = unit.get("cnes")
