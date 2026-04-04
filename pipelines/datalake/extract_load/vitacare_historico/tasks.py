@@ -145,3 +145,56 @@ def populate_pipeline_status_table(
 		raise RuntimeError(f"Erro inserindo linhas em pipeline_status: {errors}")
 
 	log(f"Inseridas {len(rows_to_insert)} nova(s) linha(s) em pipeline_status")
+
+
+@task
+def update_pipeline_status_from_gdrive_to_gcs(
+	reference_month,
+	matched_items: list[dict],
+) -> None:
+	client = bigquery.Client()
+	dataset_id = constants.PIPELINE_STATUS_DATASET_ID.value
+	table_id = constants.PIPELINE_STATUS_TABLE_ID.value
+
+	if hasattr(reference_month, "date"):
+		reference_month = reference_month.date()
+
+	if not matched_items:
+		log("Nenhum item casado para atualizar em pipeline_status")
+		return
+
+	query = f"""
+		update `rj-sms-dev.vitacare_controle.pipeline_status`
+		set
+			source_folder_name = @source_folder_name,
+			source_file_name = @source_file_name,
+			gdrive_to_gcs_status = @gdrive_to_gcs_status,
+			gdrive_to_gcs_error = @gdrive_to_gcs_error,
+			updated_at = @updated_at
+		where reference_month = @reference_month
+		and cnes = @cnes
+	"""
+
+	current_timestamp = now()
+	total_updated = 0
+	for item in matched_items:
+		cnes = item.get("cnes")
+		if cnes is None:
+			continue
+
+		job_config = bigquery.QueryJobConfig(
+			query_parameters=[
+				ScalarQueryParameter("source_folder_name", "STRING", item.get("source_folder_name")),
+				ScalarQueryParameter("source_file_name", "STRING", item.get("source_file_name")),
+				ScalarQueryParameter("gdrive_to_gcs_status", "STRING", item.get("status")),
+				ScalarQueryParameter("gdrive_to_gcs_error", "STRING", item.get("error_detail")),
+				ScalarQueryParameter("updated_at", "DATETIME", current_timestamp),
+				ScalarQueryParameter("reference_month", "DATE", reference_month),
+				ScalarQueryParameter("cnes", "STRING", str(cnes)),
+			]
+		)
+		query_job = client.query(query, job_config=job_config)
+		query_job.result()
+		total_updated += query_job.num_dml_affected_rows or 0
+
+	log(f"Atualizadas {total_updated} linha(s) de stage 1 em pipeline_status")
