@@ -28,17 +28,17 @@ def vitacare_historico(
 	blob_prefix: str = None,
 ):
 	reference_month = from_relative_date("M-0")
-	
+
 	expected_units = get_vitacare_unit_info()
-	
+
 	populate_pipeline_status_table(
 		expected_units=expected_units,
 		reference_month=reference_month,
 	)
-	
+
 	depara_gdrive = get_depara_gdrive()
-	
-	gdrive_to_gcs_result = gdrive_to_gcs(
+
+	gdrive_to_gcs_result = gdrive_to_gcs.fn(
 		root_folder_id=root_folder_id,
 		bucket_name=bucket_name,
 		environment=environment,

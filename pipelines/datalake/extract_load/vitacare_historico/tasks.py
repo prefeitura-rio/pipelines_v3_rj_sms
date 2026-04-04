@@ -6,8 +6,6 @@ from pipelines.utils.datetime import now
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
-from .constants import constants
-
 
 @task
 def get_vitacare_unit_info() -> list[dict]:
@@ -81,9 +79,7 @@ def populate_pipeline_status_table(
 	expected_units: list[dict], reference_month
 ) -> None:
 	client = bigquery.Client()
-	dataset_id = constants.PIPELINE_STATUS_DATASET_ID.value
-	table_id = constants.PIPELINE_STATUS_TABLE_ID.value
-	table_ref = client.dataset(dataset_id).table(table_id)
+	table_ref = "rj-sms-dev.vitacare_controle.pipeline_status"
 
 	if hasattr(reference_month, "date"):
 		reference_month = reference_month.date()
@@ -139,6 +135,16 @@ def populate_pipeline_status_table(
 		log("Nenhum novo registro precisa ser inserido em pipeline_status")
 		return
 
+	log(f"table_ref: {table_ref}")
+
+	table = client.get_table(table_ref)
+	log(f"full_table_id: {table.full_table_id}")
+	log(f"schema_fields: {[field.name for field in table.schema]}")
+
+	if rows_to_insert:
+		log(f"row_keys: {list(rows_to_insert[0].keys())}")
+		log(f"row_sample: {rows_to_insert[0]}")
+
 	errors = client.insert_rows_json(table_ref, rows_to_insert)
 	if errors:
 		log(f"Erro inserindo linhas em pipeline_status: {errors}", level="error")
@@ -153,8 +159,6 @@ def update_pipeline_status_from_gdrive_to_gcs(
 	matched_items: list[dict],
 ) -> None:
 	client = bigquery.Client()
-	dataset_id = constants.PIPELINE_STATUS_DATASET_ID.value
-	table_id = constants.PIPELINE_STATUS_TABLE_ID.value
 
 	if hasattr(reference_month, "date"):
 		reference_month = reference_month.date()

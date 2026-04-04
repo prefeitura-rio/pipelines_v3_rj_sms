@@ -65,6 +65,17 @@ cases:
       last_modified_date: 'M-0'
       blob_prefix: null
 
+  # Orquestração Vitacare Histórico
+  - case_slug: "vitacare-historico"
+    flow_path: "pipelines.datalake.extract_load.vitacare_historico.flows"
+    flow_name: "vitacare_historico"
+    params:
+      environment: dev
+      root_folder_id: "1VUdm8fixnUs_dJrcflsNvzXIGPX6e-2r"
+      bucket_name: "vitacare_backups_gdrive"
+      last_modified_date: 'M-1'
+      blob_prefix: null
+
   ################################
   #  TRANSFORM                   #
   ################################
