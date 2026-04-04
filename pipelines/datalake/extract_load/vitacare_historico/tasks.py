@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from google.cloud import bigquery
 from google.cloud.bigquery import ScalarQueryParameter
 
@@ -44,6 +45,38 @@ def get_vitacare_unit_info() -> list[dict]:
 
 
 @task
+def get_depara_gdrive() -> list[dict]:
+	query = """
+		select 
+			unidade_nome_gdrive,
+			cnes,
+			unidade_nome
+		from `rj-sms-dev.vitacare_controle.depara_gdrive`
+	"""
+
+	log("Buscando depara gdrive")
+	try:
+		client = bigquery.Client()
+		rows = client.query(query).result()
+
+		result = [
+			{
+				"nome_gdrive": row.unidade_nome_gdrive,
+				"cnes": row.cnes,
+				"unit_name": row.unidade_nome,
+			}
+			for row in rows
+		]
+
+		log(f"Encontradas {len(result)} unidades")
+		return result
+
+	except Exception as exc:
+		log(f"Erro ao buscar unidades: {exc}", level="error")
+		raise
+
+
+@task
 def populate_pipeline_status_table(
 	expected_units: list[dict], reference_month
 ) -> None:
@@ -62,7 +95,7 @@ def populate_pipeline_status_table(
 
 	existing_query = f"""
 		select cnes
-		from `{client.project}.{dataset_id}.{table_id}`
+		from `rj-sms-dev.vitacare_controle.pipeline_status`
 		where reference_month = @reference_month
 	"""
 	existing_job_config = bigquery.QueryJobConfig(
