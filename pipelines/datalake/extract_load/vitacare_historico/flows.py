@@ -9,7 +9,9 @@ from .tasks import (
 	get_depara_gdrive,
 	get_vitacare_unit_info,
 	populate_pipeline_status_table,
+	update_pipeline_status_from_gdrive_to_gcs,
 )
+from .utils import match_gdrive_items_with_depara
 
 
 @flow(
@@ -43,12 +45,21 @@ def vitacare_historico(
 		last_modified_date=last_modified_date,
 		blob_prefix=blob_prefix,
 	)
+	matched_items = match_gdrive_items_with_depara(
+		gdrive_items=gdrive_to_gcs_result["items"],
+		depara_gdrive=depara_gdrive,
+	)
+	update_pipeline_status_from_gdrive_to_gcs(
+		reference_month=reference_month,
+		matched_items=matched_items,
+	)
 
 	return {
 		"reference_month": reference_month,
 		"expected_units": expected_units,
 		"depara_gdrive": depara_gdrive,
 		"gdrive_to_gcs_result": gdrive_to_gcs_result,
+		"matched_items": matched_items,
 	}
 
 
