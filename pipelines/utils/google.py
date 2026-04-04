@@ -343,6 +343,17 @@ def list_google_drive_files(
 	if isinstance(modified_since, datetime.datetime):
 		modified_since = modified_since.date()
 
+	root_folder = (
+		service.files()
+		.get(
+			fileId=folder_id,
+			fields="id, name",
+			supportsAllDrives=True,
+		)
+		.execute()
+	)
+	root_folder_name = root_folder["name"]
+
 	def _list_files(
 		current_folder_id: str, parent_path: str = ""
 	) -> List[dict[str, str]]:
@@ -394,7 +405,7 @@ def list_google_drive_files(
 
 		return files
 
-	return _list_files(folder_id)
+	return _list_files(folder_id, root_folder_name)
 
 
 def download_google_drive_file(file_id: str, destination_path: str = None) -> str:

@@ -23,7 +23,6 @@ def gdrive_to_gcs(
 	bucket_name: str,
 	environment: str = "dev",
 	last_modified_date: str = None,
-	blob_prefix: str = None,
 ):
 	resolved_bucket_name = get_fully_qualified_bucket_name(
 		bucket_name=bucket_name, environment=environment
@@ -37,11 +36,7 @@ def gdrive_to_gcs(
 
 	results = []
 	for item in items:
-		results.append(
-			process_google_drive_file(
-				item=item, bucket_name=resolved_bucket_name, blob_prefix=blob_prefix
-			)
-		)
+		results.append(process_google_drive_file(item=item, bucket_name=resolved_bucket_name))
 
 	return build_execution_summary(results)
 

@@ -13,9 +13,7 @@ from .utils import build_result, normalize_blob_path
 
 
 @task
-def process_google_drive_file(
-	item: dict, bucket_name: str, blob_prefix: str = None
-) -> dict:
+def process_google_drive_file(item: dict, bucket_name: str) -> dict:
 	relative_path = item.get("relative_path") or item.get("name")
 	if not relative_path:
 		return build_result(
@@ -46,23 +44,21 @@ def process_google_drive_file(
 				extracted_relative_path = os.path.relpath(
 					file_path, extracted_dir
 				).replace("\\", "/")
-				blob_path = normalize_blob_path(
-					blob_prefix, source_parent, extracted_relative_path
-				)
+				blob_path = normalize_blob_path(source_parent, extracted_relative_path)
 				blob_dir = posixpath.dirname(blob_path) or None
 
 				upload_to_cloud_storage(
 					path=file_path, bucket_name=bucket_name, blob_prefix=blob_dir
 				)
-				uploaded_paths.append(blob_path)
+				uploaded_paths.append(f"gs://{bucket_name}/{blob_path}")
 		else:
-			blob_path = normalize_blob_path(blob_prefix, relative_path)
+			blob_path = normalize_blob_path(relative_path)
 			blob_dir = posixpath.dirname(blob_path) or None
 
 			upload_to_cloud_storage(
 				path=downloaded_file, bucket_name=bucket_name, blob_prefix=blob_dir
 			)
-			uploaded_paths.append(blob_path)
+			uploaded_paths.append(f"gs://{bucket_name}/{blob_path}")
 
 		return build_result(item=item, status="success", uploaded_paths=uploaded_paths)
 	except zipfile.BadZipFile as exc:

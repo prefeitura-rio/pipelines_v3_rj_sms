@@ -19,8 +19,7 @@ def build_result(
 		source_folder_name = relative_dir or None
 
 	return {
-		"ap": item.get("ap"),
-		"unit_name": item.get("unit_name"),
+		"source_file_id": item.get("id"),
 		"source_folder_name": source_folder_name,
 		"source_file_name": item.get("name"),
 		"relative_path": relative_path,
