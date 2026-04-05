@@ -21,6 +21,7 @@ from .utils import (
 def gcs_to_cloudsql(
 	items: list[dict],
 	instance_name: str,
+	environment: str = "dev",
 ):
 	"""
 	Processa uma lista de backups e restaura no Cloud SQL.
@@ -28,6 +29,7 @@ def gcs_to_cloudsql(
 	Args:
 		items (list[dict]): Lista de itens com source_uri e database_name.
 		instance_name (str): Nome da instância do Cloud SQL.
+		environment (str): Ambiente usado.
 
 	Returns:
 		dict: Resumo da execução.

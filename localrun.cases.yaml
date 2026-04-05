@@ -54,6 +54,22 @@ cases:
   #  TRANSFORM                   #
   ################################
 
+  # Restauração de backup GCS -> Cloud SQL
+  - case_slug: "migrate-gcs_to_cloudsql"
+    flow_path: "pipelines.datalake.migrate.gcs_to_cloudsql.flows"
+    flow_name: "gcs_to_cloudsql"
+    params:
+      environment: dev
+      items:
+        - metadata:
+            ap: "AP53"
+            cnes: "2280310"
+            reference_month: "2026-04-01"
+            source_file_name: "53_236_vitacare_historic.zip"
+          source_uri: "gs://vitacare_backups_gdrive_dev/HISTÓRICO_PEPVITA_RJ/AP53/vitacare_historic_2280310_20260405_062632.bak"
+          database_name: "vitacare_historic_2280310"
+      instance_name: "vitacare"
+
   # Modelos dbt
   - case_slug: "datalake-transform-dbt"
     flow_path: "pipelines.datalake.transform.dbt.flows"
