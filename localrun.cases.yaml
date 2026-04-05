@@ -55,7 +55,7 @@ cases:
   ################################
 
   # Restauração de backup GCS -> Cloud SQL
-  - case_slug: "migrate-gcs_to_cloudsql"
+  - case_slug: "migrate-gcs-to-cloudsql"
     flow_path: "pipelines.datalake.migrate.gcs_to_cloudsql.flows"
     flow_name: "gcs_to_cloudsql"
     params:
