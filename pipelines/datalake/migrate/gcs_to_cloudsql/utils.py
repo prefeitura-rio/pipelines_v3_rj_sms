@@ -142,15 +142,13 @@ def call_cloudsql_api(method: str, url_path: str, json: dict = None) -> dict:
 	api_url = f"{constants.API_BASE.value}{url_path}"
 
 	for attempt in range(25):
-		log(f"(call_cloudsql_api) {method} {url_path}")
-
 		response = requests.request(method, api_url, headers=headers, json=json)
 
 		if response.status_code < 400:
 			return response.json() if response.content else {}
 
 		if response.status_code == 409:
-			log(f"(call_cloudsql_api) conflito de operação, tentando novamente...")
+			log("(call_cloudsql_api) operação em andamento; tentando novamente...")
 			sleep(15)
 			continue
 
@@ -173,6 +171,7 @@ def wait_for_operations(instance_name: str) -> None:
 	url_path = f"/operations?instance={instance_name}&maxResults=1"
 
 	for _ in range(40):
+		log("(wait_for_operations) verificando se ainda existe alguma operação em andamento...")
 		response = call_cloudsql_api("GET", url_path)
 		operations = response.get("items", [])
 
@@ -318,10 +317,18 @@ def delete_database(instance_name: str, database_name: str) -> None:
 	"""
 	log(f"(delete_database) deletando database '{database_name}'...")
 
-	call_cloudsql_api(
-		"DELETE",
-		f"/instances/{instance_name}/databases/{database_name}",
-	)
+	try:
+		call_cloudsql_api(
+			"DELETE",
+			f"/instances/{instance_name}/databases/{database_name}",
+		)
+	except requests.HTTPError as exc:
+		if exc.response is not None and exc.response.status_code == 404:
+			log(
+				f"(delete_database) database '{database_name}' não encontrada; seguindo com o import..."
+			)
+			return
+		raise
 
 	wait_for_operations(instance_name)
 
@@ -338,7 +345,7 @@ def import_backup_to_database(instance_name: str, source_uri: str, database_name
 	Returns:
 		None
 	"""
-	log(f"(import_backup_to_database) importando '{source_uri}' para '{database_name}'")
+	log(f"(import_backup_to_database) importando backup para '{database_name}'...")
 
 	payload = build_import_payload(source_uri, database_name)
 

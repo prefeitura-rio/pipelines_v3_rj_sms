@@ -9,7 +9,6 @@ from .utils import (
 	build_gcs_to_cloudsql_result,
 	delete_database,
 	import_backup_to_database,
-	database_exists,
 )
 
 
@@ -35,19 +34,11 @@ def restore_gcs_backup_to_cloudsql(item: dict, instance_name: str) -> dict:
 		validate_restore_input(item)
 		validate_database_name(database_name)
 
-		# Remove database anterior, se existir
-		if database_exists(instance_name, database_name):
-			log(
-				f"(restore_gcs_backup_to_cloudsql) database '{database_name}' já existe, deletando..."
-			)
-			delete_database(
-				instance_name=instance_name,
-				database_name=database_name,
-			)
-		else:
-			log(
-				f"(restore_gcs_backup_to_cloudsql) database '{database_name}' não existe, seguindo..."
-			)
+		# Remove database anterior
+		delete_database(
+			instance_name=instance_name,
+			database_name=database_name,
+		)
 
 		# Importa backup
 		import_backup_to_database(
@@ -55,10 +46,6 @@ def restore_gcs_backup_to_cloudsql(item: dict, instance_name: str) -> dict:
 			source_uri=source_uri,
 			database_name=database_name,
 		)
-
-		# Validação final: database foi criada
-		if not database_exists(instance_name, database_name):
-			raise Exception(f"Database '{database_name}' não encontrada após import.")
 
 		log(f"(restore_gcs_backup_to_cloudsql) restore concluído com sucesso")
 
