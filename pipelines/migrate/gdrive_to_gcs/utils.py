@@ -1,22 +1,37 @@
 # -*- coding: utf-8 -*-
-import posixpath
 
 
 def normalize_blob_path(*parts: str) -> str:
+	"""
+	Monta um caminho de arquivo no padrão do GCS.
+
+	Args:
+		*parts: Partes do caminho.
+
+	Returns:
+		str: Caminho final com "/" como separador.
+	"""
 	valid_parts = [str(part).strip("/") for part in parts if part]
-	if not valid_parts:
-		return ""
-	return posixpath.join(*valid_parts)
+	return "/".join(valid_parts)
 
 
-def build_result(
+def build_gdrive_to_gcs_result(
 	item: dict, status: str, error_detail: str = None, uploaded_paths: list = None
 ) -> dict:
+	"""
+	Monta o resultado do processamento de um arquivo do Drive.
+
+	Args:
+		item (dict): Item original do Google Drive.
+		status (str): Status do processamento.
+		error_detail (str, optional): Detalhe do erro, se houver.
+		uploaded_paths (list, optional): Caminhos enviados para o GCS.
+
+	Returns:
+		dict: Resultado padronizado do processamento.
+	"""
 	relative_path = item.get("relative_path") or item.get("name") or ""
-	relative_dir = posixpath.dirname(relative_path)
-	source_folder_name = item.get("source_folder_name")
-	if source_folder_name is None:
-		source_folder_name = relative_dir or None
+	source_folder_name = "/".join(relative_path.split("/")[:-1]) or None
 
 	return {
 		"source_file_id": item.get("id"),
@@ -30,9 +45,18 @@ def build_result(
 
 
 def build_execution_summary(items: list[dict]) -> dict:
+	"""
+	Resume o resultado da execução do stage.
+
+	Args:
+		items (list[dict]): Resultados individuais.
+
+	Returns:
+		dict: Resumo com totais e lista de itens.
+	"""
 	return {
 		"total_files_found": len(items),
-		"total_successful": sum(1 for item in items if item.get("status") == "success"),
-		"total_failed": sum(1 for item in items if item.get("status") == "failed"),
+		"total_successful": sum(1 for item in items if item["status"] == "success"),
+		"total_failed": sum(1 for item in items if item["status"] == "failed"),
 		"items": items,
 	}

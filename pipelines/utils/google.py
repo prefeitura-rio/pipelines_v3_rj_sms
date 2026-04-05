@@ -300,20 +300,24 @@ def upload_to_cloud_storage_task(
 		path, bucket_name, blob_prefix=blob_prefix, if_exists=if_exists
 	)
 
+def build_bucket_name(bucket_name: str, environment: str) -> str:
+	"""
+	Monta o nome final do bucket com base no ambiente.
 
-def get_fully_qualified_bucket_name(bucket_name: str, environment: str):
-	log(
-		f"Getting fully qualified bucket name for {bucket_name} in {environment}",
-		level="info",
-	)
+	Args:
+		bucket_name (str): Nome base do bucket.
+		environment (str): Ambiente atual da execução.
 
+	Returns:
+		str: Nome final do bucket.
+	"""
 	if environment in ["prod", "local-prod"]:
-		fq_bucket_name = bucket_name
+		resolved_bucket_name = bucket_name
 	else:
-		fq_bucket_name = f"{bucket_name}_{environment}"
-	log(f"Fully qualified bucket name: {fq_bucket_name}", level="info")
+		resolved_bucket_name = f"{bucket_name}_{environment}"
 
-	return fq_bucket_name
+	log(f"Nome do Bucket final: '{resolved_bucket_name}'")
+	return resolved_bucket_name
 
 
 ###########################
@@ -323,7 +327,10 @@ def get_fully_qualified_bucket_name(bucket_name: str, environment: str):
 
 def get_google_drive_service():
 	"""
-	Retorna um serviço autenticado da API do Google Drive.
+	Cria um cliente autenticado da API do Google Drive.
+
+	Returns:
+		Resource: Cliente autenticado do Google Drive.
 	"""
 	credentials = get_credentials_from_env(
 		scopes=["https://www.googleapis.com/auth/drive.readonly"]
@@ -336,6 +343,13 @@ def list_google_drive_files(
 ) -> List[dict[str, str]]:
 	"""
 	Lista arquivos de uma pasta do Google Drive, incluindo subpastas.
+
+	Args:
+		folder_id (str): ID da pasta raiz no Google Drive.
+		last_modified_date (str, optional): Data mínima de modificação para filtrar arquivos.
+
+	Returns:
+		List[dict[str, str]]: Lista de arquivos encontrados com metadados básicos.
 	"""
 	service = get_google_drive_service()
 	modified_since = from_relative_date(last_modified_date)
@@ -378,6 +392,7 @@ def list_google_drive_files(
 					f"{parent_path}/{item['name']}" if parent_path else item["name"]
 				)
 
+				# Se for pasta, continua a busca dentro dela
 				if item["mimeType"] == "application/vnd.google-apps.folder":
 					files.extend(_list_files(item["id"], relative_path))
 					continue
@@ -387,6 +402,7 @@ def list_google_drive_files(
 					modified_time.replace("Z", "+00:00")
 				).date()
 
+				# Ignora arquivos mais antigos que a data informada
 				if modified_since and modified_date < modified_since:
 					continue
 
@@ -405,7 +421,10 @@ def list_google_drive_files(
 
 		return files
 
-	return _list_files(folder_id, root_folder_name)
+	# Começa a listagem incluindo o nome da pasta raiz no caminho relativo
+	items = _list_files(folder_id, root_folder_name)
+	log(f"Encontrado(s) {len(items)} arquivo(s) no Google Drive")
+	return items
 
 
 def download_google_drive_file(file_id: str, destination_path: str = None) -> str:
@@ -414,10 +433,10 @@ def download_google_drive_file(file_id: str, destination_path: str = None) -> st
 
 	Args:
 		file_id (str): ID do arquivo no Google Drive.
-		destination_path (str?): Caminho local de destino do arquivo.
+		destination_path (str, optional): Caminho local do arquivo ou pasta de destino.
 
 	Returns:
-		str: Caminho local final do arquivo baixado.
+		str: Caminho final do arquivo baixado.
 	"""
 	service = get_google_drive_service()
 	file_metadata = (
@@ -426,6 +445,7 @@ def download_google_drive_file(file_id: str, destination_path: str = None) -> st
 		.execute()
 	)
 
+	# Se nenhum destino for informado, cria um caminho temporário com o nome original
 	if not destination_path:
 		destination_path = os.path.join(create_tmp_data_folder(), file_metadata["name"])
 	elif os.path.isdir(destination_path):
@@ -435,13 +455,14 @@ def download_google_drive_file(file_id: str, destination_path: str = None) -> st
 
 	request = service.files().get_media(fileId=file_id)
 	buffer = io.BytesIO()
-	with open(destination_path, "wb") as f:
+
+	with open(destination_path, "wb") as output_file:
 		downloader = MediaIoBaseDownload(buffer, request)
 
 		done = False
 		while not done:
 			_, done = downloader.next_chunk()
 
-		f.write(buffer.getvalue())
+		output_file.write(buffer.getvalue())
 
 	return destination_path

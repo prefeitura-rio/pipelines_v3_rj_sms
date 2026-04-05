@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from pipelines.constants import constants as global_consts
 from pipelines.utils.google import (
-	get_fully_qualified_bucket_name,
+	build_bucket_name,
 	list_google_drive_files,
 )
 from pipelines.utils.logger import log
@@ -24,15 +24,13 @@ def gdrive_to_gcs(
 	environment: str = "dev",
 	last_modified_date: str = None,
 ):
-	resolved_bucket_name = get_fully_qualified_bucket_name(
+	resolved_bucket_name = build_bucket_name(
 		bucket_name=bucket_name, environment=environment
 	)
-	log(f"Nome do Bucket final: '{resolved_bucket_name}'")
 
 	items = list_google_drive_files(
 		folder_id=root_folder_id, last_modified_date=last_modified_date
 	)
-	log(f"Encontrado(s) {len(items)} arquivo(s) no Google Drive")
 
 	results = []
 	for item in items:
