@@ -5,6 +5,7 @@ import os
 import shutil
 from zoneinfo import ZoneInfo
 
+from dbt.contracts.results import RunResult
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from google.cloud import bigquery
 import pandas as pd
@@ -16,11 +17,10 @@ from pipelines.utils.datetime import now
 from pipelines.utils.env import environment_is_valid, get_google_project_for_environment
 from pipelines.utils.google import download_path_from_bucket, upload_to_cloud_storage
 from pipelines.utils.logger import log
+from pipelines.utils.monitor import send_discord_message
+from pipelines.utils.prefect import authenticated_task as task, get_run_parameters
 
-# from pipelines.utils.monitor import send_discord_message
-from pipelines.utils.prefect import authenticated_task as task
-
-# from .utils import log_to_file, process_dbt_logs
+from .utils import Summarizer, log_to_file, process_dbt_logs
 from .constants import constants as dbt_constants
 
 
@@ -174,26 +174,27 @@ def create_dbt_report(
 	Returns:
 			None
 	"""
-	# running_results: dbtRunnerResult = execution_info["running_result"]
-	# log_path: str = execution_info["log_path"]
+	runner_result: dbtRunnerResult = execution_info["running_result"]
+	running_results: list[RunResult] = runner_result.result.results
+	log_path: str = execution_info["log_path"]
 
-	# logs = process_dbt_logs(log_path=os.path.join(repository_path, "logs", "dbt.log"))
-	# log_path = log_to_file(logs)
-	# summarizer = Summarizer()
+	logs = process_dbt_logs(log_path=os.path.join(repository_path, "logs", "dbt.log"))
+	log_path = log_to_file(logs)
+	summarizer = Summarizer()
 
-	# is_successful, has_warnings = True, False
+	is_successful, has_warnings = True, False
 
 	general_report = []
-	# for command_result in running_results.result:
-	# 	if command_result.status == "fail":
-	# 		is_successful = False
-	# 		general_report.append(f"- 🛑 FAIL: {summarizer(command_result)}")
-	# 	elif command_result.status == "error":
-	# 		is_successful = False
-	# 		general_report.append(f"- ❌ ERROR: {summarizer(command_result)}")
-	# 	elif command_result.status == "warn":
-	# 		has_warnings = True
-	# 		general_report.append(f"- ⚠️ WARN: {summarizer(command_result)}")
+	for command_result in running_results:
+		if command_result.status == "fail":
+			is_successful = False
+			general_report.append(f"- 🛑 FAIL: {summarizer(command_result)}")
+		elif command_result.status == "error":
+			is_successful = False
+			general_report.append(f"- ❌ ERROR: {summarizer(command_result)}")
+		elif command_result.status == "warn":
+			has_warnings = True
+			general_report.append(f"- ⚠️ WARN: {summarizer(command_result)}")
 
 	cost_report = f"**Custo da Execução**: R${estimated_total_cost:.2f}"
 	log(cost_report)
@@ -203,38 +204,39 @@ def create_dbt_report(
 	general_report = "**Resumo**:\n" + "\n".join(general_report)
 	log(general_report)
 
-	# # Get Parameters
-	# param_report = ["**Parametros**:"]
-	# for key, value in prefect.context.get("parameters").items():
-	# 	if key == "rename_flow":
-	# 		continue
-	# 	if value:
-	# 		param_report.append(f"- {key}: `{value}`")
-	# param_report = "\n".join(param_report)
-	# param_report += " \n"
+	# Get Parameters
+	param_report = ["**Parametros**:"]
+	run_params = get_run_parameters()
+	for key, value in run_params.items():
+		if key == "rename_flow":
+			continue
+		if value:
+			param_report.append(f"- {key}: `{value}`")
+	param_report = "\n".join(param_report)
+	param_report += " \n"
 
-	# fully_successful = is_successful and running_results.success
-	# include_report = has_warnings or (not fully_successful)
+	fully_successful = is_successful and running_results.success
+	include_report = has_warnings or (not fully_successful)
 
-	# # DBT - Sending Logs to Discord
-	# command = prefect.context.get("parameters").get("command")
-	# emoji = "❌" if not fully_successful else "✅"
-	# complement = "com Erros" if not fully_successful else "sem Erros"
-	# message = (
-	# 		f"{param_report}\n{cost_report}\n{general_report}"
-	# 		if include_report
-	# 		else f"{param_report}\n{cost_report}"
-	# )
+	# DBT - Sending Logs to Discord
+	command = run_params.get("command")
+	emoji = "❌" if not fully_successful else "✅"
+	complement = "com Erros" if not fully_successful else "sem Erros"
+	message = (
+		f"{param_report}\n{cost_report}\n{general_report}"
+		if include_report
+		else f"{param_report}\n{cost_report}"
+	)
 
-	# send_discord_message(
-	# 	title=f"{emoji} Execução `dbt {command}` finalizada {complement}",
-	# 	message=message,
-	# 	file_path=log_path,
-	# 	monitor_slug="dbt-runs",
-	# )
+	send_discord_message(
+		title=f"{emoji} Execução `dbt {command}` finalizada {complement}",
+		message=message,
+		file_path=log_path,
+		monitor_slug="dbt-runs",
+	)
 
-	# if not fully_successful:
-	# 	return Failed(general_report)
+	if not fully_successful:
+		return Failed(general_report)
 
 
 @task

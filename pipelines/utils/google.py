@@ -73,7 +73,9 @@ def download_google_sheets_task(
 
 	log(f">>>>> Dataframe shape: {dataframe.shape}")
 	log(f">>>>> Dataframe colunas (cruas):    {dataframe.columns}")
-	dataframe.columns = cleanup_columns_for_bigquery(dataframe, lowercase=True, raise_on_repeats="raise")
+	dataframe.columns = cleanup_columns_for_bigquery(
+		dataframe, lowercase=True, raise_on_repeats="raise"
+	)
 	log(f">>>>> Dataframe colunas (tratadas): {dataframe.columns}")
 
 	dataframe.to_csv(

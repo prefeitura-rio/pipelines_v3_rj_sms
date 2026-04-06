@@ -21,7 +21,6 @@ from .tasks import (
 	name="DataLake - Transformação - DBT",
 	state_handlers=[handle_flow_state_change],
 	owners=[global_consts.CIT_ID.value],
-	log_prints=True,  # TODO: não funcionou pra capturar logs dbt
 )
 def sms_execute_dbt(
 	command: str = "test",

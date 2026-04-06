@@ -200,3 +200,13 @@ def flow_config(
 		"dockerfile": dockerfile,
 		"memory": memory,
 	}
+
+
+def get_run_parameters() -> dict[str, Any]:
+	"""
+	Retorna um dicionário com os parâmetros passados para essa execução de flow
+	"""
+	ctx = FlowRunContext.get()
+	if ctx is None:
+		raise RuntimeError("Não foi possível obter referência à Flow Run!")
+	return ctx.parameters

@@ -6,6 +6,9 @@ from typing import List
 
 import pandas as pd
 
+from dbt.contracts.results import RunResult, SourceFreshnessResult, NodeResult
+from dbt.artifacts.resources import Time as DbtTime
+
 from pipelines.utils.io import create_tmp_data_folder
 from pipelines.utils.logger import log
 
@@ -70,3 +73,50 @@ def log_to_file(logs: pd.DataFrame, levels: List[str] = None) -> str:
 		log_file.write(report)
 
 	return filepath
+
+
+#####
+# Sumarizadores de resultados do DBT
+#####
+
+
+class Summarizer:
+	"""
+	Produz resumos de execução a partir do resultado de um comando dbt.
+	Possui suporte para `RunResult` e `SourceFreshnessResult`.
+	"""
+
+	def __call__(self, result: NodeResult):
+		status = getattr(result, "status", default=None)
+
+		# Execução normal (ex.: dbt run, dbt build)
+		if isinstance(result, RunResult):
+			if status == "error":
+				return f"`{result.node.name}`\n{result.message.replace('__', '_')}\n"
+
+			relation_name = result.node.relation_name.replace("`", "")
+			if status in ("warn", "fail"):
+				return (
+					f"`{result.node.name}`\n"
+					f"{result.message}:"
+					f"```select * from {relation_name}```\n"
+				)
+			raise ValueError(f"Status de resultado desconhecido: '{status}'")
+
+		# Source freshness
+		if isinstance(result, SourceFreshnessResult):
+			relation_name = result.node.relation_name.replace("`", "")
+
+			if status == "fail":
+				return relation_name
+
+			if status in ("warn", "error"):
+				freshness = result.node.freshness
+				# Aqui acessamos warn_after ou error_after a depender do status
+				issue_after: DbtTime = getattr(freshness, f"{status}_after")
+				criteria = f">={issue_after.count} {issue_after.period}"
+				return f"`{relation_name}` ({criteria})"
+			raise ValueError(f"Status de resultado desconhecido: '{status}'")
+
+		# Outro resultado inesperado
+		raise ValueError(f"Tipo de resultado dbt desconhecido: '{type(result)}'")
