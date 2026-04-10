@@ -8,6 +8,8 @@ from typing import Iterator, List, Literal
 import gspread
 import pandas as pd
 
+from google.oauth2 import service_account
+from google.auth.transport import requests as google_requests
 from google.cloud import storage
 from google.cloud.storage.blob import Blob
 from googleapiclient.discovery import build
@@ -465,3 +467,33 @@ def download_google_drive_file(file_id: str, destination_path: str = None) -> st
 		output_file.write(buffer.getvalue())
 
 	return destination_path
+
+###########################
+##     Google CloudSQL   ##
+###########################
+
+CLOUDSQL_API_SCOPES = ["https://www.googleapis.com/auth/sqlservice.admin"]
+
+
+def get_access_token(
+	scopes: list[str] = None,
+) -> str:
+	"""
+	Obtém um access token OAuth2 para autenticar chamadas na API do Cloud SQL.
+
+	Args:
+		service_account_file (str, optional): Caminho do arquivo de credenciais.
+		scopes (list[str], optional): Escopos OAuth2 usados na autenticação.
+
+	Returns:
+		str: Access token válido para autenticação na API.
+	"""
+	if scopes is None:
+		scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+
+	credentials = service_account.Credentials.from_service_account_file(
+		"/tmp/credentials.json",
+		scopes=scopes,
+	)
+	credentials.refresh(google_requests.Request())
+	return credentials.token
