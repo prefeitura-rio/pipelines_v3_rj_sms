@@ -7,6 +7,7 @@ from typing import Iterator, List, Literal
 
 import gspread
 import pandas as pd
+import requests
 
 from google.oauth2 import service_account
 from google.auth.transport import requests as google_requests
@@ -472,8 +473,6 @@ def download_google_drive_file(file_id: str, destination_path: str = None) -> st
 ##     Google CloudSQL   ##
 ###########################
 
-CLOUDSQL_API_SCOPES = ["https://www.googleapis.com/auth/sqlservice.admin"]
-
 
 def get_access_token(
 	scopes: list[str] = None,
@@ -497,3 +496,55 @@ def get_access_token(
 	)
 	credentials.refresh(google_requests.Request())
 	return credentials.token
+
+def call_cloudsql_api(
+	method: str,
+	path: str,
+	payload: dict = None,
+	api_base_url: str = None,
+):
+	"""
+	Faz uma chamada autenticada para a API Admin do Cloud SQL.
+
+	Args:
+		method (str): Método HTTP da requisição (GET, POST, DELETE, etc).
+		path (str): Caminho da API relativo ao projeto (ex: instances, instances/{instance}).
+		payload (dict, optional): Corpo JSON enviado na requisição.
+		api_base_url (str, optional): URL base da API. Se não informado, usa o padrão.
+
+	Returns:
+		dict | list | None: Resposta JSON parseada, quando houver conteúdo.
+	"""
+	if api_base_url is None:
+		api_base_url = "https://sqladmin.googleapis.com/sql/v1beta4"
+
+	url = f"{api_base_url}/{path.lstrip('/')}"
+	headers = {
+		"Authorization": f"Bearer {get_access_token()}",
+		"Content-Type": "application/json",
+	}
+
+	log(f"Chamando Cloud SQL Admin API: {method.upper()} {url}")
+	response = requests.request(
+		method=method.upper(),
+		url=url,
+		headers=headers,
+		json=payload,
+		timeout=60,
+	)
+
+	log(f"Cloud SQL Admin API respondeu com status {response.status_code}")
+
+	try:
+		response.raise_for_status()
+	except requests.HTTPError:
+		log(
+			f"Erro na chamada da Cloud SQL Admin API: {response.text}",
+			level="error",
+		)
+		raise
+
+	if not response.content:
+		return None
+
+	return response.json()
