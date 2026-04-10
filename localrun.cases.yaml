@@ -51,6 +51,21 @@ cases:
 
 
   ################################
+  #  MIGRATE                     #
+  ################################
+
+  # Migração Google Drive -> GCS
+  - case_slug: "gdrive-to-gcs"
+    flow_path: "pipelines.migrate.gdrive_to_gcs.flows"
+    flow_name: "gdrive_to_gcs"
+    params:
+      environment: dev
+      root_folder_id: "1VUdm8fixnUs_dJrcflsNvzXIGPX6e-2r"
+      bucket_name: "vitacare_backups_gdrive"
+      last_modified_date: 'M-0'
+
+
+  ################################
   #  TRANSFORM                   #
   ################################
 

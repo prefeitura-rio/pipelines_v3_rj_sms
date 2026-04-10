@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import csv
+import datetime
+import io
 import os
 from typing import Iterator, List, Literal
 
@@ -8,8 +10,11 @@ import pandas as pd
 
 from google.cloud import storage
 from google.cloud.storage.blob import Blob
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
 
 from pipelines.utils.cleanup import prettify_byte_size, cleanup_columns_for_bigquery
+from pipelines.utils.datetime import from_relative_date
 from pipelines.utils.infisical import get_credentials_from_env
 from pipelines.utils.io import create_tmp_data_folder
 from pipelines.utils.logger import log
@@ -73,7 +78,9 @@ def download_google_sheets_task(
 
 	log(f">>>>> Dataframe shape: {dataframe.shape}")
 	log(f">>>>> Dataframe colunas (cruas):    {dataframe.columns}")
-	dataframe.columns = cleanup_columns_for_bigquery(dataframe, lowercase=True, raise_on_repeats="raise")
+	dataframe.columns = cleanup_columns_for_bigquery(
+		dataframe, lowercase=True, raise_on_repeats="raise"
+	)
 	log(f">>>>> Dataframe colunas (tratadas): {dataframe.columns}")
 
 	dataframe.to_csv(
@@ -294,3 +301,167 @@ def upload_to_cloud_storage_task(
 	return upload_to_cloud_storage(
 		path, bucket_name, blob_prefix=blob_prefix, if_exists=if_exists
 	)
+
+
+def build_bucket_name(bucket_name: str, environment: str) -> str:
+	"""
+	Monta o nome final do bucket com base no ambiente.
+
+	Args:
+		bucket_name (str): Nome base do bucket.
+		environment (str): Ambiente atual da execução.
+
+	Returns:
+		str: Nome final do bucket.
+	"""
+	if environment in ["prod", "local-prod"]:
+		resolved_bucket_name = bucket_name
+	else:
+		resolved_bucket_name = f"{bucket_name}_{environment}"
+
+	log(f"Nome do Bucket final: '{resolved_bucket_name}'")
+	return resolved_bucket_name
+
+
+###########################
+##      Google Drive     ##
+###########################
+
+
+def get_google_drive_service():
+	"""
+	Cria um cliente autenticado da API do Google Drive.
+
+	Returns:
+		Resource: Cliente autenticado do Google Drive.
+	"""
+	credentials = get_credentials_from_env(
+		scopes=["https://www.googleapis.com/auth/drive.readonly"]
+	)
+	return build("drive", "v3", credentials=credentials)
+
+
+def list_google_drive_files(
+	folder_id: str, last_modified_date: str = None
+) -> List[dict[str, str]]:
+	"""
+	Lista arquivos de uma pasta do Google Drive, incluindo subpastas.
+
+	Args:
+		folder_id (str): ID da pasta raiz no Google Drive.
+		last_modified_date (str, optional): Data mínima de modificação para filtrar arquivos.
+
+	Returns:
+		List[dict[str, str]]: Lista de arquivos encontrados com metadados básicos.
+	"""
+	service = get_google_drive_service()
+	modified_since = from_relative_date(last_modified_date)
+
+	if isinstance(modified_since, datetime.datetime):
+		modified_since = modified_since.date()
+
+	root_folder = (
+		service.files()
+		.get(fileId=folder_id, fields="id, name", supportsAllDrives=True)
+		.execute()
+	)
+	root_folder_name = root_folder["name"]
+
+	def _list_files(
+		current_folder_id: str, parent_path: str = ""
+	) -> List[dict[str, str]]:
+		files = []
+		page_token = None
+
+		while True:
+			response = (
+				service.files()
+				.list(
+					q=f"'{current_folder_id}' in parents and trashed = false",
+					fields="nextPageToken, files(id, name, mimeType, modifiedTime)",
+					pageToken=page_token,
+					supportsAllDrives=True,
+					includeItemsFromAllDrives=True,
+				)
+				.execute()
+			)
+
+			for item in response.get("files", []):
+				relative_path = (
+					f"{parent_path}/{item['name']}" if parent_path else item["name"]
+				)
+
+				# Se for pasta, continua a busca dentro dela
+				if item["mimeType"] == "application/vnd.google-apps.folder":
+					files.extend(_list_files(item["id"], relative_path))
+					continue
+
+				modified_time = item["modifiedTime"]
+				modified_date = datetime.datetime.fromisoformat(
+					modified_time.replace("Z", "+00:00")
+				).date()
+
+				# Ignora arquivos mais antigos que a data informada
+				if modified_since and modified_date < modified_since:
+					continue
+
+				files.append(
+					{
+						"id": item["id"],
+						"name": item["name"],
+						"relative_path": relative_path,
+						"modified_time": modified_time,
+					}
+				)
+
+			page_token = response.get("nextPageToken")
+			if not page_token:
+				break
+
+		return files
+
+	# Começa a listagem incluindo o nome da pasta raiz no caminho relativo
+	items = _list_files(folder_id, root_folder_name)
+	log(f"Encontrado(s) {len(items)} arquivo(s) no Google Drive")
+	return items
+
+
+def download_google_drive_file(file_id: str, destination_path: str = None) -> str:
+	"""
+	Baixa um arquivo do Google Drive para um caminho local.
+
+	Args:
+		file_id (str): ID do arquivo no Google Drive.
+		destination_path (str, optional): Caminho local do arquivo ou pasta de destino.
+
+	Returns:
+		str: Caminho final do arquivo baixado.
+	"""
+	service = get_google_drive_service()
+	file_metadata = (
+		service.files()
+		.get(fileId=file_id, fields="name", supportsAllDrives=True)
+		.execute()
+	)
+
+	# Se nenhum destino for informado, cria um caminho temporário com o nome original
+	if not destination_path:
+		destination_path = os.path.join(create_tmp_data_folder(), file_metadata["name"])
+	elif os.path.isdir(destination_path):
+		destination_path = os.path.join(destination_path, file_metadata["name"])
+
+	os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+
+	request = service.files().get_media(fileId=file_id)
+	buffer = io.BytesIO()
+
+	with open(destination_path, "wb") as output_file:
+		downloader = MediaIoBaseDownload(buffer, request)
+
+		done = False
+		while not done:
+			_, done = downloader.next_chunk()
+
+		output_file.write(buffer.getvalue())
+
+	return destination_path
