@@ -16,7 +16,11 @@ def normalize_blob_path(*parts: str) -> str:
 
 
 def build_gdrive_to_gcs_result(
-	item: dict, status: str, error_detail: str = None, uploaded_paths: list = None
+	item: dict,
+	status: str,
+	error_detail: str = None,
+	uploaded_paths: list = None,
+	inner_file_paths: list = None,
 ) -> dict:
 	"""
 	Monta o resultado do processamento de um arquivo do Drive.
@@ -26,6 +30,7 @@ def build_gdrive_to_gcs_result(
 		status (str): Status do processamento.
 		error_detail (str, optional): Detalhe do erro, se houver.
 		uploaded_paths (list, optional): Caminhos enviados para o GCS.
+		inner_file_paths (list, optional): Caminhos internos encontrados em arquivos ZIP.
 
 	Returns:
 		dict: Resultado padronizado do processamento.
@@ -41,6 +46,7 @@ def build_gdrive_to_gcs_result(
 		"status": status,
 		"error_detail": error_detail,
 		"uploaded_paths": uploaded_paths or [],
+		"inner_file_paths": inner_file_paths or [],
 	}
 
 

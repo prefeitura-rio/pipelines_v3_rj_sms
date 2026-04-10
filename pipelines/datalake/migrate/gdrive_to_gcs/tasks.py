@@ -37,6 +37,7 @@ def process_google_drive_file(item: dict, bucket_name: str) -> dict:
 
 	tmp_root = create_tmp_data_folder(prefix="gdrive_to_gcs_")
 	uploaded_paths = []
+	inner_file_paths = []
 
 	try:
 		# Baixa o arquivo para a área temporária local
@@ -48,6 +49,18 @@ def process_google_drive_file(item: dict, bucket_name: str) -> dict:
 
 		# Se for ZIP, extrai e envia os arquivos sem incluir o nome do ZIP no caminho final
 		if downloaded_file.lower().endswith(".zip"):
+			try:
+				with zipfile.ZipFile(downloaded_file, "r") as zip_ref:
+					inner_file_paths = [
+						info.filename for info in zip_ref.infolist() if not info.is_dir()
+					]
+			except Exception as exc:  # pylint: disable=broad-except
+				log(
+					f"Não foi possível inspecionar conteúdo do ZIP '{relative_path}': {repr(exc)}",
+					level="warning",
+				)
+				inner_file_paths = []
+
 			extracted_dir = os.path.join(tmp_root, "extracted")
 			unzip_file(filepath=downloaded_file, output_path=extracted_dir)
 
@@ -76,7 +89,10 @@ def process_google_drive_file(item: dict, bucket_name: str) -> dict:
 			uploaded_paths.append(f"gs://{bucket_name}/{blob_path}")
 
 		return build_gdrive_to_gcs_result(
-			item=item, status="success", uploaded_paths=uploaded_paths
+			item=item,
+			status="success",
+			uploaded_paths=uploaded_paths,
+			inner_file_paths=inner_file_paths,
 		)
 
 	except zipfile.BadZipFile as exc:
@@ -86,6 +102,7 @@ def process_google_drive_file(item: dict, bucket_name: str) -> dict:
 			status="failed",
 			error_detail=f"Arquivo ZIP corrompido: {exc}",
 			uploaded_paths=uploaded_paths,
+			inner_file_paths=inner_file_paths,
 		)
 
 	except Exception as exc:  # pylint: disable=broad-except
@@ -95,6 +112,7 @@ def process_google_drive_file(item: dict, bucket_name: str) -> dict:
 			status="failed",
 			error_detail=str(exc),
 			uploaded_paths=uploaded_paths,
+			inner_file_paths=inner_file_paths,
 		)
 
 	finally:
