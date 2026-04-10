@@ -300,6 +300,7 @@ def upload_to_cloud_storage_task(
 		path, bucket_name, blob_prefix=blob_prefix, if_exists=if_exists
 	)
 
+
 def build_bucket_name(bucket_name: str, environment: str) -> str:
 	"""
 	Monta o nome final do bucket com base no ambiente.
@@ -359,11 +360,7 @@ def list_google_drive_files(
 
 	root_folder = (
 		service.files()
-		.get(
-			fileId=folder_id,
-			fields="id, name",
-			supportsAllDrives=True,
-		)
+		.get(fileId=folder_id, fields="id, name", supportsAllDrives=True)
 		.execute()
 	)
 	root_folder_name = root_folder["name"]

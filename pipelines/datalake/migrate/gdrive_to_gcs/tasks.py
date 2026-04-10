@@ -27,16 +27,12 @@ def process_google_drive_file(item: dict, bucket_name: str) -> dict:
 	relative_path = item.get("relative_path") or item.get("name")
 	if not relative_path:
 		return build_gdrive_to_gcs_result(
-			item=item,
-			status="failed",
-			error_detail="Item sem 'relative_path' ou 'name'.",
+			item=item, status="failed", error_detail="Item sem 'relative_path' ou 'name'."
 		)
 
 	if not item.get("id"):
 		return build_gdrive_to_gcs_result(
-			item=item,
-			status="failed",
-			error_detail="Item sem 'id'.",
+			item=item, status="failed", error_detail="Item sem 'id'."
 		)
 
 	tmp_root = create_tmp_data_folder(prefix="gdrive_to_gcs_")
@@ -47,8 +43,7 @@ def process_google_drive_file(item: dict, bucket_name: str) -> dict:
 		download_path = os.path.join(tmp_root, relative_path)
 		log(f"Baixando arquivo do Google Drive para '{download_path}'")
 		downloaded_file = download_google_drive_file(
-			file_id=item["id"],
-			destination_path=download_path,
+			file_id=item["id"], destination_path=download_path
 		)
 
 		# Se for ZIP, extrai e envia os arquivos sem incluir o nome do ZIP no caminho final
@@ -67,9 +62,7 @@ def process_google_drive_file(item: dict, bucket_name: str) -> dict:
 				blob_dir = posixpath.dirname(blob_path) or None
 
 				upload_to_cloud_storage(
-					path=file_path,
-					bucket_name=bucket_name,
-					blob_prefix=blob_dir,
+					path=file_path, bucket_name=bucket_name, blob_prefix=blob_dir
 				)
 				uploaded_paths.append(f"gs://{bucket_name}/{blob_path}")
 
@@ -78,16 +71,12 @@ def process_google_drive_file(item: dict, bucket_name: str) -> dict:
 			blob_dir = posixpath.dirname(blob_path) or None
 
 			upload_to_cloud_storage(
-				path=downloaded_file,
-				bucket_name=bucket_name,
-				blob_prefix=blob_dir,
+				path=downloaded_file, bucket_name=bucket_name, blob_prefix=blob_dir
 			)
 			uploaded_paths.append(f"gs://{bucket_name}/{blob_path}")
 
 		return build_gdrive_to_gcs_result(
-			item=item,
-			status="success",
-			uploaded_paths=uploaded_paths,
+			item=item, status="success", uploaded_paths=uploaded_paths
 		)
 
 	except zipfile.BadZipFile as exc:
