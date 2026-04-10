@@ -35,7 +35,9 @@ def cleanup_bigquery_name(name: str) -> str:
 	return no_excessive_underlines
 
 
-def cleanup_columns_for_bigquery(df: pd.DataFrame, lowercase: bool = False, raise_on_repeats: bool = False):
+def cleanup_columns_for_bigquery(
+	df: pd.DataFrame, lowercase: bool = False, raise_on_repeats: bool = False
+):
 	"""
 	Remove acentos e outras marcas (p.ex. cedilha) de colunas de um DataFrame,
 	preparando-o para upload para o BigQuery. A substituição é feita in-place;
