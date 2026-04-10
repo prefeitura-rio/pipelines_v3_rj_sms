@@ -31,10 +31,7 @@ def restore_gcs_backup_to_cloudsql(item: dict, instance_name: str) -> dict:
 			f"'{database_name}' na instância '{instance_name}'"
 		)
 
-		google.delete_database(
-			instance_name=instance_name,
-			database_name=database_name,
-		)
+		google.delete_database(instance_name=instance_name, database_name=database_name)
 		google.wait_for_operations(instance_name=instance_name)
 
 		google.import_backup_to_database(
@@ -44,10 +41,7 @@ def restore_gcs_backup_to_cloudsql(item: dict, instance_name: str) -> dict:
 		)
 		google.wait_for_operations(instance_name=instance_name)
 
-		return build_gcs_to_cloudsql_result(
-			item=item,
-			status="success",
-		)
+		return build_gcs_to_cloudsql_result(item=item, status="success")
 
 	except Exception as exc:  # pylint: disable=broad-except
 		log(
@@ -56,7 +50,5 @@ def restore_gcs_backup_to_cloudsql(item: dict, instance_name: str) -> dict:
 			level="error",
 		)
 		return build_gcs_to_cloudsql_result(
-			item=item,
-			status="failed",
-			error_detail=str(exc),
+			item=item, status="failed", error_detail=str(exc)
 		)

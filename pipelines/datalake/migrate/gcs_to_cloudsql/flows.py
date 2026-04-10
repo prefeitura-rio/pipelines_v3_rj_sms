@@ -15,9 +15,7 @@ from .tasks import restore_gcs_backup_to_cloudsql
 	description="Restaura backups do GCS para uma instância Cloud SQL",
 )
 def gcs_to_cloudsql(
-	items: list[dict],
-	instance_name: str,
-	environment: str = "dev",
+	items: list[dict], instance_name: str, environment: str = "dev"
 ) -> list[dict]:
 	"""
 	Processa backups do GCS e restaura cada item em uma instância Cloud SQL.
@@ -42,10 +40,7 @@ def gcs_to_cloudsql(
 
 		for item in items:
 			results.append(
-				restore_gcs_backup_to_cloudsql(
-					item=item,
-					instance_name=instance_name,
-				)
+				restore_gcs_backup_to_cloudsql(item=item, instance_name=instance_name)
 			)
 
 	finally:

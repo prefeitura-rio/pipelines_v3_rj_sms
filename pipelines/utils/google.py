@@ -470,14 +470,13 @@ def download_google_drive_file(file_id: str, destination_path: str = None) -> st
 
 	return destination_path
 
+
 ###########################
 ##     Google CloudSQL   ##
 ###########################
 
 
-def get_access_token(
-	scopes: list[str] = None,
-) -> str:
+def get_access_token(scopes: list[str] = None) -> str:
 	"""
 	Obtém um access token OAuth2 para autenticar chamadas na API do Cloud SQL.
 
@@ -491,17 +490,14 @@ def get_access_token(
 		scopes = ["https://www.googleapis.com/auth/cloud-platform"]
 
 	credentials = service_account.Credentials.from_service_account_file(
-		"/tmp/credentials.json",
-		scopes=scopes,
+		"/tmp/credentials.json", scopes=scopes
 	)
 	credentials.refresh(google_requests.Request())
 	return credentials.token
 
+
 def call_cloudsql_api(
-	method: str,
-	path: str,
-	payload: dict = None,
-	api_base_url: str = None,
+	method: str, path: str, payload: dict = None, api_base_url: str = None
 ):
 	"""
 	Faz uma chamada autenticada para a API Admin do Cloud SQL.
@@ -526,11 +522,7 @@ def call_cloudsql_api(
 
 	log(f"Chamando Cloud SQL Admin API: {method.upper()} {url}")
 	response = requests.request(
-		method=method.upper(),
-		url=url,
-		headers=headers,
-		json=payload,
-		timeout=60,
+		method=method.upper(), url=url, headers=headers, json=payload, timeout=60
 	)
 
 	log(f"Cloud SQL Admin API respondeu com status {response.status_code}")
@@ -538,10 +530,7 @@ def call_cloudsql_api(
 	try:
 		response.raise_for_status()
 	except requests.HTTPError:
-		log(
-			f"Erro na chamada da Cloud SQL Admin API: {response.text}",
-			level="error",
-		)
+		log(f"Erro na chamada da Cloud SQL Admin API: {response.text}", level="error")
 		raise
 
 	if not response.content:
@@ -549,10 +538,9 @@ def call_cloudsql_api(
 
 	return response.json()
 
+
 def wait_for_operations(
-	instance_name: str,
-	max_attempts: int = 30,
-	sleep_seconds: int = 15,
+	instance_name: str, max_attempts: int = 30, sleep_seconds: int = 15
 ) -> None:
 	"""
 	Aguarda até que a operação mais recente de uma instância Cloud SQL termine.
@@ -569,8 +557,7 @@ def wait_for_operations(
 
 	for attempt in range(1, max_attempts + 1):
 		response = call_cloudsql_api(
-			method="GET",
-			path=f"operations?instance={instance_name}&maxResults=1",
+			method="GET", path=f"operations?instance={instance_name}&maxResults=1"
 		)
 		items = response.get("items", []) if response else []
 
@@ -581,7 +568,9 @@ def wait_for_operations(
 		status = operation.get("status")
 		operation_name = operation.get("name")
 
-		log(f"Operação '{operation_name}' da instância '{instance_name}' está em '{status}'")
+		log(
+			f"Operação '{operation_name}' da instância '{instance_name}' está em '{status}'"
+		)
 
 		if status == "DONE":
 			return
@@ -607,10 +596,7 @@ def get_instance_status(instance_name: str) -> dict:
 		dict: Estado atual e activation policy da instância.
 	"""
 	log(f"Consultando status da instância Cloud SQL '{instance_name}'")
-	response = call_cloudsql_api(
-		method="GET",
-		path=f"instances/{instance_name}",
-	)
+	response = call_cloudsql_api(method="GET", path=f"instances/{instance_name}")
 
 	status = {
 		"state": response.get("state"),
@@ -640,10 +626,7 @@ def ensure_instance_running(instance_name: str) -> None:
 		return
 
 	log(f"Ligando instância Cloud SQL '{instance_name}'")
-	instance = call_cloudsql_api(
-		method="GET",
-		path=f"instances/{instance_name}",
-	)
+	instance = call_cloudsql_api(method="GET", path=f"instances/{instance_name}")
 	settings_version = instance.get("settings", {}).get("settingsVersion")
 
 	call_cloudsql_api(
@@ -676,20 +659,14 @@ def ensure_instance_stopped(instance_name: str) -> None:
 		return
 
 	log(f"Desligando instância Cloud SQL '{instance_name}'")
-	instance = call_cloudsql_api(
-		method="GET",
-		path=f"instances/{instance_name}",
-	)
+	instance = call_cloudsql_api(method="GET", path=f"instances/{instance_name}")
 	settings_version = instance.get("settings", {}).get("settingsVersion")
 
 	call_cloudsql_api(
 		method="PATCH",
 		path=f"instances/{instance_name}",
 		payload={
-			"settings": {
-				"activationPolicy": "NEVER",
-				"settingsVersion": settings_version,
-			}
+			"settings": {"activationPolicy": "NEVER", "settingsVersion": settings_version}
 		},
 	)
 	wait_for_operations(instance_name)

@@ -19,9 +19,7 @@ def validate_restore_input(item: dict) -> None:
 
 
 def build_gcs_to_cloudsql_result(
-	item: dict,
-	status: str,
-	error_detail: str = None,
+	item: dict, status: str, error_detail: str = None
 ) -> dict:
 	"""
 	Monta o resultado padronizado do processamento de um item.
