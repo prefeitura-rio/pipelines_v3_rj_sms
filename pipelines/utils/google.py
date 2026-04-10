@@ -3,6 +3,7 @@ import csv
 import datetime
 import io
 import os
+import time
 from typing import Iterator, List, Literal
 
 import gspread
@@ -481,7 +482,6 @@ def get_access_token(
 	Obtém um access token OAuth2 para autenticar chamadas na API do Cloud SQL.
 
 	Args:
-		service_account_file (str, optional): Caminho do arquivo de credenciais.
 		scopes (list[str], optional): Escopos OAuth2 usados na autenticação.
 
 	Returns:
@@ -516,7 +516,7 @@ def call_cloudsql_api(
 		dict | list | None: Resposta JSON parseada, quando houver conteúdo.
 	"""
 	if api_base_url is None:
-		api_base_url = "https://sqladmin.googleapis.com/sql/v1beta4"
+		api_base_url = "https://sqladmin.googleapis.com/sql/v1beta4/projects/rj-sms-dev"
 
 	url = f"{api_base_url}/{path.lstrip('/')}"
 	headers = {
@@ -548,3 +548,49 @@ def call_cloudsql_api(
 		return None
 
 	return response.json()
+
+def wait_for_operations(
+	instance_name: str,
+	max_attempts: int = 30,
+	sleep_seconds: int = 15,
+) -> None:
+	"""
+	Aguarda até que a operação mais recente de uma instância Cloud SQL termine.
+
+	Args:
+		instance_name (str): Nome da instância Cloud SQL.
+		max_attempts (int, optional): Número máximo de tentativas de polling.
+		sleep_seconds (int, optional): Intervalo em segundos entre tentativas.
+
+	Returns:
+		None
+	"""
+	log(f"Aguardando operações do Cloud SQL para a instância '{instance_name}'")
+
+	for attempt in range(1, max_attempts + 1):
+		response = call_cloudsql_api(
+			method="GET",
+			path=f"operations?instance={instance_name}&maxResults=1",
+		)
+		items = response.get("items", []) if response else []
+
+		if not items:
+			return
+
+		operation = items[0]
+		status = operation.get("status")
+		operation_name = operation.get("name")
+
+		log(f"Operação '{operation_name}' da instância '{instance_name}' está em '{status}'")
+
+		if status == "DONE":
+			return
+
+		if attempt < max_attempts:
+			time.sleep(sleep_seconds)
+
+	log(
+		f"Número máximo de tentativas atingido ao aguardar operações da instância "
+		f"'{instance_name}'",
+		level="warning",
+	)
