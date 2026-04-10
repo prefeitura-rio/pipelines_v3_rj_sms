@@ -622,3 +622,75 @@ def get_instance_status(instance_name: str) -> dict:
 		f"com activation policy '{status['activation_policy']}'"
 	)
 	return status
+
+
+def ensure_instance_running(instance_name: str) -> None:
+	"""
+	Garante que uma instância Cloud SQL esteja ligada.
+
+	Args:
+		instance_name (str): Nome da instância Cloud SQL.
+
+	Returns:
+		None
+	"""
+	status = get_instance_status(instance_name)
+	if status["activation_policy"] == "ALWAYS" and status["state"] != "STOPPED":
+		log(f"Instância '{instance_name}' já está em execução")
+		return
+
+	log(f"Ligando instância Cloud SQL '{instance_name}'")
+	instance = call_cloudsql_api(
+		method="GET",
+		path=f"instances/{instance_name}",
+	)
+	settings_version = instance.get("settings", {}).get("settingsVersion")
+
+	call_cloudsql_api(
+		method="PATCH",
+		path=f"instances/{instance_name}",
+		payload={
+			"settings": {
+				"activationPolicy": "ALWAYS",
+				"settingsVersion": settings_version,
+			}
+		},
+	)
+	wait_for_operations(instance_name)
+	get_instance_status(instance_name)
+
+
+def ensure_instance_stopped(instance_name: str) -> None:
+	"""
+	Garante que uma instância Cloud SQL esteja desligada.
+
+	Args:
+		instance_name (str): Nome da instância Cloud SQL.
+
+	Returns:
+		None
+	"""
+	status = get_instance_status(instance_name)
+	if status["activation_policy"] == "NEVER" or status["state"] == "STOPPED":
+		log(f"Instância '{instance_name}' já está parada")
+		return
+
+	log(f"Desligando instância Cloud SQL '{instance_name}'")
+	instance = call_cloudsql_api(
+		method="GET",
+		path=f"instances/{instance_name}",
+	)
+	settings_version = instance.get("settings", {}).get("settingsVersion")
+
+	call_cloudsql_api(
+		method="PATCH",
+		path=f"instances/{instance_name}",
+		payload={
+			"settings": {
+				"activationPolicy": "NEVER",
+				"settingsVersion": settings_version,
+			}
+		},
+	)
+	wait_for_operations(instance_name)
+	get_instance_status(instance_name)
