@@ -594,3 +594,31 @@ def wait_for_operations(
 		f"'{instance_name}'",
 		level="warning",
 	)
+
+
+def get_instance_status(instance_name: str) -> dict:
+	"""
+	Obtém o status atual de uma instância Cloud SQL.
+
+	Args:
+		instance_name (str): Nome da instância Cloud SQL.
+
+	Returns:
+		dict: Estado atual e activation policy da instância.
+	"""
+	log(f"Consultando status da instância Cloud SQL '{instance_name}'")
+	response = call_cloudsql_api(
+		method="GET",
+		path=f"instances/{instance_name}",
+	)
+
+	status = {
+		"state": response.get("state"),
+		"activation_policy": response.get("settings", {}).get("activationPolicy"),
+	}
+
+	log(
+		f"Instância '{instance_name}' está em '{status['state']}' "
+		f"com activation policy '{status['activation_policy']}'"
+	)
+	return status
