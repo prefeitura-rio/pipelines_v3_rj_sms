@@ -696,6 +696,11 @@ def delete_database(instance_name: str, database_name: str) -> None:
 	Returns:
 		None
 	"""
+	log(
+		f"(delete_database) deletando database '{database_name}' "
+		f"da instância '{instance_name}'"
+	)
+
 	try:
 		call_cloudsql_api(
 			method="DELETE",
@@ -708,11 +713,6 @@ def delete_database(instance_name: str, database_name: str) -> None:
 			log(f"(delete_database) database '{database_name}' não encontrada")
 			return
 		raise
-
-	log(
-		f"(delete_database) deletando database '{database_name}' "
-		f"da instância '{instance_name}'"
-	)
 
 
 def import_backup_to_database(
@@ -729,6 +729,11 @@ def import_backup_to_database(
 	Returns:
 		None
 	"""
+	log(
+		f"(import_backup_to_database) importando backup '{source_uri}' "
+		f"para database '{database_name}' na instância '{instance_name}'"
+	)
+
 	call_cloudsql_api(
 		method="POST",
 		path=f"instances/{instance_name}/import",
@@ -739,9 +744,4 @@ def import_backup_to_database(
 				"database": database_name,
 			}
 		},
-	)
-
-	log(
-		f"(import_backup_to_database) importando backup '{source_uri}' "
-		f"para database '{database_name}' na instância '{instance_name}'"
 	)
