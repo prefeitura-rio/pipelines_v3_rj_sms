@@ -520,17 +520,24 @@ def call_cloudsql_api(
 		"Content-Type": "application/json",
 	}
 
-	log(f"Chamando Cloud SQL Admin API: {method.upper()} {url}")
+	log(f"(call_cloudsql_api) chamando Cloud SQL Admin API: {method.upper()} {url}")
 	response = requests.request(
 		method=method.upper(), url=url, headers=headers, json=payload, timeout=60
 	)
 
-	log(f"Cloud SQL Admin API respondeu com status {response.status_code}")
+	log(
+		f"(call_cloudsql_api) Cloud SQL Admin API respondeu com status "
+		f"{response.status_code}"
+	)
 
 	try:
 		response.raise_for_status()
 	except requests.HTTPError:
-		log(f"Erro na chamada da Cloud SQL Admin API: {response.text}", level="error")
+		log(
+			f"(call_cloudsql_api) erro na chamada da Cloud SQL Admin API: "
+			f"{response.text}",
+			level="error",
+		)
 		raise
 
 	if not response.content:
@@ -553,7 +560,10 @@ def wait_for_operations(
 	Returns:
 		None
 	"""
-	log(f"Aguardando operações do Cloud SQL para a instância '{instance_name}'")
+	log(
+		f"(wait_for_operations) aguardando operações do Cloud SQL para a "
+		f"instância '{instance_name}'"
+	)
 
 	for attempt in range(1, max_attempts + 1):
 		response = call_cloudsql_api(
@@ -569,7 +579,8 @@ def wait_for_operations(
 		operation_name = operation.get("name")
 
 		log(
-			f"Operação '{operation_name}' da instância '{instance_name}' está em '{status}'"
+			f"(wait_for_operations) operação '{operation_name}' da instância "
+			f"'{instance_name}' está em '{status}'"
 		)
 
 		if status == "DONE":
@@ -579,8 +590,8 @@ def wait_for_operations(
 			time.sleep(sleep_seconds)
 
 	log(
-		f"Número máximo de tentativas atingido ao aguardar operações da instância "
-		f"'{instance_name}'",
+		f"(wait_for_operations) número máximo de tentativas atingido ao aguardar "
+		f"operações da instância '{instance_name}'",
 		level="warning",
 	)
 
@@ -595,7 +606,7 @@ def get_instance_status(instance_name: str) -> dict:
 	Returns:
 		dict: Estado atual e activation policy da instância.
 	"""
-	log(f"Consultando status da instância Cloud SQL '{instance_name}'")
+	log(f"(get_instance_status) consultando status da instância Cloud SQL '{instance_name}'")
 	response = call_cloudsql_api(method="GET", path=f"instances/{instance_name}")
 
 	status = {
@@ -604,8 +615,9 @@ def get_instance_status(instance_name: str) -> dict:
 	}
 
 	log(
-		f"Instância '{instance_name}' está em '{status['state']}' "
-		f"com activation policy '{status['activation_policy']}'"
+		f"(get_instance_status) instância '{instance_name}' está em "
+		f"'{status['state']}' com activation policy "
+		f"'{status['activation_policy']}'"
 	)
 	return status
 
@@ -622,10 +634,10 @@ def ensure_instance_running(instance_name: str) -> None:
 	"""
 	status = get_instance_status(instance_name)
 	if status["activation_policy"] == "ALWAYS" and status["state"] != "STOPPED":
-		log(f"Instância '{instance_name}' já está em execução")
+		log(f"(ensure_instance_running) instância '{instance_name}' já está em execução")
 		return
 
-	log(f"Ligando instância Cloud SQL '{instance_name}'")
+	log(f"(ensure_instance_running) ligando instância Cloud SQL '{instance_name}'")
 	instance = call_cloudsql_api(method="GET", path=f"instances/{instance_name}")
 	settings_version = instance.get("settings", {}).get("settingsVersion")
 
@@ -655,10 +667,10 @@ def ensure_instance_stopped(instance_name: str) -> None:
 	"""
 	status = get_instance_status(instance_name)
 	if status["activation_policy"] == "NEVER" or status["state"] == "STOPPED":
-		log(f"Instância '{instance_name}' já está parada")
+		log(f"(ensure_instance_stopped) instância '{instance_name}' já está parada")
 		return
 
-	log(f"Desligando instância Cloud SQL '{instance_name}'")
+	log(f"(ensure_instance_stopped) desligando instância Cloud SQL '{instance_name}'")
 	instance = call_cloudsql_api(method="GET", path=f"instances/{instance_name}")
 	settings_version = instance.get("settings", {}).get("settingsVersion")
 
@@ -671,3 +683,33 @@ def ensure_instance_stopped(instance_name: str) -> None:
 	)
 	wait_for_operations(instance_name)
 	get_instance_status(instance_name)
+
+
+def delete_database(instance_name: str, database_name: str) -> None:
+	"""
+	Remove uma database de uma instância Cloud SQL.
+
+	Args:
+		instance_name (str): Nome da instância Cloud SQL.
+		database_name (str): Nome da database a ser removida.
+
+	Returns:
+		None
+	"""
+	try:
+		call_cloudsql_api(
+			method="DELETE",
+			path=f"instances/{instance_name}/databases/{database_name}",
+		)
+	except requests.HTTPError as exc:
+		response = exc.response
+		if response is not None and response.status_code == 404:
+			# Se a database não existe, seguimos normalmente.
+			log(f"(delete_database) database '{database_name}' não encontrada")
+			return
+		raise
+
+	log(
+		f"(delete_database) deletando database '{database_name}' "
+		f"da instância '{instance_name}'"
+	)
