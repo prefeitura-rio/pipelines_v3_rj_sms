@@ -3,11 +3,15 @@ import csv
 import datetime
 import io
 import os
+import time
 from typing import Iterator, List, Literal
 
 import gspread
 import pandas as pd
+import requests
 
+from google.oauth2 import service_account
+from google.auth.transport import requests as google_requests
 from google.cloud import storage
 from google.cloud.storage.blob import Blob
 from googleapiclient.discovery import build
@@ -465,3 +469,274 @@ def download_google_drive_file(file_id: str, destination_path: str = None) -> st
 		output_file.write(buffer.getvalue())
 
 	return destination_path
+
+
+###########################
+##     Google CloudSQL   ##
+###########################
+
+
+def get_access_token(scopes: list[str] = None) -> str:
+	"""
+	Obtém um access token OAuth2 para autenticar chamadas na API do Cloud SQL.
+
+	Args:
+		scopes (list[str], optional): Escopos OAuth2 usados na autenticação.
+
+	Returns:
+		str: Access token válido para autenticação na API.
+	"""
+	if scopes is None:
+		scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+
+	credentials = service_account.Credentials.from_service_account_file(
+		"/tmp/credentials.json", scopes=scopes
+	)
+	credentials.refresh(google_requests.Request())
+	return credentials.token
+
+
+def call_cloudsql_api(
+	method: str, path: str, payload: dict = None, api_base_url: str = None
+):
+	"""
+	Faz uma chamada autenticada para a API Admin do Cloud SQL.
+
+	Args:
+		method (str): Método HTTP da requisição (GET, POST, DELETE, etc).
+		path (str): Caminho da API relativo ao projeto (ex: instances, instances/{instance}).
+		payload (dict, optional): Corpo JSON enviado na requisição.
+		api_base_url (str, optional): URL base da API. Se não informado, usa o padrão.
+
+	Returns:
+		dict | list | None: Resposta JSON parseada, quando houver conteúdo.
+	"""
+	if api_base_url is None:
+		api_base_url = "https://sqladmin.googleapis.com/sql/v1beta4/projects/rj-sms-dev"
+
+	url = f"{api_base_url}/{path.lstrip('/')}"
+	headers = {
+		"Authorization": f"Bearer {get_access_token()}",
+		"Content-Type": "application/json",
+	}
+
+	response = requests.request(
+		method=method.upper(), url=url, headers=headers, json=payload, timeout=60
+	)
+
+	try:
+		response.raise_for_status()
+	except requests.HTTPError:
+		log(
+			f"(call_cloudsql_api) erro na chamada da Cloud SQL Admin API: "
+			f"{response.text}",
+			level="error",
+		)
+		raise
+
+	if not response.content:
+		return None
+
+	return response.json()
+
+
+def wait_for_operations(
+	instance_name: str, max_attempts: int = 30, sleep_seconds: int = 15
+) -> None:
+	"""
+	Aguarda até que a operação mais recente de uma instância Cloud SQL termine.
+
+	Args:
+		instance_name (str): Nome da instância Cloud SQL.
+		max_attempts (int, optional): Número máximo de tentativas de polling.
+		sleep_seconds (int, optional): Intervalo em segundos entre tentativas.
+
+	Returns:
+		None
+	"""
+	log(
+		f"(wait_for_operations) aguardando operações do Cloud SQL para a "
+		f"instância '{instance_name}'"
+	)
+
+	for attempt in range(1, max_attempts + 1):
+		response = call_cloudsql_api(
+			method="GET", path=f"operations?instance={instance_name}&maxResults=1"
+		)
+		items = response.get("items", []) if response else []
+
+		if not items:
+			return
+
+		operation = items[0]
+		status = operation.get("status")
+		operation_name = operation.get("name")
+
+		log(
+			f"(wait_for_operations) operação '{operation_name}' da instância "
+			f"'{instance_name}' está em '{status}'"
+		)
+
+		if status == "DONE":
+			return
+
+		if attempt < max_attempts:
+			time.sleep(sleep_seconds)
+
+	log(
+		f"(wait_for_operations) número máximo de tentativas atingido ao aguardar "
+		f"operações da instância '{instance_name}'",
+		level="warning",
+	)
+
+
+def get_instance_status(instance_name: str) -> dict:
+	"""
+	Obtém o status atual de uma instância Cloud SQL.
+
+	Args:
+		instance_name (str): Nome da instância Cloud SQL.
+
+	Returns:
+		dict: Estado atual e activation policy da instância.
+	"""
+	log(
+		f"(get_instance_status) consultando status da instância Cloud SQL '{instance_name}'"
+	)
+	response = call_cloudsql_api(method="GET", path=f"instances/{instance_name}")
+
+	status = {
+		"state": response.get("state"),
+		"activation_policy": response.get("settings", {}).get("activationPolicy"),
+	}
+
+	log(
+		f"(get_instance_status) instância '{instance_name}' está em "
+		f"'{status['state']}' com activation policy "
+		f"'{status['activation_policy']}'"
+	)
+	return status
+
+
+def ensure_instance_running(instance_name: str) -> None:
+	"""
+	Garante que uma instância Cloud SQL esteja ligada.
+
+	Args:
+		instance_name (str): Nome da instância Cloud SQL.
+
+	Returns:
+		None
+	"""
+	status = get_instance_status(instance_name)
+	if status["activation_policy"] == "ALWAYS" and status["state"] != "STOPPED":
+		log(f"(ensure_instance_running) instância '{instance_name}' já está em execução")
+		return
+
+	log(f"(ensure_instance_running) ligando instância Cloud SQL '{instance_name}'")
+	instance = call_cloudsql_api(method="GET", path=f"instances/{instance_name}")
+	settings_version = instance.get("settings", {}).get("settingsVersion")
+
+	call_cloudsql_api(
+		method="PATCH",
+		path=f"instances/{instance_name}",
+		payload={
+			"settings": {
+				"activationPolicy": "ALWAYS",
+				"settingsVersion": settings_version,
+			}
+		},
+	)
+	wait_for_operations(instance_name)
+	get_instance_status(instance_name)
+
+
+def ensure_instance_stopped(instance_name: str) -> None:
+	"""
+	Garante que uma instância Cloud SQL esteja desligada.
+
+	Args:
+		instance_name (str): Nome da instância Cloud SQL.
+
+	Returns:
+		None
+	"""
+	status = get_instance_status(instance_name)
+	if status["activation_policy"] == "NEVER" or status["state"] == "STOPPED":
+		log(f"(ensure_instance_stopped) instância '{instance_name}' já está parada")
+		return
+
+	log(f"(ensure_instance_stopped) desligando instância Cloud SQL '{instance_name}'")
+	instance = call_cloudsql_api(method="GET", path=f"instances/{instance_name}")
+	settings_version = instance.get("settings", {}).get("settingsVersion")
+
+	call_cloudsql_api(
+		method="PATCH",
+		path=f"instances/{instance_name}",
+		payload={
+			"settings": {"activationPolicy": "NEVER", "settingsVersion": settings_version}
+		},
+	)
+	wait_for_operations(instance_name)
+	get_instance_status(instance_name)
+
+
+def delete_database(instance_name: str, database_name: str) -> None:
+	"""
+	Remove uma database de uma instância Cloud SQL.
+
+	Args:
+		instance_name (str): Nome da instância Cloud SQL.
+		database_name (str): Nome da database a ser removida.
+
+	Returns:
+		None
+	"""
+	log(
+		f"(delete_database) deletando database '{database_name}' "
+		f"da instância '{instance_name}'"
+	)
+
+	try:
+		call_cloudsql_api(
+			method="DELETE", path=f"instances/{instance_name}/databases/{database_name}"
+		)
+	except requests.HTTPError as exc:
+		response = exc.response
+		if response is not None and response.status_code == 404:
+			# Se a database não existe, seguimos normalmente.
+			log(f"(delete_database) database '{database_name}' não encontrada")
+			return
+		raise
+
+
+def import_backup_to_database(
+	instance_name: str, source_uri: str, database_name: str
+) -> None:
+	"""
+	Importa um arquivo de backup do GCS para uma database do Cloud SQL.
+
+	Args:
+		instance_name (str): Nome da instância Cloud SQL.
+		source_uri (str): URI `gs://` do arquivo de backup.
+		database_name (str): Nome da database de destino.
+
+	Returns:
+		None
+	"""
+	log(
+		f"(import_backup_to_database) importando backup '{source_uri}' "
+		f"para database '{database_name}' na instância '{instance_name}'"
+	)
+
+	call_cloudsql_api(
+		method="POST",
+		path=f"instances/{instance_name}/import",
+		payload={
+			"importContext": {
+				"fileType": "BAK",
+				"uri": source_uri,
+				"database": database_name,
+			}
+		},
+	)
