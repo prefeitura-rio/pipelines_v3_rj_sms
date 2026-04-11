@@ -606,7 +606,9 @@ def get_instance_status(instance_name: str) -> dict:
 	Returns:
 		dict: Estado atual e activation policy da instância.
 	"""
-	log(f"(get_instance_status) consultando status da instância Cloud SQL '{instance_name}'")
+	log(
+		f"(get_instance_status) consultando status da instância Cloud SQL '{instance_name}'"
+	)
 	response = call_cloudsql_api(method="GET", path=f"instances/{instance_name}")
 
 	status = {
@@ -703,8 +705,7 @@ def delete_database(instance_name: str, database_name: str) -> None:
 
 	try:
 		call_cloudsql_api(
-			method="DELETE",
-			path=f"instances/{instance_name}/databases/{database_name}",
+			method="DELETE", path=f"instances/{instance_name}/databases/{database_name}"
 		)
 	except requests.HTTPError as exc:
 		response = exc.response
