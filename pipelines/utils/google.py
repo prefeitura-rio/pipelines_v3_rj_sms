@@ -713,3 +713,35 @@ def delete_database(instance_name: str, database_name: str) -> None:
 		f"(delete_database) deletando database '{database_name}' "
 		f"da instância '{instance_name}'"
 	)
+
+
+def import_backup_to_database(
+	instance_name: str, source_uri: str, database_name: str
+) -> None:
+	"""
+	Importa um arquivo de backup do GCS para uma database do Cloud SQL.
+
+	Args:
+		instance_name (str): Nome da instância Cloud SQL.
+		source_uri (str): URI `gs://` do arquivo de backup.
+		database_name (str): Nome da database de destino.
+
+	Returns:
+		None
+	"""
+	call_cloudsql_api(
+		method="POST",
+		path=f"instances/{instance_name}/import",
+		payload={
+			"importContext": {
+				"fileType": "BAK",
+				"uri": source_uri,
+				"database": database_name,
+			}
+		},
+	)
+
+	log(
+		f"(import_backup_to_database) importando backup '{source_uri}' "
+		f"para database '{database_name}' na instância '{instance_name}'"
+	)
