@@ -520,14 +520,8 @@ def call_cloudsql_api(
 		"Content-Type": "application/json",
 	}
 
-	log(f"(call_cloudsql_api) chamando Cloud SQL Admin API: {method.upper()} {url}")
 	response = requests.request(
 		method=method.upper(), url=url, headers=headers, json=payload, timeout=60
-	)
-
-	log(
-		f"(call_cloudsql_api) Cloud SQL Admin API respondeu com status "
-		f"{response.status_code}"
 	)
 
 	try:
