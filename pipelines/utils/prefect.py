@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import asyncio
+import re
 from typing import Any, Callable, Literal, Union, List, Optional
+import unicodedata
 
 from prefect import Task, get_client
 from prefect.context import FlowRunContext
@@ -208,6 +210,35 @@ def flow_config(
 		"memory": memory,
 		"gcs": bool(mount_gcs),
 	}
+
+
+def get_flow_name():
+	"""Retorna o nome da flow, especificado em @flow(name='...')"""
+	fr_ctx = FlowRunContext.get()
+	if not fr_ctx:
+		raise RuntimeError("Não foi possível obter 'FlowRunContext'!")
+	return fr_ctx.flow.name
+
+
+def get_normalized_flow_name():
+	"""
+	Retorna o nome do flow normalizado para uso em pastas etc.
+	Ex.: "Report: Previsão do Tempo" → "report_previsao_do_tempo"
+	"""
+	flow_name = get_flow_name().strip()
+	# Normaliza o nome para deploy
+	normalized_flow_name = re.sub(
+		r"_{2,}",
+		"_",
+		re.sub(
+			r"[^a-z_]",
+			"",
+			(unicodedata.normalize("NFD", flow_name).lower().replace(" ", "_")),
+		),
+	)
+	if len(normalized_flow_name) < 1:
+		raise RuntimeError("Após normalização, nome do flow fica vazio!")
+	return normalized_flow_name
 
 
 @authenticated_task

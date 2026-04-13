@@ -6,9 +6,10 @@ from typing import List
 import zipfile
 
 from pipelines.utils.cleanup import prettify_byte_size
+from pipelines.utils.datetime import today_str
 from pipelines.utils.env import is_local_run
 from pipelines.utils.logger import log
-from pipelines.utils.prefect import authenticated_task as task
+from pipelines.utils.prefect import authenticated_task as task, get_normalized_flow_name
 
 
 def get_gcs_mount_dir():
@@ -16,10 +17,11 @@ def get_gcs_mount_dir():
 	Retorna a pasta local onde o bucket do GCS está montado.
 	Em execuções locais, retorna uma pasta qualquer em `/tmp`.
 	"""
+	flow_folder = get_normalized_flow_name()
 	# Se estamos rodando localmente, então não queremos dar
 	# erro pra isso; usa pasta local no lugar
 	if is_local_run():
-		path = "/tmp/local_gcs_mount_dir"
+		path = f"/tmp/pipelines/__mnt_gcs/{flow_folder}"
 		os.makedirs(path, exist_ok=True)
 		return path
 
@@ -28,20 +30,22 @@ def get_gcs_mount_dir():
 	if not os.path.exists("/mnt/gcs"):
 		raise RuntimeError("GCS não foi montado :(")
 
-	return "/mnt/gcs"
+	path = f"/mnt/gcs/{flow_folder}"
+	os.makedirs(path, exist_ok=True)
+	return path
 
 
 def create_tmp_data_folder(
 	prefix: str = None, suffix: str = None, in_gcs: bool = False
 ) -> str:
 	"""
-	Cria uma pasta temporária (ou em `/tmp/data`, ou no GCS) com
+	Cria uma pasta temporária (ou em `/tmp/pipelines`, ou no GCS) com
 	nome aleatório, para uso geral. Opcionalmente recebe um prefixo
 	ou sufixo, adicionados em volta dos caracteres aleatórios.
 
 	Retorna o caminho da pasta.
 	"""
-	prefix = "pipelines_" if not prefix else f"{prefix}_"
+	prefix = "" if not prefix else f"{prefix}_"
 	suffix = "" if not suffix else f"_{suffix}"
 
 	# UUID aqui seria mais "confiável" (e mais lento), mas
@@ -49,11 +53,12 @@ def create_tmp_data_folder(
 	# (cada flow run é um container novo), e `urandom(S)`
 	# gera S bytes = S*2 caracteres = 16^(S*2) opções...
 	folder_name = f"{prefix}{os.urandom(8).hex()}{suffix}"
+	today = today_str()
 
-	if in_gcs:
-		path = f"{get_gcs_mount_dir()}/{folder_name}"
-	else:
-		path = f"/tmp/data/{folder_name}"
+	root = (
+		get_gcs_mount_dir() if in_gcs else f"/tmp/pipelines/{get_normalized_flow_name()}"
+	)
+	path = f"{root}/tmp/{today}/{folder_name}"
 
 	if os.path.exists(path):
 		log(f"Uh oh! '{path}' já existia; deletando...")

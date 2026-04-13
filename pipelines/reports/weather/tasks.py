@@ -26,7 +26,7 @@ def get_bairros() -> DataFrame:
 @task()
 def write_bairros_to_gcs(data: DataFrame):
 	# Cria uma pasta direto no bucket, pela rede
-	gcs_folder_path = create_tmp_data_folder(suffix="previsao_tempo", in_gcs=True)
+	gcs_folder_path = create_tmp_data_folder(in_gcs=True)
 	# Escreve arquivo CSV direto no bucket
 	data.to_csv(f"{gcs_folder_path}/test.csv")
 
