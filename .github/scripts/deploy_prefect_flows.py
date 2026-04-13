@@ -209,21 +209,15 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 			logging.warning(f"Requisição de memória '{memory_label}' desconhecida!")
 			infra = {"memory": "4Gi", "cpu": "1"}
 
-		infra["volumes"] = [
-			{
-				"name": "gcs-mount",
-				"gcs": {
-					"bucket": "rj-sms_pipelines-mnt",
-					"readOnly": False
+		mount_gcs = flow_config.get("gcs") or False
+		if mount_gcs:
+			infra["volumes"] = [
+				{
+					"name": "gcs-mount",
+					"gcs": {"bucket": "rj-sms_pipelines-mnt", "readOnly": False},
 				}
-			}
-		]
-		infra["volume_mounts"] = [
-			{
-				"name": "gcs-mount",
-				"mountPath": "/mnt/gcs"
-			}
-		]
+			]
+			infra["volume_mounts"] = [{"name": "gcs-mount", "mountPath": "/mnt/gcs"}]
 
 		logging.debug(f"Requisitando deploy de (...)/{normalized_flow_name}")
 		deploy_list.append(

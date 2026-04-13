@@ -21,4 +21,4 @@ def weather_report(lat: float, lon: float, environment: str = "dev"):
 	print_report(data=data)
 
 
-_flows = [flow_config(flow=weather_report, schedules=schedules)]
+_flows = [flow_config(flow=weather_report, schedules=schedules, mount_gcs=True)]

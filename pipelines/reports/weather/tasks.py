@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import os
-
 import httpx
 from pandas import DataFrame
 

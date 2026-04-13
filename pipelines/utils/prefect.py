@@ -115,7 +115,7 @@ def authenticated_task(
 	)
 
 
-@authenticated_task()
+@authenticated_task
 def authenticated_create_flow_run(**kwargs):
 	"""
 	Cria uma execução de flow a partir dos parâmetros passados
@@ -125,7 +125,7 @@ def authenticated_create_flow_run(**kwargs):
 	# return create_flow_run.run(**kwargs)
 
 
-@authenticated_task()
+@authenticated_task
 def authenticated_wait_for_flow_run(**kwargs):
 	"""
 	Aguarda uma execução de flow terminar
@@ -163,6 +163,7 @@ def flow_config(
 	schedules: list[Schedule] = None,
 	dockerfile: str = None,
 	memory: Literal["small", "medium", "large"] = "small",
+	mount_gcs: bool = False,
 ) -> dict:
 	"""
 	Retorna uma configuração de flow, a ser usada na variável
@@ -186,6 +187,12 @@ def flow_config(
 				muitos dados em "disco".
 			* Para `memory="medium"`, são alocados 12 GB de RAM
 			* Para `memory="large"`, são alocados 24 GB de RAM
+		mount_gcs(bool):
+			Flag indicando se um bucket do GCS deve ser montado
+			em `/mnt/gcs` ou não. Como não há disco, se for
+			necessário escrever arquivos maiores que a RAM
+			disponível, é necessário usar um bucket externo.
+			Falso por padrão.
 	"""
 	if not schedules:
 		schedules = []
@@ -199,4 +206,14 @@ def flow_config(
 		"schedules": schedules,
 		"dockerfile": dockerfile,
 		"memory": memory,
+		"gcs": bool(mount_gcs),
 	}
+
+
+@authenticated_task
+def as_task(function, args: list = None, kwargs: dict = None):
+	"""Executa uma função comum como task"""
+	args = [] if not args else args
+	kwargs = dict() if not kwargs else kwargs
+
+	return function(*args, **kwargs)
