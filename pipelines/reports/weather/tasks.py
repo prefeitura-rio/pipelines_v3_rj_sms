@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+import os
+
 import httpx
 from pandas import DataFrame
 
+from pipelines.utils.io import create_tmp_data_folder
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 from google.cloud import bigquery
@@ -10,7 +13,7 @@ from .constants import BASE_API_URL, FORECAST_ENDPOINT
 
 
 @task()
-def get_bairros():
+def get_bairros() -> DataFrame:
 	log("Instanciando cliente BigQuery")
 	client = bigquery.Client()
 	sql = "select distinct nome from `rj-sms.datario_dados_mestres.bairro`"
@@ -19,7 +22,15 @@ def get_bairros():
 	df: DataFrame = client.query_and_wait(sql).to_dataframe()
 
 	log(f"Exemplo de 5 bairros:\n{df.sample(5)}", fwd_discord=True)
-	return 0
+	return df
+
+
+@task()
+def write_bairros_to_gcs(data: DataFrame):
+	# Cria uma pasta direto no bucket, pela rede
+	gcs_folder_path = create_tmp_data_folder(suffix="previsao_tempo", in_gcs=True)
+	# Escreve arquivo CSV direto no bucket
+	data.to_csv(f"{gcs_folder_path}/test.csv")
 
 
 @task(retries=3, timeout_seconds=15)

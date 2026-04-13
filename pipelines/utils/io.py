@@ -10,7 +10,11 @@ from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
 
-def create_tmp_data_folder(prefix: str = None, suffix: str = None) -> str:
+def create_tmp_data_folder(
+	prefix: str = None,
+	suffix: str = None,
+	in_gcs: bool = False
+) -> str:
 	"""
 	Cria uma pasta em `/tmp/data` com nome aleatório para uso geral.
 	Opcionalmente recebe um prefixo ou sufixo, adicionados em volta
@@ -27,7 +31,15 @@ def create_tmp_data_folder(prefix: str = None, suffix: str = None) -> str:
 	# esses arquivos não vão persistir por muito tempo
 	# (cada flow run é um container novo), e `urandom(S)`
 	# gera S bytes = S*2 caracteres = 16^(S*2) opções...
-	path = f"/tmp/data/{prefix}{os.urandom(8).hex()}{suffix}"
+	folder_name = f"{prefix}{os.urandom(8).hex()}{suffix}"
+
+	if in_gcs:
+		if not os.path.exists("/mnt/gcs"):
+			raise RuntimeError("GCS não foi montado :(")
+		path = f"/mnt/gcs/tmp/{folder_name}"
+	else:
+		path = f"/tmp/data/{folder_name}"
+
 	if os.path.exists(path):
 		log(f"Uh oh! '{path}' já existia; deletando...")
 		shutil.rmtree(path)

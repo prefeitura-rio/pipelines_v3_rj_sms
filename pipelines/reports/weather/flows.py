@@ -3,7 +3,7 @@ from pipelines.utils.prefect import flow, flow_config
 from pipelines.utils.state_handlers import handle_flow_state_change
 from pipelines.constants import constants as global_consts
 
-from .tasks import fetch_weather, get_bairros, print_report
+from .tasks import fetch_weather, get_bairros, print_report, write_bairros_to_gcs
 from .schedules import schedules
 
 
@@ -14,8 +14,10 @@ from .schedules import schedules
 	owners=[global_consts.AVELLAR_ID.value],
 )
 def weather_report(lat: float, lon: float, environment: str = "dev"):
-	zero = get_bairros()
-	data = fetch_weather(lat=lat + zero, lon=lon, environment=environment)
+	bairros = get_bairros()
+	write_bairros_to_gcs(data=bairros)
+
+	data = fetch_weather(lat=lat, lon=lon, environment=environment)
 	print_report(data=data)
 
 
