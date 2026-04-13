@@ -9,7 +9,7 @@ from prefect.context import FlowRunContext
 from prefect.flows import Flow as OriginalFlow, FlowDecorator as OriginalFlowDecorator
 from prefect.schedules import Schedule
 
-from pipelines.utils.env import get_current_environment
+from pipelines.utils.env import get_current_environment, is_dev_run
 from pipelines.utils.infisical import inject_bd_credentials
 from pipelines.utils.logger import log
 
@@ -238,6 +238,8 @@ def get_normalized_flow_name():
 	)
 	if len(normalized_flow_name) < 1:
 		raise RuntimeError("Após normalização, nome do flow fica vazio!")
+	if is_dev_run():
+		return f"{normalized_flow_name}_staging"
 	return normalized_flow_name
 
 

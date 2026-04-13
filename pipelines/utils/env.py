@@ -106,8 +106,21 @@ def getenv_or_action(
 
 
 def is_local_run():
-	"""Retorna `True` se a variável de ambiente `IN_DEBUGGER` é true"""
+	"""
+	Retorna `True` se a variável de ambiente `IN_DEBUGGER` é true;
+	i.e. se é uma execução local do flow
+	"""
 	return os.environ.get("IN_DEBUGGER") in (1, "1", True, "true")
+
+
+def is_dev_run():
+	"""Retorna `True` se o ambiente atual é de desenvolvimento"""
+	return get_current_environment() != "prod"
+
+
+def is_prod_run():
+	"""Retorna `True` se o ambiente atual é de produção"""
+	return get_current_environment() == "prod"
 
 
 def get_prefect_url():
