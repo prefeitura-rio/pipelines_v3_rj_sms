@@ -202,6 +202,87 @@ $ uv run python .github/scripts/deploy_prefect_flows.py
 Por sua vez, deploys "remotos" são realizados pelo Workflow de GitHub Actions do repositório. Sua configuração está na pasta `.github/`, mas ele efetivamente só executa esse mesmo script acima com alguns parâmetros pré-preenchidos. É necessário configurar secrets: na aba "Settings", em "Secrets and variables" → "Actions", é necessário definir as chaves usadas acima (`PREFECT_API_URL`, `PREFECT_API_KEY` e `PREFECT_WS_AUTH`) e também `GOOGLE_CREDENTIALS`, que possui como valor a íntegra do JSON de credenciais descrito acima. É importante minimizar o JSON – isto é, deixá-lo inteiro em uma única linha – antes de inserí-lo como secret, pois os logs são filtrados por linha individual dos secrets, e um JSON não minimizado possui linhas `{` e `}`, por exemplo.
 
 
+### GCS como "disco"
+Jobs do Cloud Run não possuem disco rígido; o filesystem inteiro fica em RAM. Isso significa que os arquivos escritos e baixados competem com o código em execução pelo menos recurso.
+
+Na configuração de deploy desse repositório, um flow pode requisitar um dentre alguns níveis de memória pré-determinados. Contudo, ainda assim existem limitações – a maior quantidade de memória que o Google permite alocar a um Job é 32 GB. Quando se lida com arquivos maiores do que isso, é preciso outra alternativa. Aqui entra o Google Cloud Storage.
+
+Para configurar o GCS, você precisa primeiro adicionar ele como opção nos Job Variables. Navegue até sua Work Pool, clique em Edit e na aba Advanced. O conteúdo é um JSON gigante com 2 chaves na raiz: `"variables"` e `"job_configuration"`.
+
+Dentro de `"variables"`, você deve incluir duas propriedades, que irão definir os volumes e onde eles serão montados no filesystem do Job:
+
+```json
+{
+  "variables": {
+    "type": "object",
+    "properties": {
+      // ...
+      "volumes": {
+        "type": "array",
+        "title": "Volumes",
+        "default": [],
+        "description": "Volumes (bucket→name): `[{ 'name': '...', 'gcs': { 'bucket': '...', 'readOnly': bool } }]`"
+      },
+      "volume_mounts": {
+        "type": "array",
+        "title": "Volume Mounts",
+        "default": [],
+        "description": "Volume mounts (name→folder): `[{ 'name': '...', 'mountPath': '/mnt/...' }]`"
+      },
+      // ...
+    }
+  }
+  // ...
+}
+```
+
+Dentro de `"job_configuration"`, fazemos uso das propriedades definidas acima, além de configurar a versão do Job que queremos (gen 2):
+
+```json
+{
+  // ...
+  "job_configuration": {
+    // ...
+    "job_body": {
+      // ...
+      "template": {
+        "template": {
+          // ...
+          "volumes": "{{ volumes }}",
+          "executionEnvironment": "EXECUTION_ENVIRONMENT_GEN2",
+          "containers": [
+            {
+              // ...
+              "volumeMounts": "{{ volume_mounts }}"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+Fim :) O arquivo de deploy cuida do resto. Para fins de completude, os seguintes campos são incluídos automaticamente nas Job Variables na hora do deploy, quando requisitado pelo flow:
+
+```json
+{
+  "volumes": [
+    {
+      "name": "gcs-mount",
+      "gcs": { "bucket": "<nome do bucket>", "readOnly": false },
+    }
+  ],
+  "volume_mounts": [
+    {
+      "name": "gcs-mount",
+      "mountPath": "/mnt/gcs"
+    }
+  ]
+}
+```
+
+
 ## Infisical
 
 ### Deploy
@@ -336,8 +417,4 @@ Com o novo `access_token` recebido, substitua a variável de ambiente `PREFECT_A
 
 ## TODO
 - Login via SSO do Google (Authentik, Infisical)
-- Identificação de usuário logado no Prefect (opcional) (queria muito)
-  - Ou gambiarra com `<iframe>`\
-    (mais complicado do que parece, acho que perderia URL trocadas em transição de página)
-  - Ou customizar imagem do container direto
 - GCP Secrets

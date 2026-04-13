@@ -15,6 +15,11 @@ from prefect.flows import Flow
 from prefect.schedules import Schedule
 
 
+GCP_PROJECT = "rj-sms"
+BUCKET_NAME = "rj-sms_pipelines-mnt"  # Bucket do GCS montado como /mnt/gcs, opcionalmente
+DEPLOYED_PROJECT_NAME = "pipelines-v3-rj-sms"  # Caminho no Artifact Registry
+WORK_POOL_NAME = "gcp-wp"  # Nome do Work Pool configurado no Prefect
+
 logging.basicConfig(
 	level=os.getenv("LOG_LEVEL", "INFO").upper(),
 	format="%(asctime)s.%(msecs)03d [%(levelname)s]\t%(message)s",
@@ -123,6 +128,8 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 			)
 			continue
 
+		#############
+		## Nome
 		flow_name = flow.name.strip()
 		# Normaliza o nome para deploy
 		normalized_flow_name = re.sub(
@@ -139,6 +146,8 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 				f"'{file_path}': Nome do flow #{i + 1} '{flow_name}' é inválido!"
 			)
 
+		#############
+		## Dockerfile
 		dockerfile = flow_config.get("dockerfile")
 		if dockerfile:
 			current_dir = os.getcwd()
@@ -149,6 +158,8 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 				)
 				dockerfile = None
 
+		#############
+		## Schedules
 		if environment == "dev":
 			flow_name += " (stg)"
 			normalized_flow_name += "_staging"
@@ -190,6 +201,8 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 				)
 			schedules = new_schedules
 
+		#############
+		## Memória RAM
 		memory_label = flow_config.get("memory") or "small"
 		# [Ref] https://docs.cloud.google.com/run/docs/configuring/jobs/memory-limits#cpu-minimum
 		#  NºCPUs |  Intervalo RAM
@@ -209,16 +222,27 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
 			logging.warning(f"Requisição de memória '{memory_label}' desconhecida!")
 			infra = {"memory": "4Gi", "cpu": "1"}
 
+		#############
+		## GCS montado
+		mount_gcs = flow_config.get("gcs") or False
+		if mount_gcs:
+			infra["volumes"] = [
+				{"name": "gcs-mount", "gcs": {"bucket": BUCKET_NAME, "readOnly": False}}
+			]
+			infra["volume_mounts"] = [{"name": "gcs-mount", "mountPath": "/mnt/gcs"}]
+
+		#############
+		## Deploy
 		logging.debug(f"Requisitando deploy de (...)/{normalized_flow_name}")
 		deploy_list.append(
 			flow.adeploy(
 				name=flow_name,
 				description=flow.description,
 				tags=([] if environment == "prod" else ["staging"]),
-				work_pool_name="gcp-wp",  # FIXME: não gosto que seja hardcoded assim
+				work_pool_name=WORK_POOL_NAME,
 				work_queue_name=("default" if environment == "prod" else "staging"),
 				image=DockerImage(
-					name=f"southamerica-east1-docker.pkg.dev/rj-sms/pipelines-v3-rj-sms/{normalized_flow_name}",
+					name=f"southamerica-east1-docker.pkg.dev/{GCP_PROJECT}/{DEPLOYED_PROJECT_NAME}/{normalized_flow_name}",
 					tag="latest",
 					dockerfile=(
 						"./pipelines/Dockerfile"

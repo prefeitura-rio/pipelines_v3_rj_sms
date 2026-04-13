@@ -105,7 +105,26 @@ def getenv_or_action(
 	return value
 
 
+def is_local_run():
+	"""
+	Retorna `True` se a variável de ambiente `IN_DEBUGGER` é true;
+	i.e. se é uma execução local do flow
+	"""
+	return os.environ.get("IN_DEBUGGER") in (1, "1", True, "true")
+
+
+def is_dev_run():
+	"""Retorna `True` se o ambiente atual é de desenvolvimento"""
+	return get_current_environment() != "prod"
+
+
+def is_prod_run():
+	"""Retorna `True` se o ambiente atual é de produção"""
+	return get_current_environment() == "prod"
+
+
 def get_prefect_url():
+	"""Obtém o URL da instância do Prefect, ou `localhost` se executado localmente"""
 	# Não precisa dar erro se estamos executando localmente
-	default = "localhost" if os.environ.get("IN_DEBUGGER") else None
+	default = "localhost" if is_local_run() else None
 	return getenv_or_action("PREFECT_API_URL", default=default).removesuffix("/api")

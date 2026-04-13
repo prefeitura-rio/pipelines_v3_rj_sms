@@ -24,6 +24,11 @@ def now(utc: bool = False) -> datetime.datetime:
 	return datetime.datetime.now(tz=SAO_PAULO_TZ)
 
 
+def today_str() -> str:
+	"""Retorna o dia atual (fuso BRT) como 'YYYY-MM-DD'"""
+	return now().date().isoformat()
+
+
 def from_relative_date(
 	relative_date: Optional[str] = None,
 ) -> Optional[datetime.date | datetime.datetime]:
