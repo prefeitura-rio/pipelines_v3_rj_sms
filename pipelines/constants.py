@@ -50,4 +50,4 @@ class constants(Enum):
 	##  Outras subsecretarias  ##
 	#############################
 	DAYANE_ID  =  "316705041161388032"  # Dayane Ramos
-	MATHEUS_ID = "1184846547242995722"  # Matheus Miloski
+	MILOSKI_ID = "1184846547242995722"  # Matheus Miloski

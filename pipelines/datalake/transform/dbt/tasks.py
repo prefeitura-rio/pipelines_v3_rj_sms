@@ -183,15 +183,37 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
 
 	general_report = []
 	for command_result in running_results:
-		if command_result.status == "fail":
+		status = command_result.status
+		if status == "pass":  # Passou em teste, não gera report
+			continue
+
+		model_owner_name = command_result.node.meta.get("owner")
+		model_owner = dbt_constants.OWNERS.value.get(model_owner_name or "")
+		# Se modelo sem dono, marca CIT
+		no_owner = not model_owner_name or not dbt_constants.OWNERS.value.get(
+			model_owner_name
+		)
+		if no_owner:
+			model_owner = dbt_constants.OWNERS.value["cit"]
+
+		model_owner = f"<@{model_owner}>"
+		owner_ctx_str = ", modelo sem dono!" if no_owner else ""
+
+		if status == "fail":
 			is_successful = False
-			general_report.append(f"- 🛑 FAIL: {summarizer(command_result)}")
-		elif command_result.status == "error":
+			general_report.append(
+				f"- 🛑 FAIL ({model_owner}{owner_ctx_str}): {summarizer(command_result)}"
+			)
+		elif status == "error":
 			is_successful = False
-			general_report.append(f"- ❌ ERROR: {summarizer(command_result)}")
-		elif command_result.status == "warn":
+			general_report.append(
+				f"- ❌ ERROR ({model_owner}{owner_ctx_str}): {summarizer(command_result)}"
+			)
+		elif status == "warn":
 			has_warnings = True
-			general_report.append(f"- ⚠️ WARN: {summarizer(command_result)}")
+			general_report.append(
+				f"- ⚠️ WARN ({model_owner}{owner_ctx_str}): {summarizer(command_result)}"
+			)
 
 	cost_report = f"**Custo da Execução**: R${estimated_total_cost:.2f}"
 	log(cost_report)
@@ -204,7 +226,7 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
 	param_report = ["**Parametros**:"]
 	run_params = get_run_parameters()
 	for key, value in run_params.items():
-		if key == "rename_flow":
+		if key in ("rename_flow", "send_discord_report"):
 			continue
 		if value:
 			param_report.append(f"- {key}: `{value}`")
@@ -229,7 +251,7 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
 	)
 
 	if not is_successful:
-		return Failed(general_report)
+		raise RuntimeError(general_report)
 
 
 @task

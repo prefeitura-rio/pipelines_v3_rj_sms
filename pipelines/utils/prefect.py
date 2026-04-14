@@ -4,10 +4,12 @@ import re
 from typing import Any, Callable, Literal, Union, List, Optional
 import unicodedata
 
-from prefect import Task, get_client
+from prefect import Task, get_client #, State
+# from prefect.client.schemas.objects import TaskRun
 from prefect.context import FlowRunContext
 from prefect.flows import Flow as OriginalFlow, FlowDecorator as OriginalFlowDecorator
 from prefect.schedules import Schedule
+# from prefect.states import Failed
 
 from pipelines.utils.env import get_current_environment, is_dev_run
 from pipelines.utils.infisical import inject_bd_credentials
@@ -77,6 +79,24 @@ flow = FlowDecorator
 ## TASKS
 #################
 
+# TODO:
+# - Caso uma Task falhe, Tasks downstream que não dependam dela ainda
+#   são executadas
+# - Ainda não temos consenso se isso é uma mudança positiva ou não
+# - Caso não seja, acho que o código abaixo resolveria o problema; quando
+#   uma Task falha, ele envia o status de Failed para a Flow Run em si
+# - É possível que ele continue executando com o status Failed? Não sei,
+#   problema pra ser testado caso a gente vá usar mesmo um dia
+# def on_task_fail_kill_flow_run(task: Task, task_run: TaskRun, state: State):
+# 	log(
+# 		"[on_task_fail_kill_flow_run] Task falhou, enviando status 'Failed' para Flow Run"
+# 	)
+# 	fr_ctx = FlowRunContext.get()
+# 	fr_ctx.client.set_flow_run_state(fr_ctx.flow_run.id, Failed(), force=True)
+# 	log(
+# 		"[on_task_fail_kill_flow_run] Status de 'Failed' para Flow Run foi requisitado! :)"
+# 	)
+
 
 def authenticated_task(
 	fn: Callable = None, **task_init_kwargs: Any
@@ -110,10 +130,16 @@ def authenticated_task(
 
 	# Instância de Task
 	if fn is not None:
-		return Task(fn=inject_credential_setting_in_function(fn), **task_init_kwargs)
+		return Task(
+			fn=inject_credential_setting_in_function(fn),
+			# on_failure=[on_task_fail_kill_flow_run],   TODO: vide acima
+			**task_init_kwargs,
+		)
 	# Decorator
 	return lambda any_function: Task(
-		fn=inject_credential_setting_in_function(any_function), **task_init_kwargs
+		fn=inject_credential_setting_in_function(any_function),
+		# on_failure=[on_task_fail_kill_flow_run],  TODO: vide acima
+		**task_init_kwargs,
 	)
 
 

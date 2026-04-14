@@ -89,20 +89,16 @@ class Summarizer:
 	"""
 
 	def __call__(self, result: NodeResult):
-		status = getattr(result, "status", default=None)
+		status = getattr(result, "status", None)
 
 		# Execução normal (ex.: dbt run, dbt build)
 		if isinstance(result, RunResult):
 			if status == "error":
 				return f"`{result.node.name}`\n{result.message.replace('__', '_')}\n"
 
-			relation_name = result.node.relation_name.replace("`", "")
-			if status in ("warn", "fail"):
-				return (
-					f"`{result.node.name}`\n"
-					f"{result.message}:"
-					f"```select * from {relation_name}```\n"
-				)
+			relation_name = result.node.relation_name.replace("`", "").trim()
+			if status in ("success", "warn", "fail"):
+				return f"`{result.node.name}`\n{result.message}:```{relation_name}```\n"
 			raise ValueError(f"Status de resultado desconhecido: '{status}'")
 
 		# Source freshness
