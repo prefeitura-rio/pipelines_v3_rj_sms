@@ -56,7 +56,7 @@ cases:
 
   # Migração Google Drive -> GCS
   - case_slug: "gdrive-to-gcs"
-    flow_path: "pipelines.migrate.gdrive_to_gcs.flows"
+    flow_path: "pipelines.datalake.migrate.gdrive_to_gcs.flows"
     flow_name: "gdrive_to_gcs"
     params:
       environment: dev
