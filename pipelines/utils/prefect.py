@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 import asyncio
+import re
 from typing import Any, Callable, Literal, Union, List, Optional
+import unicodedata
 
 from prefect import Task, get_client
 from prefect.context import FlowRunContext
 from prefect.flows import Flow as OriginalFlow, FlowDecorator as OriginalFlowDecorator
 from prefect.schedules import Schedule
 
-from pipelines.utils.env import get_current_environment
+from pipelines.utils.env import get_current_environment, is_dev_run
 from pipelines.utils.infisical import inject_bd_credentials
 from pipelines.utils.logger import log
 
@@ -115,7 +117,7 @@ def authenticated_task(
 	)
 
 
-@authenticated_task()
+@authenticated_task
 def authenticated_create_flow_run(**kwargs):
 	"""
 	Cria uma execução de flow a partir dos parâmetros passados
@@ -125,7 +127,7 @@ def authenticated_create_flow_run(**kwargs):
 	# return create_flow_run.run(**kwargs)
 
 
-@authenticated_task()
+@authenticated_task
 def authenticated_wait_for_flow_run(**kwargs):
 	"""
 	Aguarda uma execução de flow terminar
@@ -163,6 +165,7 @@ def flow_config(
 	schedules: list[Schedule] = None,
 	dockerfile: str = None,
 	memory: Literal["small", "medium", "large"] = "small",
+	mount_gcs: bool = False,
 ) -> dict:
 	"""
 	Retorna uma configuração de flow, a ser usada na variável
@@ -186,6 +189,12 @@ def flow_config(
 				muitos dados em "disco".
 			* Para `memory="medium"`, são alocados 12 GB de RAM
 			* Para `memory="large"`, são alocados 24 GB de RAM
+		mount_gcs(bool):
+			Flag indicando se um bucket do GCS deve ser montado
+			em `/mnt/gcs` ou não. Como não há disco, se for
+			necessário escrever arquivos maiores que a RAM
+			disponível, é necessário usar um bucket externo.
+			Falso por padrão.
 	"""
 	if not schedules:
 		schedules = []
@@ -199,6 +208,7 @@ def flow_config(
 		"schedules": schedules,
 		"dockerfile": dockerfile,
 		"memory": memory,
+		"gcs": bool(mount_gcs),
 	}
 
 
@@ -210,3 +220,43 @@ def get_run_parameters() -> dict[str, Any]:
 	if ctx is None:
 		raise RuntimeError("Não foi possível obter referência à Flow Run!")
 	return ctx.parameters
+
+
+def get_flow_name():
+	"""Retorna o nome da flow, especificado em @flow(name='...')"""
+	fr_ctx = FlowRunContext.get()
+	if not fr_ctx:
+		raise RuntimeError("Não foi possível obter 'FlowRunContext'!")
+	return fr_ctx.flow.name
+
+
+def get_normalized_flow_name():
+	"""
+	Retorna o nome do flow normalizado para uso em pastas etc.
+	Ex.: "Report: Previsão do Tempo" → "report_previsao_do_tempo"
+	"""
+	flow_name = get_flow_name().strip()
+	# Normaliza o nome para deploy
+	normalized_flow_name = re.sub(
+		r"_{2,}",
+		"_",
+		re.sub(
+			r"[^a-z_]",
+			"",
+			(unicodedata.normalize("NFD", flow_name).lower().replace(" ", "_")),
+		),
+	)
+	if len(normalized_flow_name) < 1:
+		raise RuntimeError("Após normalização, nome do flow fica vazio!")
+	if is_dev_run():
+		return f"{normalized_flow_name}_staging"
+	return normalized_flow_name
+
+
+@authenticated_task
+def as_task(function, args: list = None, kwargs: dict = None):
+	"""Executa uma função comum como task"""
+	args = [] if not args else args
+	kwargs = dict() if not kwargs else kwargs
+
+	return function(*args, **kwargs)
