@@ -99,6 +99,7 @@ def send_discord_message(
 	title: str,
 	message: str,
 	slug: Literal["dbt-runs", "data-ingestion", "warning", "hci_status"],
+	file_path: str = None,
 ):
 	"""
 	Envia mensagem textual a um canal do Discord, prefixada de informações
@@ -143,4 +144,8 @@ def send_discord_message(
 		log("Mensagem excede limite de caracteres; texto será truncado", level="warning")
 		message = f"{message[: message_max_char_count - 3]}..."
 
-	asyncio.run(send_discord_webhook(slug=slug, text_content=header_content + message))
+	asyncio.run(
+		send_discord_webhook(
+			slug=slug, text_content=header_content + message, file_path=file_path
+		)
+	)

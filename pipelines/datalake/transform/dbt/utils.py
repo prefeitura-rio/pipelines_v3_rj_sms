@@ -13,31 +13,33 @@ from pipelines.utils.io import create_tmp_data_folder
 from pipelines.utils.logger import log
 
 
-def process_dbt_logs(log_path: str = "dbt_repository/logs/dbt.log") -> pd.DataFrame:
+def process_dbt_logs(log_path: str) -> pd.DataFrame:
 	"""
-	Process the contents of a dbt log file and return a DataFrame containing the parsed log entries
+	Processamento do conteúdo de um arquivo de logs do dbt
 
 	Args:
-		log_path (str): The path to the dbt log file. Defaults to "dbt_repository/logs/dbt.log".
+		log_path(str):
+	                Caminho para o arquivo de logs do dbt
 
 	Returns:
-		pd.DataFrame: A DataFrame containing the parsed log entries.
+		out(DataFrame):
+			DataFrame Pandas contendo as entradas do log, pós-parsing
 	"""
-
 	with open(log_path, "r", encoding="utf-8", errors="ignore") as log_file:
 		log_content = log_file.read()
 
+	#                    \x1b = ESC
 	result = re.split(r"(\x1b\[0m\d{2}:\d{2}:\d{2}\.\d{6})", log_content)
 	parts = [part.strip() for part in result][1:]
 
-	splitted_log = []
+	split_log = []
 	for i in range(0, len(parts), 2):
 		time = parts[i].replace(r"\x1b[0m", "")
 		level = parts[i + 1][1:6].replace(" ", "")
 		text = parts[i + 1][7:]
-		splitted_log.append((time, level, text))
+		split_log.append((time, level, text))
 
-	full_logs = pd.DataFrame(splitted_log, columns=["time", "level", "text"])
+	full_logs = pd.DataFrame(split_log, columns=["time", "level", "text"])
 
 	return full_logs
 
@@ -76,7 +78,7 @@ def log_to_file(logs: pd.DataFrame, levels: List[str] = None) -> str:
 
 
 #####
-# Sumarizadores de resultados do DBT
+# Sumarizador de resultados do DBT
 #####
 
 
