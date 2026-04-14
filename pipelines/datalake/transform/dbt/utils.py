@@ -18,8 +18,7 @@ def process_dbt_logs(log_path: str) -> pd.DataFrame:
 	Processamento do conteúdo de um arquivo de logs do dbt
 
 	Args:
-		log_path(str):
-	                Caminho para o arquivo de logs do dbt
+		log_path(str): Caminho para o arquivo de logs do dbt
 
 	Returns:
 		out(DataFrame):
@@ -28,14 +27,19 @@ def process_dbt_logs(log_path: str) -> pd.DataFrame:
 	with open(log_path, "r", encoding="utf-8", errors="ignore") as log_file:
 		log_content = log_file.read()
 
+	# Ex.:
+	#   15:16:29.425453 [debug] [ThreadPool]: Opening a new connection, ...
 	#                    \x1b = ESC
 	result = re.split(r"(\x1b\[0m\d{2}:\d{2}:\d{2}\.\d{6})", log_content)
 	parts = [part.strip() for part in result][1:]
 
 	split_log = []
 	for i in range(0, len(parts), 2):
+		# 15:16:29.425453
 		time = parts[i].replace(r"\x1b[0m", "")
+		# [debug]
 		level = parts[i + 1][1:6].replace(" ", "")
+		# [MainThread]: Up to date!
 		text = parts[i + 1][7:]
 		split_log.append((time, level, text))
 
@@ -64,7 +68,10 @@ def log_to_file(logs: pd.DataFrame, levels: List[str] = None) -> str:
 
 	report = []
 	for _, row in logs.iterrows():
-		report.append(f"{row['time']} [{row['level'].rjust(5, ' ')}] {row['text']}")
+		text = str(row["text"]).strip().removeprefix("[MainThread]: ")
+		if text.lower().startswith(("install", "updated version", "updates available", "up to date!", "unable to do partial")):
+			continue
+		report.append(f"{row['time']} [{row['level'].rjust(5, ' ')}] {text}")
 	report = "\n".join(report)
 	log(f"Logs do DBT: {report}")
 
