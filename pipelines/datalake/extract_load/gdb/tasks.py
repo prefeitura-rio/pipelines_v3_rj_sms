@@ -123,6 +123,13 @@ def upload_csv_as_table(
 	refdate: str = None,
 	lines_per_chunk: int = 100_000,
 ):
+	if not os.path.exists(csv_path):
+		log(f"Arquivo CSV '{csv_path}' inexistente!", level="warning")
+		return
+	if os.path.getsize(csv_path) < 1:
+		log("Arquivo vazio; ignorando")
+		return
+
 	# Lemos o CSV em pedaços para não estourar a memória
 	LINES_PER_CHUNK = int(lines_per_chunk or 100_000)
 
@@ -173,6 +180,7 @@ def upload_csv_as_table(
 					table_id=table_name,
 					date_partition_column="data_particao",
 					dump_mode="append",
+					csv_delimiter=",",
 				)
 				break
 			# Aqui deu erro de conexão comigo algumas vezes:
