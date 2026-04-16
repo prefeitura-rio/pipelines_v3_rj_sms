@@ -346,7 +346,7 @@ def get_google_drive_service():
 
 
 def list_google_drive_files(
-	folder_id: str, last_modified_date: str = None
+	folder_id: str, last_modified_date: str = "M-0", last_modified_end_date: str = "D-0"
 ) -> List[dict[str, str]]:
 	"""
 	Lista arquivos de uma pasta do Google Drive, incluindo subpastas.
@@ -354,15 +354,25 @@ def list_google_drive_files(
 	Args:
 		folder_id (str): ID da pasta raiz no Google Drive.
 		last_modified_date (str, optional): Data mínima de modificação para filtrar arquivos.
+		last_modified_end_date (str, optional): Data máxima de modificação para filtrar arquivos.
 
 	Returns:
 		List[dict[str, str]]: Lista de arquivos encontrados com metadados básicos.
 	"""
 	service = get_google_drive_service()
 	modified_since = from_relative_date(last_modified_date)
+	modified_until = from_relative_date(last_modified_end_date)
 
 	if isinstance(modified_since, datetime.datetime):
 		modified_since = modified_since.date()
+
+	if isinstance(modified_until, datetime.datetime):
+		modified_until = modified_until.date()
+
+	if modified_since and modified_until and modified_since > modified_until:
+		raise ValueError(
+			"'last_modified_date' não pode ser maior que 'last_modified_end_date'."
+		)
 
 	root_folder = (
 		service.files()
@@ -405,8 +415,12 @@ def list_google_drive_files(
 					modified_time.replace("Z", "+00:00")
 				).date()
 
-				# Ignora arquivos mais antigos que a data informada
+				# Ignora arquivos mais antigos que a data inicial informada
 				if modified_since and modified_date < modified_since:
+					continue
+
+				# Ignora arquivos mais novos que a data final informada
+				if modified_until and modified_date > modified_until:
 					continue
 
 				files.append(
