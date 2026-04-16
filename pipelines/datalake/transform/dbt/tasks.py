@@ -248,6 +248,7 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
 		message=message,
 		file_path=log_path,
 		slug="dbt-runs",
+		multiple_messages_ok=True,
 	)
 
 	if not is_successful:

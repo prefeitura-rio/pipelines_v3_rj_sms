@@ -100,6 +100,7 @@ def send_discord_message(
 	message: str,
 	slug: Literal["dbt-runs", "data-ingestion", "warning", "hci_status"],
 	file_path: str = None,
+	multiple_messages_ok: bool = False,
 ):
 	"""
 	Envia mensagem textual a um canal do Discord, prefixada de informações
@@ -109,6 +110,13 @@ def send_discord_message(
 		title(str): Título da mensagem, formatado como H2
 		message(str): Conteúdo textual da mensagem
 		slug(str): Referência ao canal de destino
+		multiple_messages_ok(bool):
+			Flag indicando se, caso a mensagem seja longa demais, ela deve ser
+			quebrada em várias mensagens distintas. Por padrão, é `False`, e
+			mensagens longas são truncadas com "...". Somente passe `True` em
+			flows cujas mensagens são muito relevantes e não muito longas –
+			p.ex. relatórios do dbt. Caso contrário, envie uma mensagem resumida
+			no Discord e coloque maiores detalhes nos logs do flow em si.
 	"""
 	environment = get_current_environment()
 	prefect_url = get_prefect_url()
@@ -137,15 +145,64 @@ def send_discord_message(
 			)
 
 	header_content = "\n".join([*header_lines, ""])
-	DISCORD_MAX_CHARS = 2000
-	message_max_char_count = DISCORD_MAX_CHARS - len(header_content)
 
-	if len(message) > message_max_char_count:
+	DISCORD_MAX_CHARS = 2000  # Limite, por mensagem, do próprio Discord
+	message = str(message).strip()
+	message_max_char_count = DISCORD_MAX_CHARS - len(header_content)
+	if not multiple_messages_ok and len(message) > message_max_char_count:
 		log("Mensagem excede limite de caracteres; texto será truncado", level="warning")
 		message = f"{message[: message_max_char_count - 3]}..."
 
-	asyncio.run(
-		send_discord_webhook(
-			slug=slug, text_content=header_content + message, file_path=file_path
-		)
-	)
+	message_lines = message.split("\n")
+
+	pages = []
+	current_buffer = header_content  # Primeiro buffer já começa com o cabeçalho
+	for line in message_lines:
+		line = line.strip()
+		if len(line) < 1:
+			continue
+
+		# Se juntar a próxima linha ao buffer ainda não atinge o limite de caracteres
+		if len(current_buffer) + 1 + len(line) <= DISCORD_MAX_CHARS:
+			# Adiciona ela ao buffer
+			current_buffer += "\n" + line
+			continue
+
+		# Caso contrário, esse buffer está pronto; adiciona às mensagens já prontas
+		current_buffer = current_buffer.strip()
+		if len(current_buffer) > 0:
+			pages.append(current_buffer)
+
+		# Se a próxima linha por si só não passa do limite de caracteres, ela é o novo buffer
+		if len(line) <= DISCORD_MAX_CHARS:
+			current_buffer = line
+			continue
+
+		# Aqui, a linha passa do limite de caracteres; temos que quebrá-la
+		# Se a linha possui caracteres DEMAIS, morre aqui
+		if len(line) > DISCORD_MAX_CHARS * 3:
+			raise ValueError(
+				f"Tamanho da linha excede máximo permitido: {len(line)} > {DISCORD_MAX_CHARS * 3}"
+			)
+		# Quebra a linha em pedaços de `DISCORD_MAX_CHARS` e adiciona ao buffer
+		for i in range(0, len(line), DISCORD_MAX_CHARS):
+			chunk = line[i : i + DISCORD_MAX_CHARS].strip()
+			if i == 0:
+				current_buffer = chunk
+			else:
+				pages.append(current_buffer)
+				current_buffer = chunk
+	# Aqui, ainda devemos ter o final da mensagem no buffer; adiciona
+	pages.append(current_buffer)
+
+	async def send_multiple_discord_messages(contents):
+		for idx, content in enumerate(contents):
+			# Só envia o arquivo anexado na última mensagem
+			if idx == len(contents) - 1:
+				await send_discord_webhook(
+					slug=slug, text_content=content, file_path=file_path
+				)
+			else:
+				await send_discord_webhook(slug=slug, text_content=content)
+
+	asyncio.run(send_multiple_discord_messages(pages))

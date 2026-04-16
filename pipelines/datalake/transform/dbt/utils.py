@@ -69,7 +69,15 @@ def log_to_file(logs: pd.DataFrame, levels: List[str] = None) -> str:
 	report = []
 	for _, row in logs.iterrows():
 		text = str(row["text"]).strip().removeprefix("[MainThread]: ")
-		if text.lower().startswith(("install", "updated version", "updates available", "up to date!", "unable to do partial")):
+		if text.lower().startswith(
+			(
+				"install",
+				"updated version",
+				"updates available",
+				"up to date!",
+				"unable to do partial",
+			)
+		):
 			continue
 		report.append(f"{row['time']} [{row['level'].rjust(5, ' ')}] {text}")
 	report = "\n".join(report)
