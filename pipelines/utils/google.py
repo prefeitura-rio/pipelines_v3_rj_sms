@@ -346,9 +346,7 @@ def get_google_drive_service():
 
 
 def list_google_drive_files(
-	folder_id: str,
-	last_modified_date: str = 'M-0',
-	last_modified_end_date: str = 'D-0',
+	folder_id: str, last_modified_date: str = "M-0", last_modified_end_date: str = "D-0"
 ) -> List[dict[str, str]]:
 	"""
 	Lista arquivos de uma pasta do Google Drive, incluindo subpastas.
