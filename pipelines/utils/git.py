@@ -6,12 +6,10 @@ import tarfile
 from typing import Literal
 import requests
 
-# from pipelines.utils.prefect import authenticated_task as task
+from pipelines.utils.prefect import authenticated_task as task
 from pipelines.utils.logger import log
-from prefect import task
 
 
-@task
 def download_gh_repo(
 	repo: str,
 	branch: str = "main",
@@ -101,3 +99,43 @@ def download_gh_repo(
 	os.remove(tar_filename)
 
 	return destination_path
+
+
+@task
+def download_gh_repo_task(
+	repo: str,
+	branch: str = "main",
+	destination_path: str = None,
+	if_destination_exists: Literal["delete", "raise"] = "raise",
+	repository_folder: str = None,
+) -> str:
+	"""
+	Baixa o conteúdo de um repositório no GitHub para uma pasta local.
+
+	Args:
+		repo (str):
+			Nome do repositório no GitHub, no formato "organizacao/repositorio".
+			Ex.: "prefeitura-rio/queries-rj-sms"
+		branch (str?):
+			Branch a ser baixada. Por padrão, possui o valor "main".
+		destination_path (str?):
+			Pasta para onde o código baixado deve ser baixado.
+			Por padrão, "/tmp/runtime_download_repository".
+		if_destination_exists (str?):
+			Ação a ser feita se a pasta de destino local já existir.
+			Recebe valores "delete" (pasta existente deve ser apagada)
+			ou "raise" (FileExistsError). Valor padrão é "raise".
+		repository_folder (str?):
+			Pasta no repositório de onde buscar o conteúdo.
+			Se não for informado, o repositório inteiro é copiado.
+
+	Returns:
+		path (str): Caminho onde o repositório baixado está.
+	"""
+	return download_gh_repo(
+		repo,
+		branch=branch,
+		destination_path=destination_path,
+		if_destination_exists=if_destination_exists,
+		repository_folder=repository_folder,
+	)

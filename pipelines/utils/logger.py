@@ -44,7 +44,7 @@ def log(
 		slug = "error" if level in ["error", "critical"] else "warning"
 
 		# Precisamos importar aqui porque `send_discord_message()`
-		# usa `log()` = dependência circular. Importanto dentro
+		# usa `log()` = dependência circular. Importando dentro
 		# da função em si, a dependência só é calculada quando
 		# (e se) alguém chamar com `fwd_discord=True`
 		from pipelines.utils.monitor import send_discord_message

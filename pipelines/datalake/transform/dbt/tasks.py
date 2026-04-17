@@ -16,11 +16,10 @@ from pipelines.utils.datetime import now
 from pipelines.utils.env import environment_is_valid, get_google_project_for_environment
 from pipelines.utils.google import download_path_from_bucket, upload_to_cloud_storage
 from pipelines.utils.logger import log
+from pipelines.utils.monitor import send_discord_message
+from pipelines.utils.prefect import authenticated_task as task, get_run_parameters
 
-# from pipelines.utils.monitor import send_discord_message
-from pipelines.utils.prefect import authenticated_task as task
-
-# from .utils import log_to_file, process_dbt_logs
+from .utils import Summarizer, log_to_file, process_dbt_logs
 from .constants import constants as dbt_constants
 
 
@@ -91,12 +90,11 @@ def execute_dbt(
 	log_path = os.path.join(repository_path, "logs", "dbt.log")
 
 	if command not in ("deps") and not os.path.exists(log_path):
-		# FIXME
-		# send_message(
-		# 	title="❌ Erro ao executar DBT",
-		# 	message="Não foi possível encontrar o arquivo de logs.",
-		# 	monitor_slug="dbt-runs",
-		# )
+		send_discord_message(
+			title="❌ Erro ao executar DBT",
+			message="Não foi possível encontrar o arquivo de logs.",
+			slug="dbt-runs",
+		)
 		return Failed(message="DBT Run seems not successful. No logs found.")
 
 	return {
@@ -112,7 +110,7 @@ def execute_dbt(
 @task
 def estimate_dbt_costs(execution_info: dict, environment: str) -> float:
 	"""
-	Estima custo de uma execução de comando dbt
+	Estima custo de uma execução de comando dbt, em BRL
 	"""
 	affected_datasets = []
 	running_result: dbtRunnerResult = execution_info["running_result"]
@@ -158,83 +156,103 @@ def estimate_dbt_costs(execution_info: dict, environment: str) -> float:
 	return total_brl_cost
 
 
-######  TODO: 🚧🚧🚧🚧🚧 em construção  ######
 @task
-def create_dbt_report(
-	execution_info: dict, estimated_total_cost: float, repository_path: str
-) -> None:
+def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None:
 	"""
+	Cria um report sobre a execução do dbt e envia ao Discord. Dispara
+	uma falha do flow se detectar erro na execução.
+
 	Args:
-		running_results (dbtRunnerResult): The results of running dbt commands.
-		repository_path (str): The path to the repository.
-
-	Raises:
-		FAIL: If there are failures in the dbt commands.
-
-	Returns:
-			None
+		execution_info(dict):
+			Dicionário com informações sobre a execução. Deve conter chaves
+			`command` (str), `running_result` (dbtRunnerResult),
+			`execution_time` (float), `start_time`, `end_time` (datetime)
+			e `log_path` (str).
+		estimated_total_cost(float):
+			Custo estimado em BRL.
 	"""
-	# running_results: dbtRunnerResult = execution_info["running_result"]
-	# log_path: str = execution_info["log_path"]
+	runner_result: dbtRunnerResult = execution_info["running_result"]
+	running_results = runner_result.result.results
+	log_path: str = execution_info["log_path"]
 
-	# logs = process_dbt_logs(log_path=os.path.join(repository_path, "logs", "dbt.log"))
-	# log_path = log_to_file(logs)
-	# summarizer = Summarizer()
+	logs = process_dbt_logs(log_path=execution_info["log_path"])
+	log_path = log_to_file(logs)
+	summarizer = Summarizer()
 
-	# is_successful, has_warnings = True, False
+	is_successful, has_warnings = True, False
 
 	general_report = []
-	# for command_result in running_results.result:
-	# 	if command_result.status == "fail":
-	# 		is_successful = False
-	# 		general_report.append(f"- 🛑 FAIL: {summarizer(command_result)}")
-	# 	elif command_result.status == "error":
-	# 		is_successful = False
-	# 		general_report.append(f"- ❌ ERROR: {summarizer(command_result)}")
-	# 	elif command_result.status == "warn":
-	# 		has_warnings = True
-	# 		general_report.append(f"- ⚠️ WARN: {summarizer(command_result)}")
+	for command_result in running_results:
+		status = command_result.status
+		if status == "pass":  # Passou em teste, não gera report
+			continue
+
+		model_owner_name = command_result.node.meta.get("owner")
+		model_owner = dbt_constants.OWNERS.value.get(model_owner_name or "")
+		# Se modelo sem dono, marca CIT
+		no_owner = not model_owner_name or not dbt_constants.OWNERS.value.get(
+			model_owner_name
+		)
+		if no_owner:
+			model_owner = dbt_constants.OWNERS.value["cit"]
+
+		model_owner = f"<@{model_owner}>"
+		owner_ctx_str = ", modelo sem dono!" if no_owner else ""
+
+		if status == "fail":
+			is_successful = False
+			general_report.append(
+				f"- 🛑 FAIL ({model_owner}{owner_ctx_str}): {summarizer(command_result)}"
+			)
+		elif status == "error":
+			is_successful = False
+			general_report.append(
+				f"- ❌ ERROR ({model_owner}{owner_ctx_str}): {summarizer(command_result)}"
+			)
+		elif status == "warn":
+			has_warnings = True
+			general_report.append(
+				f"- ⚠️ WARN ({model_owner}{owner_ctx_str}): {summarizer(command_result)}"
+			)
 
 	cost_report = f"**Custo da Execução**: R${estimated_total_cost:.2f}"
 	log(cost_report)
 
-	# Sort and log the general report
 	general_report = sorted(general_report, reverse=True)
 	general_report = "**Resumo**:\n" + "\n".join(general_report)
 	log(general_report)
 
-	# # Get Parameters
-	# param_report = ["**Parametros**:"]
-	# for key, value in prefect.context.get("parameters").items():
-	# 	if key == "rename_flow":
-	# 		continue
-	# 	if value:
-	# 		param_report.append(f"- {key}: `{value}`")
-	# param_report = "\n".join(param_report)
-	# param_report += " \n"
+	# Parâmetros do flow
+	param_report = ["**Parametros**:"]
+	run_params = get_run_parameters()
+	for key, value in run_params.items():
+		if key in ("rename_flow", "send_discord_report"):
+			continue
+		if value:
+			param_report.append(f"- {key}: `{value}`")
+	param_report = "\n".join(param_report) + " \n"
 
-	# fully_successful = is_successful and running_results.success
-	# include_report = has_warnings or (not fully_successful)
+	include_report = has_warnings or (not is_successful)
 
-	# # DBT - Sending Logs to Discord
-	# command = prefect.context.get("parameters").get("command")
-	# emoji = "❌" if not fully_successful else "✅"
-	# complement = "com Erros" if not fully_successful else "sem Erros"
-	# message = (
-	# 		f"{param_report}\n{cost_report}\n{general_report}"
-	# 		if include_report
-	# 		else f"{param_report}\n{cost_report}"
-	# )
+	# Envia arquivo de logs para o Discord
+	command = run_params.get("command")
+	emoji = "❌" if not is_successful else "✅"
+	complement = "com Erros" if not is_successful else "sem Erros"
+	message = (
+		f"{param_report}\n{cost_report}\n{general_report}"
+		if include_report
+		else f"{param_report}\n{cost_report}"
+	)
+	send_discord_message(
+		title=f"{emoji} Execução `dbt {command}` finalizada {complement}",
+		message=message,
+		file_path=log_path,
+		slug="dbt-runs",
+		multiple_messages_ok=True,
+	)
 
-	# send_discord_message(
-	# 	title=f"{emoji} Execução `dbt {command}` finalizada {complement}",
-	# 	message=message,
-	# 	file_path=log_path,
-	# 	monitor_slug="dbt-runs",
-	# )
-
-	# if not fully_successful:
-	# 	return Failed(general_report)
+	if not is_successful:
+		raise RuntimeError(general_report)
 
 
 @task
@@ -295,9 +313,7 @@ def should_upload_artifacts(command: str):
 
 @task
 def upload_dbt_artifacts_to_gcs(dbt_path: str, environment: str):
-	"""
-	Faz upload de dbt artifacts para o Google Cloud Storage
-	"""
+	"""Faz upload de dbt artifacts para o Google Cloud Storage"""
 	dbt_artifacts_path = os.path.join(dbt_path, "target")
 	gcs_bucket = dbt_constants.GCS_BUCKET.value[environment]
 	upload_to_cloud_storage(dbt_artifacts_path, gcs_bucket)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
-from pipelines.utils.git import download_gh_repo
+from pipelines.utils.git import download_gh_repo_task
 from pipelines.utils.state_handlers import handle_flow_state_change
 from pipelines.constants import constants as global_consts
 
@@ -21,7 +21,6 @@ from .tasks import (
 	name="DataLake - Transformação - DBT",
 	state_handlers=[handle_flow_state_change],
 	owners=[global_consts.CIT_ID.value],
-	log_prints=True,  # TODO: não funcionou pra capturar logs dbt
 )
 def sms_execute_dbt(
 	command: str = "test",
@@ -47,7 +46,7 @@ def sms_execute_dbt(
 		)
 
 	# Baixa o código atual do repositório
-	repo_path = download_gh_repo(
+	repo_path = download_gh_repo_task(
 		repo="prefeitura-rio/queries-rj-sms",
 		branch="master",
 		if_destination_exists="delete",
@@ -86,9 +85,7 @@ def sms_execute_dbt(
 
 	if send_discord_report:
 		create_dbt_report(
-			execution_info=execution_info,
-			estimated_total_cost=estimated_total_cost,
-			repository_path=repo_path,
+			execution_info=execution_info, estimated_total_cost=estimated_total_cost
 		)
 
 	#######################################
