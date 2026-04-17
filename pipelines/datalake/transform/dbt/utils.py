@@ -35,16 +35,15 @@ def process_dbt_logs(log_path: str) -> pd.DataFrame:
 
 	split_log = []
 	for i in range(0, len(parts), 2):
-		# 15:16:29.425453
-		time = parts[i].replace(r"\x1b[0m", "")
-		# [debug]
+		# ex.: "15:16:29.42"
+		time = re.sub(r"\x1b\[0m", "", parts[i])[:-4]
+		# ex.: "[debug]"
 		level = parts[i + 1][1:6].replace(" ", "")
-		# [MainThread]: Up to date!
-		text = parts[i + 1][7:]
+		# ex.: "[MainThread]: Up to date!"
+		text = re.sub(r"\x1b\[[0-9]+m", "", parts[i + 1][7:]).strip()
 		split_log.append((time, level, text))
 
 	full_logs = pd.DataFrame(split_log, columns=["time", "level", "text"])
-
 	return full_logs
 
 
@@ -68,7 +67,16 @@ def log_to_file(logs: pd.DataFrame, levels: List[str] = None) -> str:
 
 	report = []
 	for _, row in logs.iterrows():
-		text = str(row["text"]).strip().removeprefix("[MainThread]: ")
+		text: str = row["text"]
+		text = re.sub(
+			# Remove '[Thread-# (]:' do início
+			r"^\[Thread-[0-9]+ \(?\]:",
+			"-",
+			# Remove '[MainThread]:'/'[ThreadPool]:' do início
+			text.removeprefix("[MainThread]:").removeprefix("[ThreadPool]:").strip(),
+		)
+		if len(text) <= 0:
+			continue
 		if text.lower().startswith(
 			(
 				"install",
@@ -79,7 +87,14 @@ def log_to_file(logs: pd.DataFrame, levels: List[str] = None) -> str:
 			)
 		):
 			continue
-		report.append(f"{row['time']} [{row['level'].rjust(5, ' ')}] {text}")
+		# Pulamos warnings de deprecation porque no final vem um
+		# "DeprecationsSummary" que lista a quantidade de cada
+		if re.match(r"\[WARNING\]\[[A-Za-z]+Deprecation\]:", text):
+			continue
+
+		time = str(row["time"])
+		level = str(row["level"]).ljust(5, " ")
+		report.append(f"{time} [{level}]   {text}")
 	report = "\n".join(report)
 	log(f"Logs do DBT: {report}")
 
