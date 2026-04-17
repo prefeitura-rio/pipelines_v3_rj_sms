@@ -196,23 +196,24 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
 		if no_owner:
 			model_owner = dbt_constants.OWNERS.value["cit"]
 
-		model_owner = f"<@{model_owner}>"
+		model_owner_tag = f"<@{model_owner}>"
 		owner_ctx_str = ", modelo sem dono!" if no_owner else ""
+		model_owner_name = "CIT" if no_owner else model_owner_name
 
 		if status == "fail":
 			is_successful = False
 			general_report.append(
-				f"- 🛑 FAIL ({model_owner}{owner_ctx_str}): {summarizer(command_result)}"
+				f"- 🛑 FAIL ({model_owner_tag}{owner_ctx_str}): {summarizer(command_result)}"
 			)
 		elif status == "error":
 			is_successful = False
 			general_report.append(
-				f"- ❌ ERROR ({model_owner}{owner_ctx_str}): {summarizer(command_result)}"
+				f"- ❌ ERROR ({model_owner_tag}{owner_ctx_str}): {summarizer(command_result)}"
 			)
 		elif status == "warn":
 			has_warnings = True
 			general_report.append(
-				f"- ⚠️ WARN ({model_owner}{owner_ctx_str}): {summarizer(command_result)}"
+				f"- ⚠️ WARN (@{model_owner_name}{owner_ctx_str}): {summarizer(command_result)}"
 			)
 
 	cost_report = f"**Custo da Execução**: R${estimated_total_cost:.2f}"
