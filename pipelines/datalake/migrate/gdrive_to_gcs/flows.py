@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from pipelines.constants import constants as global_consts
 from pipelines.utils.google import build_bucket_name, list_google_drive_files
+from pipelines.utils.logger import log
 
 from pipelines.utils.prefect import flow, flow_config
 from pipelines.utils.state_handlers import handle_flow_state_change
@@ -37,6 +38,19 @@ def gdrive_to_gcs(
 		results.append(
 			process_google_drive_file(item=item, bucket_name=resolved_bucket_name)
 		)
+
+	failed_items = [result for result in results if result["status"] == "failed"]
+	if failed_items:
+		log(
+			"(gdrive_to_gcs) itens com falha no processamento:\n"
+			+ "\n".join(
+				f"- file/path: {result.get('relative_path') or result.get('source_file_name')}"
+				f" | error: {result.get('error_detail')}"
+				for result in failed_items
+			),
+			level="warning",
+		)
+		log('finished')
 
 	return build_execution_summary(results)
 
