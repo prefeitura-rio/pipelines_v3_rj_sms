@@ -126,7 +126,7 @@ class Summarizer:
 			if status == "error":
 				return f"`{result.node.name}`\n{result.message.replace('__', '_')}\n"
 
-			relation_name = result.node.relation_name.replace("`", "").trim()
+			relation_name = result.node.relation_name.replace("`", "").strip()
 			if status in ("success", "warn", "fail"):
 				return f"`{result.node.name}`\n{result.message}:```{relation_name}```\n"
 			raise ValueError(f"Status de resultado desconhecido: '{status}'")
