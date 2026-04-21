@@ -8,7 +8,7 @@ on:
     inputs:
       pipeline_filter:
         description: "Diretório sob o qual todos os flows terão deploy"
-        requered: false
+        required: false
         type: string
         default: ""
       debug:
@@ -34,7 +34,10 @@ concurrency:
 
 jobs:
   deploy-flow:
-    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'staging/') || contains(github.event.pull_request.labels.*.name, 'staging')
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.head_ref, 'staging/') ||
+      contains(toJson(github.event.pull_request.labels), '"name": "staging"')
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
