@@ -34,7 +34,7 @@ concurrency:
 
 jobs:
   deploy-flow:
-    if: startsWith(github.head_ref, 'staging/') || contains(github.event.pull_request.labels.*.name, 'staging')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'staging/') || contains(github.event.pull_request.labels.*.name, 'staging')
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
