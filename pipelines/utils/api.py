@@ -32,6 +32,8 @@ def convert_usd_to_brl(usd: float, default_rate: float = None) -> float:
 
 	except requests.RequestException as e:
 		log(f"Erro ao contactar API do Banco Central: {e}", level="error")
+	except Exception as e:
+		log(f"Erro ao obter cotação do Banco Central: {e}", level="error")
 
 	################
 	# Opção 2: API de biblioteca online
@@ -53,6 +55,8 @@ def convert_usd_to_brl(usd: float, default_rate: float = None) -> float:
 
 	except requests.RequestException as e:
 		log(f"Erro ao contactar `currency-api`: {e}", level="error")
+	except Exception as e:
+		log(f"Erro ao obter cotação de `currency-api`: {e}", level="error")
 
 	################
 	# Opçaõ 3: Cotação padrão

@@ -62,7 +62,7 @@ def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwar
 						color=15158332,
 					)
 				],
-				monitor_slug="error",
+				slug="error",
 			)
 		)
 

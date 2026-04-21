@@ -10,7 +10,7 @@ on:
     inputs:
       pipeline_filter:
         description: "Diretório sob o qual todos os flows terão deploy"
-        requered: false
+        required: false
         type: string
         default: ""
       debug:
