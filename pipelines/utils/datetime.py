@@ -28,6 +28,13 @@ def today_str() -> str:
 	"""Retorna o dia atual (fuso BRT) como 'YYYY-MM-DD'"""
 	return now().date().isoformat()
 
+def now_str() -> str:
+	"""Retorna data/hora atual (fuso BRT) como 'YYYY-MM-DD HH:MM:SS'"""
+	return now().strftime("%Y-%m-%d %H:%M:%S")
+
+def current_year() -> int:
+	return now().year
+
 
 def from_relative_date(
 	relative_date: Optional[str] = None,

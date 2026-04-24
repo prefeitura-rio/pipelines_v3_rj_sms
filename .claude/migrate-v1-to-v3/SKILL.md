@@ -32,11 +32,19 @@ Also consider:
   - Leave a comment in (v3) with the value of `num_workers=`, `memory_limit=` and `memory_request=` in (v1).
 - `flows.py` files cannot have a `constants`; those must be renamed when imported
   (eg. `from pipelines.constants import constants as global_consts`).
-- Ignore `# pylint` comments, do not migrate them.
+- In each flow parameter in (v3), copy their default values and leave a comment indicating if they had required=True in (v1).
+- Keep all comments, but ignore `# pylint` comments.
 - Instead of `datetime.now(pytz.timezone("America/Sao_Paulo"))`, use `now()` via
   `from pipelines.utils.datetime import now`.
 - In `flows.py`, on parallel uploads to datalake, add `rate_limit("um-por-segundo")` inside `for`s
   before `upload_xxx.submit()`.
 - In `schedules.py`, with weekly schedules (`interval=timedelta(days=7)`), use English names
-  for weekdays (eg. `config={"weekday": "sunday", ...}`
+  for weekdays (eg. `config={"weekday": "sunday", ...}`)
 
+### 4. Catalog it
+The file `localrun.cases.yaml` at the root of (v3) lists all flows. Add a new entry for the migrated flow
+under the correct section ("Reports", "Extract/Load", etc) according to flow path.
+- `case_slug` is made up;
+- `flow_path` is the path with `.` separators;
+- `flow_name` is the function name;
+- `params` is a list of its parameters. For params without defaults, leave them commented, following the pattern.

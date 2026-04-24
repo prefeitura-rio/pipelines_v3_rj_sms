@@ -49,6 +49,20 @@ cases:
       # lines_per_chunk: 100000
       # data_referencia: ...
 
+  # Extração SICLOM API
+  - case_slug: "datalake-extract-siclom-api"
+    flow_path: "pipelines.datalake.extract_load.siclom_api.flows"
+    flow_name: "siclom_period_extraction"
+    params:
+      environment: dev
+      dataset_id: brutos_siclom_api
+      # table_id: carga_cd4
+      # endpoint: /mostracargacd4periodo/
+      annual: true
+      extraction_range: 5
+      # month: ...
+      # year: ...
+
 
   ################################
   #  MIGRATE                     #

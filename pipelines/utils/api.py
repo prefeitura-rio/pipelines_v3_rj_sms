@@ -2,8 +2,24 @@
 import datetime
 import requests
 
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
 from pipelines.utils.datetime import now
 from pipelines.utils.logger import log
+
+
+def GET(url: str, headers: dict = None, retries: int = 2, retry_on: list[int] = None) -> requests.Response | None:
+	"""Faz requisição para uma API utilizando o método GET."""
+	session = requests.Session()
+	retry_config = Retry(total=retries, backoff_factor=1, status_forcelist=retry_on)
+	session.mount("https://", HTTPAdapter(max_retries=retry_config))
+	try:
+		response = session.get(url=url, headers=headers)
+	except requests.exceptions.RequestException as e:
+		log(e, level="error")
+		return None
+	return response
 
 
 def convert_usd_to_brl(usd: float, default_rate: float = None) -> float:
