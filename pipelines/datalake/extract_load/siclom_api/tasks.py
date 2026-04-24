@@ -50,7 +50,9 @@ def generate_formatted_months(reference_year: str, interval) -> list[str]:
 
 
 @task
-def get_siclom_period_data(base_url: str, endpoint: str, api_key: str, period: str) -> DataFrame:
+def get_siclom_period_data(
+  base_url: str, endpoint: str, api_key: str, period: str
+) -> DataFrame:
   """Faz a requisição para a API do SICLOM utilizando a busca por mês e ano."""
   log(f"Buscando dados de {period}...")
 
@@ -73,7 +75,9 @@ def get_siclom_period_data(base_url: str, endpoint: str, api_key: str, period: s
 
 
 @task
-def get_siclom_prep_data(base_url: str, endpoint: str, api_key: str, period: str) -> DataFrame:
+def get_siclom_prep_data(
+  base_url: str, endpoint: str, api_key: str, period: str
+) -> DataFrame:
   """
   Faz a requisição para a API do SICLOM utilizando a busca por mês e ano para dados de PREP.
   Este endpoint é paginado e possui uma lógica de extração diferente dos demais, por isso foi
@@ -100,7 +104,7 @@ def get_siclom_prep_data(base_url: str, endpoint: str, api_key: str, period: str
 
   log("Iniciando extração por paginação...")
   while next:
-    log(f'Extraindo página {page["current"]}/{page["pageCount"]}...')
+    log(f"Extraindo página {page['current']}/{page['pageCount']}...")
     url = f"{base_url}{endpoint}{period}?page={next}&numItemsPerPage=50"
     response = GET(url=url, headers=headers, retry_on=[104, 502, 503, 504])
     if not response or response.status_code != 200:

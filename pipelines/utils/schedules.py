@@ -8,25 +8,25 @@ from pipelines.constants import constants
 
 
 def restrict_int_interval(value, min: int, max: int, default: int = 0):
-	"""
-	Garante que um dado valor estará dentro de um intervalo esperado; caso
-	contrário, retorna `default`.
-	"""
-	try:
-		value = int(value)
-	except (ValueError, TypeError):
-		return default
+  """
+  Garante que um dado valor estará dentro de um intervalo esperado; caso
+  contrário, retorna `default`.
+  """
+  try:
+    value = int(value)
+  except (ValueError, TypeError):
+    return default
 
-	if value < min:
-		return default
-	if value > max:
-		return default
-	return value
+  if value < min:
+    return default
+  if value > max:
+    return default
+  return value
 
 
 class ScheduleConfig(TypedDict):
-	month: Optional[int]
-	weekday: Literal[
+  month: Optional[int]
+  weekday: Literal[
 		"monday",    "segunda",
 		"tuesday",   "terça",
 		"wednesday", "quarta",
@@ -35,32 +35,32 @@ class ScheduleConfig(TypedDict):
 		"saturday",  "sábado",
 		"sunday",    "domingo",
 	]  # fmt: skip
-	day: Optional[int]
-	hour: Optional[int]
-	minute: Optional[int]
+  day: Optional[int]
+  hour: Optional[int]
+  minute: Optional[int]
 
 
 def create_schedule_list(
-	parameters_list: List[dict],
-	interval: Literal[
-		"hourly", "12-hours", "daily", "weekly", "monthly", "semiannual"
-	] = "daily",
-	config: ScheduleConfig = None,
+  parameters_list: List[dict],
+  interval: Literal[
+    "hourly", "12-hours", "daily", "weekly", "monthly", "semiannual"
+  ] = "daily",
+  config: ScheduleConfig = None,
 ):
-	return [
-		create_schedule(parameters=params, interval=interval, config=config)
-		for params in parameters_list
-	]
+  return [
+    create_schedule(parameters=params, interval=interval, config=config)
+    for params in parameters_list
+  ]
 
 
 def create_schedule(
-	parameters: dict,
-	interval: Literal[
-		"hourly", "12-hours", "daily", "weekly", "monthly", "semiannual"
-	] = "daily",
-	config: ScheduleConfig = None,
+  parameters: dict,
+  interval: Literal[
+    "hourly", "12-hours", "daily", "weekly", "monthly", "semiannual"
+  ] = "daily",
+  config: ScheduleConfig = None,
 ):
-	"""
+  """
 	Cria schedule para um flow com o intervalo requisitado.
 
 	Args:
@@ -112,16 +112,16 @@ def create_schedule(
 	)
 	```
 	"""
-	month = 1
-	weekday = "monday"
-	day = 1
-	hour = 0
-	minute = 0
+  month = 1
+  weekday = "monday"
+  day = 1
+  hour = 0
+  minute = 0
 
-	if config is not None:
-		month = restrict_int_interval(config.get("month"), 1, 12, default=1)
-		_processed_weekday = str(config.get("weekday", "")).lower().strip()
-		weekday = (
+  if config is not None:
+    month = restrict_int_interval(config.get("month"), 1, 12, default=1)
+    _processed_weekday = str(config.get("weekday", "")).lower().strip()
+    weekday = (
 			"monday"
 			if _processed_weekday not in (
 				"tuesday",   "terça",
@@ -133,77 +133,71 @@ def create_schedule(
 			)
 			else _processed_weekday
 		)  # fmt: skip
-		day = restrict_int_interval(config.get("day"), 1, 28, default=1)
-		hour = restrict_int_interval(config.get("hour"), 0, 23)
-		minute = restrict_int_interval(config.get("minute"), 0, 59)
+    day = restrict_int_interval(config.get("day"), 1, 28, default=1)
+    hour = restrict_int_interval(config.get("hour"), 0, 23)
+    minute = restrict_int_interval(config.get("minute"), 0, 59)
 
-	if interval == "hourly":
-		return Interval(
-			timedelta(hours=1),
-			anchor_date=datetime(2026, 1, 1, 0, minute, tzinfo=constants.TIMEZONE.value),
-			timezone=constants.TIMEZONE_NAME.value,
-			parameters=parameters,
-		)
+  if interval == "hourly":
+    return Interval(
+      timedelta(hours=1),
+      anchor_date=datetime(2026, 1, 1, 0, minute, tzinfo=constants.TIMEZONE.value),
+      timezone=constants.TIMEZONE_NAME.value,
+      parameters=parameters,
+    )
 
-	if interval == "12-hours":
-		return Interval(
-			timedelta(hours=12),
-			anchor_date=datetime(
-				2026, 1, 1, hour, minute, tzinfo=constants.TIMEZONE.value
-			),
-			timezone=constants.TIMEZONE_NAME.value,
-			parameters=parameters,
-		)
+  if interval == "12-hours":
+    return Interval(
+      timedelta(hours=12),
+      anchor_date=datetime(2026, 1, 1, hour, minute, tzinfo=constants.TIMEZONE.value),
+      timezone=constants.TIMEZONE_NAME.value,
+      parameters=parameters,
+    )
 
-	if interval == "daily":
-		return Interval(
-			timedelta(days=1),
-			anchor_date=datetime(
-				2026, 1, 1, hour, minute, tzinfo=constants.TIMEZONE.value
-			),
-			timezone=constants.TIMEZONE_NAME.value,
-			parameters=parameters,
-		)
+  if interval == "daily":
+    return Interval(
+      timedelta(days=1),
+      anchor_date=datetime(2026, 1, 1, hour, minute, tzinfo=constants.TIMEZONE.value),
+      timezone=constants.TIMEZONE_NAME.value,
+      parameters=parameters,
+    )
 
-	if interval == "weekly":
-		# 5 jan 2026 foi segunda-feira
-		# fmt: off
-		day_offset = 0
-		if   weekday in ("monday",    "segunda"): day_offset = 0
-		elif weekday in ("tuesday",   "terça"):   day_offset = 1
-		elif weekday in ("wednesday", "quarta"):  day_offset = 2
-		elif weekday in ("thursday",  "quinta"):  day_offset = 3
-		elif weekday in ("friday",    "sexta"):   day_offset = 4
-		elif weekday in ("saturday",  "sábado"):  day_offset = 5
-		elif weekday in ("sunday",    "domingo"): day_offset = 6
-		# fmt: on
-		return Interval(
-			timedelta(days=7),
-			anchor_date=datetime(
-				2026, 1, 5 + day_offset, hour, minute, tzinfo=constants.TIMEZONE.value
-			),
-			timezone=constants.TIMEZONE_NAME.value,
-			parameters=parameters,
-		)
+  if interval == "weekly":
+    # 5 jan 2026 foi segunda-feira
+    # fmt: off
+    day_offset = 0
+    if   weekday in ("monday",    "segunda"): day_offset = 0
+    elif weekday in ("tuesday",   "terça"):   day_offset = 1
+    elif weekday in ("wednesday", "quarta"):  day_offset = 2
+    elif weekday in ("thursday",  "quinta"):  day_offset = 3
+    elif weekday in ("friday",    "sexta"):   day_offset = 4
+    elif weekday in ("saturday",  "sábado"):  day_offset = 5
+    elif weekday in ("sunday",    "domingo"): day_offset = 6
+    # fmt: on
+    return Interval(
+      timedelta(days=7),
+      anchor_date=datetime(
+        2026, 1, 5 + day_offset, hour, minute, tzinfo=constants.TIMEZONE.value
+      ),
+      timezone=constants.TIMEZONE_NAME.value,
+      parameters=parameters,
+    )
 
-	if interval == "monthly":
-		return Interval(
-			timedelta(days=30),
-			anchor_date=datetime(
-				2026, 1, day, hour, minute, tzinfo=constants.TIMEZONE.value
-			),
-			timezone=constants.TIMEZONE_NAME.value,
-			parameters=parameters,
-		)
+  if interval == "monthly":
+    return Interval(
+      timedelta(days=30),
+      anchor_date=datetime(2026, 1, day, hour, minute, tzinfo=constants.TIMEZONE.value),
+      timezone=constants.TIMEZONE_NAME.value,
+      parameters=parameters,
+    )
 
-	if interval == "semiannual":
-		return Interval(
-			timedelta(days=6 * 30),
-			anchor_date=datetime(
-				2026, month, day, hour, minute, tzinfo=constants.TIMEZONE.value
-			),
-			timezone=constants.TIMEZONE_NAME.value,
-			parameters=parameters,
-		)
+  if interval == "semiannual":
+    return Interval(
+      timedelta(days=6 * 30),
+      anchor_date=datetime(
+        2026, month, day, hour, minute, tzinfo=constants.TIMEZONE.value
+      ),
+      timezone=constants.TIMEZONE_NAME.value,
+      parameters=parameters,
+    )
 
-	raise ValueError(f"Valor para intervalo não reconhecido: '{interval}'")
+  raise ValueError(f"Valor para intervalo não reconhecido: '{interval}'")

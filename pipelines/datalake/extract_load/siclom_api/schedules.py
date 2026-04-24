@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from pipelines.constants import constants as global_consts
 from pipelines.utils.schedules import create_schedule_list
 
 flow_parameters = [
