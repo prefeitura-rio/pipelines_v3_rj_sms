@@ -34,6 +34,7 @@ logging.level = "INFO"
 
 [tool.ruff]
 line-length = 90
+indent-width = 2
 
 [tool.ruff.lint]
 ignore = [
@@ -42,7 +43,7 @@ ignore = [
 
 [tool.ruff.format]
 quote-style = "double"
-indent-style = "tab"
+indent-style = "space"
 line-ending = "lf"
 skip-magic-trailing-comma = true
 

@@ -10,58 +10,58 @@ from .schedules import schedules
 
 
 @flow(
-	name="DataLake - Extração e Carga de Dados - Google Sheets",
-	state_handlers=[handle_flow_state_change],
-	owners=[global_consts.CIT_ID.value],
+  name="DataLake - Extração e Carga de Dados - Google Sheets",
+  state_handlers=[handle_flow_state_change],
+  owners=[global_consts.CIT_ID.value],
 )
 def sms_dump_url(
-	# URL da planilha
-	url: str,
-	# Nome da aba na planilha; por padrão "Sheet1"
-	gsheets_sheet_name: str,
-	# Dataset no BigQuery
-	dataset_id: str,
-	# Tabela no BigQuery
-	table_id: str,
-	# Renomear flow para nome legível
-	rename_flow: bool = True,
-	# url_type: str = "google_sheet"  (removido por ser redundante)
-	# csv_delimiter: str = ";"        (removido por ser redundante)
-	environment: str = "dev",
+  # URL da planilha
+  url: str,
+  # Nome da aba na planilha; por padrão "Sheet1"
+  gsheets_sheet_name: str,
+  # Dataset no BigQuery
+  dataset_id: str,
+  # Tabela no BigQuery
+  table_id: str,
+  # Renomear flow para nome legível
+  rename_flow: bool = True,
+  # url_type: str = "google_sheet"  (removido por ser redundante)
+  # csv_delimiter: str = ";"        (removido por ser redundante)
+  environment: str = "dev",
 ):
-	#####################################
-	# Configura ambiente
-	####################################
-	if rename_flow:
-		rename_flow_run(new_name=f"Dump URL: {dataset_id}.{table_id}")
+  #####################################
+  # Configura ambiente
+  ####################################
+  if rename_flow:
+    rename_flow_run(new_name=f"Dump URL: {dataset_id}.{table_id}")
 
-	####################################
-	# Parte 1 - Obter o dado
-	#####################################
-	create_folders_task = create_data_folders_task()
+  ####################################
+  # Parte 1 - Obter o dado
+  #####################################
+  create_folders_task = create_data_folders_task()
 
-	download_task = download_google_sheets_task(
-		url=url,
-		file_path=create_folders_task["raw"],
-		file_name=table_id,
-		gsheets_sheet_name=gsheets_sheet_name,
-		wait_for=[create_folders_task],
-	)
+  download_task = download_google_sheets_task(
+    url=url,
+    file_path=create_folders_task["raw"],
+    file_name=table_id,
+    gsheets_sheet_name=gsheets_sheet_name,
+    wait_for=[create_folders_task],
+  )
 
-	#####################################
-	# Parte 2 - Upload do dado
-	#####################################
-	upload_to_datalake_task(
-		input_path=create_folders_task["raw"],
-		dataset_id=dataset_id,
-		table_id=table_id,
-		dump_mode="replace",
-		delete_mode="staging",
-		if_storage_data_exists="replace",
-		biglake_table=True,
-		dataset_is_public=False,
-		wait_for=[download_task],
-	)
+  #####################################
+  # Parte 2 - Upload do dado
+  #####################################
+  upload_to_datalake_task(
+    input_path=create_folders_task["raw"],
+    dataset_id=dataset_id,
+    table_id=table_id,
+    dump_mode="replace",
+    delete_mode="staging",
+    if_storage_data_exists="replace",
+    biglake_table=True,
+    dataset_is_public=False,
+    wait_for=[download_task],
+  )
 
 
 _flows = [flow_config(flow=sms_dump_url, schedules=schedules)]

@@ -13,196 +13,192 @@ from pipelines.utils.logger import log
 
 
 async def send_discord_webhook(
-	slug: Literal["dbt-runs", "data-ingestion", "warning", "hci_status"],
-	text_content: str = None,
-	embed_content: List[Embed] = None,
-	file_path: str = None,
+  slug: Literal["dbt-runs", "data-ingestion", "warning", "hci_status"],
+  text_content: str = None,
+  embed_content: List[Embed] = None,
+  file_path: str = None,
 ):
-	"""
-	Envia mensagem para um webhook do Discord. Ainda que
-	`text_content` e `embed_content` sejam parâmetros opcionais,
-	é necessário definir pelo menos um.
+  """
+  Envia mensagem para um webhook do Discord. Ainda que
+  `text_content` e `embed_content` sejam parâmetros opcionais,
+  é necessário definir pelo menos um.
 
-	Args:
-		slug(str):
-			Referência ao canal destino, usada para obter o URL do webhook
-		text_content(str?):
-			Conteúdo textual da mensagem
-		embed_content(list[Embed]?):
-			Conteúdo já formatado como `Embed`
-		file_path(str?):
-			Caminho de arquivo a anexar à mensagem; ex.: arquivo de logs em .txt
-	"""
-	if not slug:
-		raise ValueError("É preciso informar um `slug`!")
+  Args:
+          slug(str):
+                  Referência ao canal destino, usada para obter o URL do webhook
+          text_content(str?):
+                  Conteúdo textual da mensagem
+          embed_content(list[Embed]?):
+                  Conteúdo já formatado como `Embed`
+          file_path(str?):
+                  Caminho de arquivo a anexar à mensagem; ex.: arquivo de logs em .txt
+  """
+  if not slug:
+    raise ValueError("É preciso informar um `slug`!")
 
-	environment = get_current_environment()
-	secret_name = f"DISCORD_WEBHOOK_URL_{slug.upper()}"
-	webhook_url = get_secret(
-		secret_name=secret_name, environment=environment, path="/discord"
-	)
+  environment = get_current_environment()
+  secret_name = f"DISCORD_WEBHOOK_URL_{slug.upper()}"
+  webhook_url = get_secret(
+    secret_name=secret_name, environment=environment, path="/discord"
+  )
 
-	if not text_content and not embed_content:
-		raise ValueError("É preciso definir pelo menos um entre conteúdo textual e Embed")
-	if text_content and len(text_content) > 2000:
-		raise ValueError(
-			f"Conteúdo textual é longo demais: possui tamanho {len(text_content)}, máximo é 2000"
-		)
-	if embed_content and len(embed_content) > 5:
-		raise ValueError(
-			f"Embeds demais: possui {len(embed_content)} entradas, máximo é 5"
-		)
+  if not text_content and not embed_content:
+    raise ValueError("É preciso definir pelo menos um entre conteúdo textual e Embed")
+  if text_content and len(text_content) > 2000:
+    raise ValueError(
+      f"Conteúdo textual é longo demais: possui tamanho {len(text_content)}, máximo é 2000"
+    )
+  if embed_content and len(embed_content) > 5:
+    raise ValueError(f"Embeds demais: possui {len(embed_content)} entradas, máximo é 5")
 
-	params = {
-		"content": text_content or "",
-		"embeds": embed_content or [],
-		"allowed_mentions": AllowedMentions(users=True),
-	}
+  params = {
+    "content": text_content or "",
+    "embeds": embed_content or [],
+    "allowed_mentions": AllowedMentions(users=True),
+  }
 
-	if file_path:
-		if not os.path.exists(file_path):
-			log(f"Arquivo '{file_path}' não existe! Ignorado", level="error")
-		else:
-			file = File(file_path, filename=os.path.basename(file_path))
-			params["file"] = file
-			# Código legado, migrei por abundância de caução; acho que
-			# a gente nunca nem usa PNG, mas deixo abaixo como referência
-			# if file_path.endswith(".png"):
-			# 	embed = Embed()
-			# 	embed.set_image(url=f"attachment://{file_path}")
-			# 	params["embeds"].append(embed)
+  if file_path:
+    if not os.path.exists(file_path):
+      log(f"Arquivo '{file_path}' não existe! Ignorado", level="error")
+    else:
+      file = File(file_path, filename=os.path.basename(file_path))
+      params["file"] = file
+      # Código legado, migrei por abundância de caução; acho que
+      # a gente nunca nem usa PNG, mas deixo abaixo como referência
+      # if file_path.endswith(".png"):
+      # 	embed = Embed()
+      # 	embed.set_image(url=f"attachment://{file_path}")
+      # 	params["embeds"].append(embed)
 
-	async with aiohttp.ClientSession() as session:
-		webhook = Webhook.from_url(webhook_url, session=session)
-		try:
-			await webhook.send(**params)
-		except RuntimeError as e:
-			log("Erro ao enviar mensagem para webhook do Discord!", level="error")
-			raise e
+  async with aiohttp.ClientSession() as session:
+    webhook = Webhook.from_url(webhook_url, session=session)
+    try:
+      await webhook.send(**params)
+    except RuntimeError as e:
+      log("Erro ao enviar mensagem para webhook do Discord!", level="error")
+      raise e
 
 
 def send_discord_embed(
-	contents: List[Embed],
-	slug: Literal["dbt-runs", "data-ingestion", "warning", "hci_status"],
+  contents: List[Embed],
+  slug: Literal["dbt-runs", "data-ingestion", "warning", "hci_status"],
 ):
-	"""
-	Envia um ou mais Embeds pré-formatados para o Discord
+  """
+  Envia um ou mais Embeds pré-formatados para o Discord
 
-	Args:
-		contents(list[Embed]): Conteúdo a ser enviado
-		slug(str): Referência ao canal de destino
-	"""
-	asyncio.run(send_discord_webhook(slug=slug, embed_content=contents))
+  Args:
+          contents(list[Embed]): Conteúdo a ser enviado
+          slug(str): Referência ao canal de destino
+  """
+  asyncio.run(send_discord_webhook(slug=slug, embed_content=contents))
 
 
 def send_discord_message(
-	title: str,
-	message: str,
-	slug: Literal["dbt-runs", "data-ingestion", "warning", "hci_status"],
-	file_path: str = None,
-	multiple_messages_ok: bool = False,
+  title: str,
+  message: str,
+  slug: Literal["dbt-runs", "data-ingestion", "warning", "hci_status"],
+  file_path: str = None,
+  multiple_messages_ok: bool = False,
 ):
-	"""
-	Envia mensagem textual a um canal do Discord, prefixada de informações
-	sobre o flow e task que fizeram a requisição
+  """
+  Envia mensagem textual a um canal do Discord, prefixada de informações
+  sobre o flow e task que fizeram a requisição
 
-	Args:
-		title(str): Título da mensagem, formatado como H2
-		message(str): Conteúdo textual da mensagem
-		slug(str): Referência ao canal de destino
-		multiple_messages_ok(bool):
-			Flag indicando se, caso a mensagem seja longa demais, ela deve ser
-			quebrada em várias mensagens distintas. Por padrão, é `False`, e
-			mensagens longas são truncadas com "...". Somente passe `True` em
-			flows cujas mensagens são muito relevantes e não muito longas –
-			p.ex. relatórios do dbt. Caso contrário, envie uma mensagem resumida
-			no Discord e coloque maiores detalhes nos logs do flow em si.
-	"""
-	environment = get_current_environment()
-	prefect_url = get_prefect_url()
-	header_lines = [f"## {title}", f"> Environment: {environment}"]
+  Args:
+          title(str): Título da mensagem, formatado como H2
+          message(str): Conteúdo textual da mensagem
+          slug(str): Referência ao canal de destino
+          multiple_messages_ok(bool):
+                  Flag indicando se, caso a mensagem seja longa demais, ela deve ser
+                  quebrada em várias mensagens distintas. Por padrão, é `False`, e
+                  mensagens longas são truncadas com "...". Somente passe `True` em
+                  flows cujas mensagens são muito relevantes e não muito longas –
+                  p.ex. relatórios do dbt. Caso contrário, envie uma mensagem resumida
+                  no Discord e coloque maiores detalhes nos logs do flow em si.
+  """
+  environment = get_current_environment()
+  prefect_url = get_prefect_url()
+  header_lines = [f"## {title}", f"> Environment: {environment}"]
 
-	fr_ctx = FlowRunContext.get()
-	if fr_ctx:
-		flow_name = fr_ctx.flow.name
-		flow_run_id = str(fr_ctx.flow_run.id)
-		if prefect_url == "localhost":
-			header_lines.append(f"> Flow (v3): {flow_name}")
-		else:
-			header_lines.append(
-				f"> Flow (v3): [{flow_name}]({prefect_url}/runs/flow-run/{flow_run_id})"
-			)
+  fr_ctx = FlowRunContext.get()
+  if fr_ctx:
+    flow_name = fr_ctx.flow.name
+    flow_run_id = str(fr_ctx.flow_run.id)
+    if prefect_url == "localhost":
+      header_lines.append(f"> Flow (v3): {flow_name}")
+    else:
+      header_lines.append(
+        f"> Flow (v3): [{flow_name}]({prefect_url}/runs/flow-run/{flow_run_id})"
+      )
 
-	tr_ctx = TaskRunContext.get()
-	if tr_ctx:
-		task_name = tr_ctx.task.name
-		task_run_id = str(tr_ctx.task_run.id)
-		if prefect_url == "localhost":
-			header_lines.append(f"> Task: {task_name}")
-		else:
-			header_lines.append(
-				f"> Task: [{task_name}]({prefect_url}/runs/task-run/{task_run_id})"
-			)
+  tr_ctx = TaskRunContext.get()
+  if tr_ctx:
+    task_name = tr_ctx.task.name
+    task_run_id = str(tr_ctx.task_run.id)
+    if prefect_url == "localhost":
+      header_lines.append(f"> Task: {task_name}")
+    else:
+      header_lines.append(
+        f"> Task: [{task_name}]({prefect_url}/runs/task-run/{task_run_id})"
+      )
 
-	header_content = "\n".join([*header_lines, ""])
+  header_content = "\n".join([*header_lines, ""])
 
-	DISCORD_MAX_CHARS = 2000  # Limite, por mensagem, do próprio Discord
-	message = str(message).strip()
-	message_max_char_count = DISCORD_MAX_CHARS - len(header_content)
-	if not multiple_messages_ok and len(message) > message_max_char_count:
-		log("Mensagem excede limite de caracteres; texto será truncado", level="warning")
-		message = f"{message[: message_max_char_count - 3]}..."
+  DISCORD_MAX_CHARS = 2000  # Limite, por mensagem, do próprio Discord
+  message = str(message).strip()
+  message_max_char_count = DISCORD_MAX_CHARS - len(header_content)
+  if not multiple_messages_ok and len(message) > message_max_char_count:
+    log("Mensagem excede limite de caracteres; texto será truncado", level="warning")
+    message = f"{message[: message_max_char_count - 3]}..."
 
-	message_lines = message.split("\n")
+  message_lines = message.split("\n")
 
-	pages = []
-	current_buffer = header_content  # Primeiro buffer já começa com o cabeçalho
-	for line in message_lines:
-		line = line.strip()
-		if len(line) < 1:
-			continue
+  pages = []
+  current_buffer = header_content  # Primeiro buffer já começa com o cabeçalho
+  for line in message_lines:
+    line = line.strip()
+    if len(line) < 1:
+      continue
 
-		# Se juntar a próxima linha ao buffer ainda não atinge o limite de caracteres
-		if len(current_buffer) + 1 + len(line) <= DISCORD_MAX_CHARS:
-			# Adiciona ela ao buffer
-			current_buffer += "\n" + line
-			continue
+    # Se juntar a próxima linha ao buffer ainda não atinge o limite de caracteres
+    if len(current_buffer) + 1 + len(line) <= DISCORD_MAX_CHARS:
+      # Adiciona ela ao buffer
+      current_buffer += "\n" + line
+      continue
 
-		# Caso contrário, esse buffer está pronto; adiciona às mensagens já prontas
-		current_buffer = current_buffer.strip()
-		if len(current_buffer) > 0:
-			pages.append(current_buffer)
+    # Caso contrário, esse buffer está pronto; adiciona às mensagens já prontas
+    current_buffer = current_buffer.strip()
+    if len(current_buffer) > 0:
+      pages.append(current_buffer)
 
-		# Se a próxima linha por si só não passa do limite de caracteres, ela é o novo buffer
-		if len(line) <= DISCORD_MAX_CHARS:
-			current_buffer = line
-			continue
+    # Se a próxima linha por si só não passa do limite de caracteres, ela é o novo buffer
+    if len(line) <= DISCORD_MAX_CHARS:
+      current_buffer = line
+      continue
 
-		# Aqui, a linha passa do limite de caracteres; temos que quebrá-la
-		# Se a linha possui caracteres DEMAIS, morre aqui
-		if len(line) > DISCORD_MAX_CHARS * 3:
-			raise ValueError(
-				f"Tamanho da linha excede máximo permitido: {len(line)} > {DISCORD_MAX_CHARS * 3}"
-			)
-		# Quebra a linha em pedaços de `DISCORD_MAX_CHARS` e adiciona ao buffer
-		for i in range(0, len(line), DISCORD_MAX_CHARS):
-			chunk = line[i : i + DISCORD_MAX_CHARS].strip()
-			if i == 0:
-				current_buffer = chunk
-			else:
-				pages.append(current_buffer)
-				current_buffer = chunk
-	# Aqui, ainda devemos ter o final da mensagem no buffer; adiciona
-	pages.append(current_buffer)
+    # Aqui, a linha passa do limite de caracteres; temos que quebrá-la
+    # Se a linha possui caracteres DEMAIS, morre aqui
+    if len(line) > DISCORD_MAX_CHARS * 3:
+      raise ValueError(
+        f"Tamanho da linha excede máximo permitido: {len(line)} > {DISCORD_MAX_CHARS * 3}"
+      )
+    # Quebra a linha em pedaços de `DISCORD_MAX_CHARS` e adiciona ao buffer
+    for i in range(0, len(line), DISCORD_MAX_CHARS):
+      chunk = line[i : i + DISCORD_MAX_CHARS].strip()
+      if i == 0:
+        current_buffer = chunk
+      else:
+        pages.append(current_buffer)
+        current_buffer = chunk
+  # Aqui, ainda devemos ter o final da mensagem no buffer; adiciona
+  pages.append(current_buffer)
 
-	async def send_multiple_discord_messages(contents):
-		for idx, content in enumerate(contents):
-			# Só envia o arquivo anexado na última mensagem
-			if idx == len(contents) - 1:
-				await send_discord_webhook(
-					slug=slug, text_content=content, file_path=file_path
-				)
-			else:
-				await send_discord_webhook(slug=slug, text_content=content)
+  async def send_multiple_discord_messages(contents):
+    for idx, content in enumerate(contents):
+      # Só envia o arquivo anexado na última mensagem
+      if idx == len(contents) - 1:
+        await send_discord_webhook(slug=slug, text_content=content, file_path=file_path)
+      else:
+        await send_discord_webhook(slug=slug, text_content=content)
 
-	asyncio.run(send_multiple_discord_messages(pages))
+  asyncio.run(send_multiple_discord_messages(pages))

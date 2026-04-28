@@ -11,9 +11,9 @@ from google.cloud import bigquery
 
 from pipelines.utils.datetime import now
 from pipelines.utils.env import (
-	get_current_environment,
-	get_google_project_for_environment,
-	get_prefect_url,
+  get_current_environment,
+  get_google_project_for_environment,
+  get_prefect_url,
 )
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import Flow
@@ -22,97 +22,93 @@ from pipelines.utils.monitor import send_discord_embed
 
 
 def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwargs):
-	log(
-		f"[handle_flow_state_change] '{flow_run.name}' ({flow.name}) -> {state.name}",
-		level="info",
-	)
-	if len(kwargs):
-		log(f"[handle_flow_state_change] kwargs={kwargs}")
+  log(
+    f"[handle_flow_state_change] '{flow_run.name}' ({flow.name}) -> {state.name}",
+    level="info",
+  )
+  if len(kwargs):
+    log(f"[handle_flow_state_change] kwargs={kwargs}")
 
-	environment = get_current_environment()
+  environment = get_current_environment()
 
-	inject_bd_credentials(environment=environment)
+  inject_bd_credentials(environment=environment)
 
-	info = {
-		"flow_name": flow.name,
-		"flow_id": str(flow_run.flow_id),
-		"flow_run_id": str(flow_run.id),
-		"flow_parameters": json.dumps(flow_run.parameters),
-		"state": type(state).__name__,
-		"message": state.message,
-		"occurrence": now().isoformat(),
-	}
+  info = {
+    "flow_name": flow.name,
+    "flow_id": str(flow_run.flow_id),
+    "flow_run_id": str(flow_run.id),
+    "flow_parameters": json.dumps(flow_run.parameters),
+    "state": type(state).__name__,
+    "message": state.message,
+    "occurrence": now().isoformat(),
+  }
 
-	if state.is_failed() and environment == "prod" and len(flow.get_owners()) > 0:
-		prefect_url = get_prefect_url()
-		message = [
-			" ".join([f"<@{owner}>" for owner in flow.get_owners()]),
-			f"> Flow (v3): [{flow_run.name}]({prefect_url}/flow-run/{info['flow_run_id']})",
-			"*Parâmetros:*",
-		]
-		for key, value in flow_run.parameters.items():
-			message.append(f"- {key}: `{value}`")
+  if state.is_failed() and environment == "prod" and len(flow.get_owners()) > 0:
+    prefect_url = get_prefect_url()
+    message = [
+      " ".join([f"<@{owner}>" for owner in flow.get_owners()]),
+      f"> Flow (v3): [{flow_run.name}]({prefect_url}/flow-run/{info['flow_run_id']})",
+      "*Parâmetros:*",
+    ]
+    for key, value in flow_run.parameters.items():
+      message.append(f"- {key}: `{value}`")
 
-		asyncio.run(
-			send_discord_embed(
-				contents=[
-					Embed(
-						title=info["flow_name"],
-						description="\n".join(message),
-						color=15158332,
-					)
-				],
-				slug="error",
-			)
-		)
+    asyncio.run(
+      send_discord_embed(
+        contents=[
+          Embed(title=info["flow_name"], description="\n".join(message), color=15158332)
+        ],
+        slug="error",
+      )
+    )
 
-	# Se estamos executando localmente, não precisa escrever nada no BigQuery
-	if os.environ.get("IN_DEBUGGER"):
-		return
+  # Se estamos executando localmente, não precisa escrever nada no BigQuery
+  if os.environ.get("IN_DEBUGGER"):
+    return
 
-	rows = [info]
-	# ------------------------------------------------------------
-	# Sending data to BigQuery
-	# ------------------------------------------------------------
-	project_id = get_google_project_for_environment(environment=environment)
-	dataset_id = "brutos_prefect_staging"
-	table_id = "flow_state_change"
+  rows = [info]
+  # ------------------------------------------------------------
+  # Sending data to BigQuery
+  # ------------------------------------------------------------
+  project_id = get_google_project_for_environment(environment=environment)
+  dataset_id = "brutos_prefect_staging"
+  table_id = "flow_state_change"
 
-	client = bigquery.Client(project=project_id)
+  client = bigquery.Client(project=project_id)
 
-	# Create Dataset if it does not exist
-	dataset_ref = client.dataset(dataset_id)
-	try:
-		client.get_dataset(dataset_ref)
-	except NotFound:
-		dataset = bigquery.Dataset(dataset_ref)
-		client.create_dataset(dataset)
-		log(f"[handle_flow_state_change] Criado dataset '{dataset_id}'")
+  # Create Dataset if it does not exist
+  dataset_ref = client.dataset(dataset_id)
+  try:
+    client.get_dataset(dataset_ref)
+  except NotFound:
+    dataset = bigquery.Dataset(dataset_ref)
+    client.create_dataset(dataset)
+    log(f"[handle_flow_state_change] Criado dataset '{dataset_id}'")
 
-	# Create Table if it does not exist
-	table_ref = dataset_ref.table(table_id)
-	try:
-		client.get_table(table_ref)
-	except NotFound:
-		schema = [
-			bigquery.SchemaField("flow_name", "STRING"),
-			bigquery.SchemaField("flow_id", "STRING"),
-			bigquery.SchemaField("flow_run_id", "STRING"),
-			bigquery.SchemaField("flow_parameters", "STRING"),
-			bigquery.SchemaField("state", "STRING"),
-			bigquery.SchemaField("message", "STRING"),
-			bigquery.SchemaField("occurrence", "TIMESTAMP"),
-		]
-		table = bigquery.Table(table_ref, schema=schema)
-		client.create_table(table)
-		log(f"[handle_flow_state_change] Criada tabela '{table_id}'")
+  # Create Table if it does not exist
+  table_ref = dataset_ref.table(table_id)
+  try:
+    client.get_table(table_ref)
+  except NotFound:
+    schema = [
+      bigquery.SchemaField("flow_name", "STRING"),
+      bigquery.SchemaField("flow_id", "STRING"),
+      bigquery.SchemaField("flow_run_id", "STRING"),
+      bigquery.SchemaField("flow_parameters", "STRING"),
+      bigquery.SchemaField("state", "STRING"),
+      bigquery.SchemaField("message", "STRING"),
+      bigquery.SchemaField("occurrence", "TIMESTAMP"),
+    ]
+    table = bigquery.Table(table_ref, schema=schema)
+    client.create_table(table)
+    log(f"[handle_flow_state_change] Criada tabela '{table_id}'")
 
-	# Insert rows
-	errors = client.insert_rows_json(table_ref, rows)
+  # Insert rows
+  errors = client.insert_rows_json(table_ref, rows)
 
-	if errors:
-		log(f"[handle_flow_state_change] Erros encontrados inserindo na tabela: {errors}")
-	else:
-		log("[handle_flow_state_change] Linhas inseridas com sucesso")
+  if errors:
+    log(f"[handle_flow_state_change] Erros encontrados inserindo na tabela: {errors}")
+  else:
+    log("[handle_flow_state_change] Linhas inseridas com sucesso")
 
-	return state
+  return state
