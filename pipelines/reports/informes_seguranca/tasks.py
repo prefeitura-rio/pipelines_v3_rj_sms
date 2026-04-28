@@ -342,7 +342,7 @@ Descrições díspares para CID '{cid}':
   email_string = utils.compress_message_whitespace(email_string)
 
   email_kb = len(email_string) / 1000
-  log(f"Final HTML is ~{email_kb:.2f} KB", level="warning" if email_kb > 100 else "info")
+  log(f"HTML final tem ~{email_kb:.2f} KB", level="warning" if email_kb > 100 else "info")
   return (email_string, False)
 
 

@@ -456,7 +456,7 @@ def get_email_recipients_task(
       recipients = [recipients]
     if type(recipients) is list or type(recipients) is tuple:
       recipients = list(recipients)
-      log(f"Overriding recipients ({len(recipients)}): {recipients}")
+      log(f"Sobrescrevendo recipientes ({len(recipients)}): {recipients}")
       return {"to_addresses": recipients, "cc_addresses": [], "bcc_addresses": []}
     log(f"Tipo de `recipients` não reconhecido: '{type(recipients)}'; ignorando")
 
