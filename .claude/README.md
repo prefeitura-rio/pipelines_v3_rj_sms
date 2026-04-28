@@ -89,7 +89,7 @@ correta.
 Iteração:
 * Editar o SKILL.md
 * Se estiver editando fora da pasta do Claude, é necessário copiá-la novamente:
-  `$ cp -r skill__migrate-v1-to-v3 ~/.claude/skills/skill__migrate-v1-to-v3`
+  `$ cp -r migrate-v1-to-v3 ~/.claude/skills/migrate-v1-to-v3`
 
 Ao adicionar / editar conteúdo na skill, lembre-se de ser o mais enxuto possível.
 O custo de execução é por tokens, então quanto menos palavras e mais sucinto,
