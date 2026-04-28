@@ -39,7 +39,9 @@ Also consider:
 - In `flows.py`, on parallel uploads to datalake, add `rate_limit("um-por-segundo")` inside `for`s
   before `upload_xxx.submit()`.
 - In `schedules.py`, with weekly schedules (`interval=timedelta(days=7)`), use English names
-  for weekdays (eg. `config={"weekday": "sunday", ...}`)
+  for weekdays (eg. `config={"weekday": "sunday", ...}`).
+- `@task(max_retries=..., retry_delay=timedelta(...))` becomes `@task(retries=..., retry_delay_seconds=...)`.
+- `nout` param in `@task(nout=...)` no longer exists; remove it.
 
 ### 4. Catalog it
 The file `localrun.cases.yaml` at the root of (v3) lists all flows. Add a new entry for the migrated flow

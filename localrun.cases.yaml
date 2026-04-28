@@ -13,6 +13,18 @@ cases:
       lat: -22.9519
       lon: -43.2105
 
+  # Informes de Segurança / Comunicação de CIDs
+  - case_slug: "report-informes-seguranca"
+    flow_path: "pipelines.reports.informes_seguranca.flows"
+    flow_name: "report_informes_seguranca"
+    params:
+      environment: dev
+      ## Quando date é nula, usa dia de ontem
+      date: null
+      # override_recipients: ...
+      ## Desenvolvendo local, não queremos enviar nada
+      skip_email: true
+
 
   ################################
   #  EXTRACT/LOAD                #
