@@ -3,12 +3,14 @@
 import glob
 import os
 import shutil
-from typing import Literal, Optional
+from typing import Dict, List, Literal, Optional
 import uuid
 
 import basedosdados as bd
 import pandas as pd
+from google.cloud import bigquery
 
+from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.io import create_tmp_data_folder
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
@@ -407,3 +409,113 @@ def upload_df_to_datalake_task(
     date_partition_column=date_partition_column,
     dataset_is_public=dataset_is_public,
   )
+
+
+@task(retries=1, retry_delay_seconds=3 * 60)
+def get_email_recipients_task(
+  environment: str | None = None,
+  dataset: str | None = None,
+  table: str | None = None,
+  recipients: List[str] | str | None = None,
+  error: bool | None = False,
+) -> Dict[str, List[str]]:
+  """
+  Retorna lista de recipientes de email no formato esperado pela API da Iplan,
+  a partir de tabela com formato esperado de colunas `email` (`str`),
+  `tipo` (`Literal['TO', 'CC', 'BCC', 'SKIP']`) e `recebe_erro` (`bool`).
+  Opcionalmente recebe uma lista de recipientes diretamente, sem leitura de
+  banco de dados, pensada para uso em testes.
+
+  Args:
+    environment(str):
+      Ambiente de execução (ex. "dev", "prod", etc), usado para obter nome do projeto.
+      Pode ser omitido se `recipients` não for nulo.
+    dataset(str?):
+      Dataset para procurar pelos recipientes. Por padrão, `"brutos_sheets"`.
+      Pode ser omitido se `recipients` não for nulo..
+    table(str):
+      Tabela para procurar pelos recipientes. Busca será em `rj-sms(-dev).{dataset}.{table}`.
+      Pode ser omitido se `recipients` não for nulo.
+    recipients(str | str[]?):
+      Um ou vários endereços de email de recipientes. Não lê o banco de dados se definido.
+    error(bool?):
+      Flag opcional indicando se a mensagem contém erro. Somente endereços marcados
+      como recipientes de erro recebem a mensagem.
+
+  Returns:
+      recipients(Dict[str, List[str]]):
+        Recipientes do email, no formato usado pela API da Iplan.
+        Possui 3 chaves, contendo listas de endereços (`"to_addresses"`,
+        `"cc_addresses"`, `"bcc_addresses"`) se referindo aos cabeçalhos
+        TO, CC e BCC a serem enviados.
+  """
+  # Se queremos sobrescrever os recipientes do email
+  # (ex. enviar somente para uma pessoa, para teste)
+  if recipients is not None:
+    if type(recipients) is str:
+      recipients = [recipients]
+    if type(recipients) is list or type(recipients) is tuple:
+      recipients = list(recipients)
+      log(f"Sobrescrevendo recipientes ({len(recipients)}): {recipients}")
+      return {"to_addresses": recipients, "cc_addresses": [], "bcc_addresses": []}
+    log(f"Tipo de `recipients` não reconhecido: '{type(recipients)}'; ignorando")
+
+  client = bigquery.Client()
+
+  PROJECT = get_google_project_for_environment(environment=environment)
+  DATASET = dataset or "brutos_sheets"
+  if not table or not isinstance(table, str) or len(table) == 0:
+    raise ValueError(f"Parâmetro `table` ({repr(table)}) deve ser nome válido de tabela")
+  TABLE = table
+
+  QUERY = f"""
+SELECT email, tipo, recebe_erro
+FROM `{PROJECT}.{DATASET}.{TABLE}`
+  """
+  log(f"Buscando recipientes em `{PROJECT}.{DATASET}.{TABLE}`...")
+  rows = [row.values() for row in client.query(QUERY).result()]
+  log(f"Encontrado(s) {len(rows)} registro(s)")
+
+  to_addresses = []
+  cc_addresses = []
+  bcc_addresses = []
+  for email, kind, gets_errors in rows:
+    email = str(email).strip()
+    kind = str(kind).lower().strip()
+    gets_errors = str(gets_errors).lower().strip() == "true"
+    if not email:
+      continue
+    if "@" not in email:
+      log(f"Recipiente '{email}' não contém '@'; ignorando", level="warning")
+      continue
+
+    should_get = (error and gets_errors) or not error
+    if should_get:
+      if kind == "to":
+        to_addresses.append(email)
+      elif kind == "cc":
+        cc_addresses.append(email)
+      elif kind == "bcc":
+        bcc_addresses.append(email)
+      elif kind == "skip":
+        continue
+      else:
+        log(
+          f"Tipo de recipiente '{kind}' (para '{email}') não reconhecido; ignorando",
+          level="warning",
+        )
+    else:
+      log(f"Ignorando '{email}' porque não foi marcado como recipiente de erros")
+
+  log(
+    f"Recipientes: {len(to_addresses)} (TO); {len(cc_addresses)} (CC); {len(bcc_addresses)} (BCC)"
+  )
+  # Erro caso por algum motivo não tenha nenhum destinatário
+  if len(to_addresses) + len(cc_addresses) + len(bcc_addresses) <= 0:
+    raise ValueError("Email não possui recipientes!")
+
+  return {
+    "to_addresses": to_addresses,
+    "cc_addresses": cc_addresses,
+    "bcc_addresses": bcc_addresses,
+  }
