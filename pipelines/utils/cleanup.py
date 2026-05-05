@@ -37,11 +37,12 @@ def cleanup_bigquery_name(name: str) -> str:
 
 def cleanup_columns_for_bigquery(
   df: pd.DataFrame, lowercase: bool = False, raise_on_repeats: bool = False
-):
+) -> pd.DataFrame:
   """
   Remove acentos e outras marcas (p.ex. cedilha) de colunas de um DataFrame,
   preparando-o para upload para o BigQuery. A substituição é feita in-place;
   isto é, as colunas do DataFrame passado serão modificadas pela função.
+  De qualquer forma, a função retorna o DataFrame modificado.
 
   Caso seja desejado, nomes de colunas podem ser convertidos para lowercase
   via `lowercase=True`. Por padrão, não há conversão nenhuma.
