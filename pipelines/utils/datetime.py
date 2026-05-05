@@ -17,23 +17,28 @@ def now(utc: bool = False) -> datetime.datetime:
   Retorna datetime.now() ou em BRT (padrão) ou em UTC
 
   Args:
-          utc(bool?):
-                  Se deve usar fuso horário UTC. Por padrão, é `False`,
-                  e usa o fuso BRT (America/Sao_Paulo).
+    utc(bool?):
+      Se deve usar fuso horário UTC. Por padrão, é `False`,
+      e usa o fuso BRT (America/Sao_Paulo).
   """
   if utc:
     return datetime.datetime.now(tz=UTC_TZ)
   return datetime.datetime.now(tz=SAO_PAULO_TZ)
 
 
-def today_str() -> str:
-  """Retorna o dia atual (fuso BRT) como 'YYYY-MM-DD'"""
-  return now().date().isoformat()
-
-
 def now_str() -> str:
   """Retorna data/hora atual (fuso BRT) como 'YYYY-MM-DD HH:MM:SS'"""
   return now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def today() -> datetime.date:
+  """Retorna datetime.now().date(), em fuso BRT"""
+  return now().date()
+
+
+def today_str() -> str:
+  """Retorna o dia atual (fuso BRT) como 'YYYY-MM-DD'"""
+  return today().isoformat()
 
 
 def current_year() -> int:
@@ -58,8 +63,7 @@ def from_relative_date(
     log("Relative date is None, returning None", level="info")
     return None
 
-  current_datetime = now()
-  current_date = current_datetime.date()
+  current_date = today()
 
   if relative_date.startswith(("D-", "M-", "Y-")):
     quantity = int(relative_date.split("-", maxsplit=1)[1])
