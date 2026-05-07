@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from typing import Optional
+
 from pipelines.constants import constants as global_consts
 
 from pipelines.utils.datalake import upload_df_to_datalake
@@ -18,18 +20,30 @@ from .schedules import schedules
   ],
 )
 def extract_load_relational_db(
+  # Parâmetros para o secret com o URL do banco de dados
   db_url_infisical_key: str,
   db_url_infisical_path: str,
 
+  # Identificador da tabela, `dataset.table`, a ser criada
   target_dataset_id: str,
   target_table_id: str,
 
+  # Identificador da tabela, `schema.table`, a ser extraída
   source_schema_name: str,
   source_table_name: str,
-  source_datetime_column: str = "created_at",
 
+  # Nome da coluna de data a ser usada para restringir
+  # o intervalo dos dados
+  source_datetime_column: Optional[str] = "created_at",
+
+  # Data relativa a ser usada para restringir
+  # o intervalo dos dados
   relative_date: str = "D-1",
-  historical_mode: bool = False,
+
+  # Flag indicando se a tabela inteira deve ser extraída;
+  # sendo `True`, os parâmetros `source_datetime_column`
+  # e `relative_date` são ignorados
+  extract_whole_table: bool = False,
 
   rename_flow: bool = True,
   environment: str = "dev",
@@ -48,7 +62,7 @@ def extract_load_relational_db(
     db_table=source_table_name,
     db_schema=source_schema_name,
     relative_date=relative_date,
-    historical_mode=historical_mode,
+    extract_whole_table=extract_whole_table,
     reference_datetime_column=source_datetime_column,
   )
 

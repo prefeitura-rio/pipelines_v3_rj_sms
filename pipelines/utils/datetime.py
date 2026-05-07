@@ -60,7 +60,7 @@ def from_relative_date(
   para `datetime` via `datetime.fromisoformat()`.
   """
   if relative_date is None:
-    log("Relative date is None, returning None", level="info")
+    log("Data relativa é `None`; retornando `None`")
     return None
 
   current_date = today()
@@ -78,10 +78,14 @@ def from_relative_date(
     else:
       result = datetime.date(current_date.year - quantity, 1, 1)
   else:
-    log("The input dated is not a relative date, converting to datetime", level="info")
+    log(
+      f"O valor passado, '{relative_date}', não é uma data relativa; "
+      "tentando conversão para datetime",
+      level="warning"
+    )
     result = datetime.datetime.fromisoformat(relative_date)
 
-  log(f"Relative date is {relative_date}, returning {result}", level="info")
+  log(f"Data relativa '{relative_date}' calculada como '{result}'")
   return result
 
 
