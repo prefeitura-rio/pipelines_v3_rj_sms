@@ -71,7 +71,7 @@ def extract_load_relational_db(
     dataset_id=target_dataset_id,
     table_id=f"{source_schema_name}__{source_table_name}",
     source_format="parquet",
-    partition_column="loaded_at",
+    date_partition_column ="loaded_at",
   )
 
 

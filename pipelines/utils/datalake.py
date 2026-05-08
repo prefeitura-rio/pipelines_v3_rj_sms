@@ -16,6 +16,29 @@ from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
 
+def safe_df_to_parquet(df: pd.DataFrame, output_path: Optional[str]) -> str:
+  """
+  Cria um arquivo Parquet que é preenchido com os dados de um DataFrame,
+  convertidos para string.
+
+  Args:
+    df(pd.DataFrame): O DataFrame a ser exportado.
+    output_path(str?):
+      O caminho do arquivo a ser criado. Algo como `/tmp/file.parquet`.
+      Se não for passado, uma pasta temporária local será criada, e o
+      nome do arquivo será um UUID v4.
+  Returns:
+    O caminho do arquivo criado.
+  """
+  if not output_path:
+    root_folder = create_tmp_data_folder()
+    output_path = os.path.join(root_folder, f"{uuid.uuid4()}.parquet")
+
+  df = df.fillna("").astype(str)
+  df.to_parquet(output_path, index=False)
+  return output_path
+
+
 def upload_to_datalake(
   input_path: str,
   dataset_id: str,
@@ -34,33 +57,33 @@ def upload_to_datalake(
   cria ou adiciona dados a uma tabela do BigQuery.
 
   Args:
-          input_path (str):
-                  Caminho para o arquivo com dados; pode ser pasta ou arquivo
-          dataset_id (str):
-                  Nome do dataset no BigQuery
-          table_id (str):
-                  Nome da tabela no BigQuery
-          dump_mode (str?):
-                  Como criar os dados: `"append"` não apaga dados existentes, `"replace"` substitui
-                  tudo que existia. Por padrão, é `"append"`.
-          delete_mode (str?):
-                  `"all"` apaga tanto a tabela externa (`_staging`) quanto a materializada;
-                  `"staging"` apaga somente a tabela externa. Por padrão, é `"staging"`.
-          source_format (str?):
-                  Formato dos dados (`"csv"` ou `"parquet"`). Por padrão, é `"csv"`.
-          csv_delimiter (str?):
-                  Separador usado no arquivo CSV. Por padrão, é `";"`.
-          if_storage_data_exists (str?):
-                  O que fazer se o dado já existir no GCS: `"raise"` dispara erro de conflito;
-                  `"replace"` substitui o dado; `"pass"` não faz nada. Por padrão, é `"replace"`.
-          biglake_table (bool?):
-                  Se a tabela é BigLake – i.e. permite consultas mesmo sem ser materializada.
-                  Por padrão, é `True`.
-          dataset_is_public (bool?):
-                  Se o dataset é público. Por padrão, é `False`.
-          exception_on_missing_input_file (bool?):
-                  Se deve disparar um `FileNotFoundError` caso `input_path` seja string vazia ou
-                  uma pasta sem arquivos. Por padrão, é `False`.
+    input_path (str):
+      Caminho para o arquivo com dados; pode ser pasta ou arquivo
+    dataset_id (str):
+      Nome do dataset no BigQuery
+    table_id (str):
+      Nome da tabela no BigQuery
+    dump_mode (str?):
+      Como criar os dados: `"append"` não apaga dados existentes, `"replace"` substitui
+      tudo que existia. Por padrão, é `"append"`.
+    delete_mode (str?):
+      `"all"` apaga tanto a tabela externa (`_staging`) quanto a materializada;
+      `"staging"` apaga somente a tabela externa. Por padrão, é `"staging"`.
+    source_format (str?):
+      Formato dos dados (`"csv"` ou `"parquet"`). Por padrão, é `"csv"`.
+    csv_delimiter (str?):
+      Separador usado no arquivo CSV. Por padrão, é `";"`.
+    if_storage_data_exists (str?):
+      O que fazer se o dado já existir no GCS: `"raise"` dispara erro de conflito;
+      `"replace"` substitui o dado; `"pass"` não faz nada. Por padrão, é `"replace"`.
+    biglake_table (bool?):
+      Se a tabela é BigLake – i.e. permite consultas mesmo sem ser materializada.
+      Por padrão, é `True`.
+    dataset_is_public (bool?):
+      Se o dataset é público. Por padrão, é `False`.
+    exception_on_missing_input_file (bool?):
+      Se deve disparar um `FileNotFoundError` caso `input_path` seja string vazia ou
+      uma pasta sem arquivos. Por padrão, é `False`.
   """
   if input_path == "":
     log("`input_path` vazio; nada para fazer upload", level="warning")
@@ -181,33 +204,33 @@ def upload_to_datalake_task(
   cria ou adiciona dados a uma tabela do BigQuery.
 
   Args:
-          input_path (str):
-                  Caminho para o arquivo com dados; pode ser pasta ou arquivo
-          dataset_id (str):
-                  Nome do dataset no BigQuery
-          table_id (str):
-                  Nome da tabela no BigQuery
-          dump_mode (str?):
-                  Como criar os dados: `"append"` não apaga dados existentes, `"replace"` substitui
-                  tudo que existia. Por padrão, é `"append"`.
-          delete_mode (str?):
-                  `"all"` apaga tanto a tabela externa (`_staging`) quanto a materializada;
-                  `"staging"` apaga somente a tabela externa. Por padrão, é `"staging"`.
-          source_format (str?):
-                  Formato dos dados (`"csv"` ou `"parquet"`). Por padrão, é `"csv"`.
-          csv_delimiter (str?):
-                  Separador usado no arquivo CSV. Por padrão, é `";"`.
-          if_storage_data_exists (str?):
-                  O que fazer se o dado já existir no GCS: `"raise"` dispara erro de conflito;
-                  `"replace"` substitui o dado; `"pass"` não faz nada. Por padrão, é `"replace"`.
-          biglake_table (bool?):
-                  Se a tabela é BigLake – i.e. permite consultas mesmo sem ser materializada.
-                  Por padrão, é `True`.
-          dataset_is_public (bool?):
-                  Se o dataset é público. Por padrão, é `False`.
-          exception_on_missing_input_file (bool?):
-                  Se deve disparar um `FileNotFoundError` caso `input_path` seja string vazia ou
-                  uma pasta sem arquivos. Por padrão, é `False`.
+    input_path (str):
+      Caminho para o arquivo com dados; pode ser pasta ou arquivo
+    dataset_id (str):
+      Nome do dataset no BigQuery
+    table_id (str):
+      Nome da tabela no BigQuery
+    dump_mode (str?):
+      Como criar os dados: `"append"` não apaga dados existentes, `"replace"` substitui
+      tudo que existia. Por padrão, é `"append"`.
+    delete_mode (str?):
+      `"all"` apaga tanto a tabela externa (`_staging`) quanto a materializada;
+      `"staging"` apaga somente a tabela externa. Por padrão, é `"staging"`.
+    source_format (str?):
+      Formato dos dados (`"csv"` ou `"parquet"`). Por padrão, é `"csv"`.
+    csv_delimiter (str?):
+      Separador usado no arquivo CSV. Por padrão, é `";"`.
+    if_storage_data_exists (str?):
+      O que fazer se o dado já existir no GCS: `"raise"` dispara erro de conflito;
+      `"replace"` substitui o dado; `"pass"` não faz nada. Por padrão, é `"replace"`.
+    biglake_table (bool?):
+      Se a tabela é BigLake – i.e. permite consultas mesmo sem ser materializada.
+      Por padrão, é `True`.
+    dataset_is_public (bool?):
+      Se o dataset é público. Por padrão, é `False`.
+    exception_on_missing_input_file (bool?):
+      Se deve disparar um `FileNotFoundError` caso `input_path` seja string vazia ou
+      uma pasta sem arquivos. Por padrão, é `False`.
   """
   return upload_to_datalake(
     input_path=input_path,
@@ -251,9 +274,7 @@ def create_date_partitions(
     if file_format == "csv":
       dataframe.to_csv(file_folder, index=False, sep=csv_delimiter)
     elif file_format == "parquet":
-      # FIXME
-      # safe_export_df_to_parquet.run(df=dataframe, output_path=file_folder)
-      raise NotImplementedError("`safe_export_df_to_parquet` ainda não foi implementado")
+      safe_df_to_parquet(df=dataframe, output_path=file_folder)
 
   return root_folder
 
@@ -270,36 +291,36 @@ def upload_df_to_datalake(
   dataset_is_public: bool = False,
 ):
   """
-  Faz upload de um DataFrame como tabela no BigQuery, com opção de coluna de partição
-  por data
+  Faz upload de um DataFrame como tabela no BigQuery, com opção de
+  coluna de partição por data.
   Args:
-          df(pd.DataFrame):
-                  O DataFrame com dados que virará uma tabela
-          dataset_id(str):
-                  Nome do dataset que conterá a tabela ("project.{dataset}.table")
-          table_id(str):
-                  Nome da tabela a ser criada ("project.dataset.{table}")
-          dump_mode(str?):
-                  Modo de criação da tabela em caso de existência prévia: `"replace"`
-                  (padrão) substitui os dados anteriores; `"append"` adiciona
-                  os dados ao final dos já existentes
-          source_format(str?):
-                  Formato dos dados que serão salvos no GCS, na camada _staging;
-                  por padrão, é `"csv"`, mas também pode ser `"parquet"`. CSVs são
-                  melhores caso o arquivo original queira ser baixado e compartilhado;
-                  Parquets são melhores caso a intenção seja fazer consultas na tabela
-                  externa, 'BigLake'
-          biglake_table(bool?):
-                  Se deve ou não criar uma tabela externa no BigQuery; por padrão,
-                  é `True`
-          csv_delimiter(str?):
-                  Delimitador de campos no caso de `source_format="csv"`; por padrão,
-                  é `;`. Só importa se você pretende compartilhar os CSVs originais
-          date_partition_column(str?):
-                  Nome da coluna de particionamento por data; normalmente algo
-                  como `"data_particao"`. Por padrão, nenhuma (`None`)
-          dataset_is_public(bool?):
-                  Flag de dataset público; por padrão, `False`
+    df(pd.DataFrame):
+      O DataFrame com dados que virará uma tabela
+    dataset_id(str):
+      Nome do dataset que conterá a tabela ("project.{dataset}.table")
+    table_id(str):
+      Nome da tabela a ser criada ("project.dataset.{table}")
+    dump_mode(str?):
+      Modo de criação da tabela em caso de existência prévia: `"replace"`
+      (padrão) substitui os dados anteriores; `"append"` adiciona
+      os dados ao final dos já existentes
+    source_format(str?):
+      Formato dos dados que serão salvos no GCS, na camada _staging;
+      por padrão, é `"csv"`, mas também pode ser `"parquet"`. CSVs são
+      melhores caso o arquivo original queira ser baixado e compartilhado;
+      Parquets são melhores caso a intenção seja fazer consultas na tabela
+      externa, 'BigLake'
+    biglake_table(bool?):
+      Se deve ou não criar uma tabela externa no BigQuery; por padrão,
+      é `True`
+    csv_delimiter(str?):
+      Delimitador de campos no caso de `source_format="csv"`; por padrão,
+      é `;`. Só importa se você pretende compartilhar os CSVs originais
+    date_partition_column(str?):
+      Nome da coluna de particionamento por data; normalmente algo
+      como `"data_particao"`. Por padrão, nenhuma (`None`)
+    dataset_is_public(bool?):
+      Flag de dataset público; por padrão, `False`
   """
   if df.empty:
     log(
@@ -328,9 +349,7 @@ def upload_df_to_datalake(
     if source_format == "csv":
       df.to_csv(file_path, index=False, sep=csv_delimiter)
     elif source_format == "parquet":
-      # FIXME
-      # safe_export_df_to_parquet.run(df=df, output_path=file_path)
-      raise NotImplementedError("`safe_export_df_to_parquet` ainda não foi implementado")
+      safe_df_to_parquet(df=df, output_path=file_path)
 
   log(f"Fazendo upload de dados em '{root_folder}'")
   upload_to_datalake(
