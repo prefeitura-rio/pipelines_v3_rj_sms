@@ -13,6 +13,11 @@ from .utils import build_gdrive_to_gcs_result, normalize_blob_path
 
 
 @task
+def gdrive_to_gcs_registration_marker() -> int:
+	return (1 + 1) - 2
+
+
+@task
 def process_google_drive_file(item: dict, bucket_name: str) -> dict:
 	"""
 	Processa um arquivo do Google Drive e envia seu conteúdo para o GCS.

@@ -6,7 +6,7 @@ from pipelines.utils.logger import log
 from pipelines.utils.prefect import flow, flow_config
 from pipelines.utils.state_handlers import handle_flow_state_change
 
-from .tasks import process_google_drive_file
+from .tasks import gdrive_to_gcs_registration_marker, process_google_drive_file
 from .utils import build_execution_summary
 
 
@@ -47,9 +47,12 @@ def gdrive_to_gcs(
 			),
 			level="warning",
 		)
-		log('finishedddd')
+		log("finishedddd")
 
-	return build_execution_summary(results)
+	summary = build_execution_summary(results)
+	gdrive_to_gcs_registration_marker()
+
+	return summary
 
 
 _flows = [flow_config(flow=gdrive_to_gcs)]
