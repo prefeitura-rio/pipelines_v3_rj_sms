@@ -11,7 +11,7 @@ from .utils import build_execution_summary
 
 
 @flow(
-	name="Migrate - Google Drive to GCS",
+	name="Migrate - Google Drive to GCS Test",
 	state_handlers=[handle_flow_state_change],
 	owners=[global_consts.CIT_ID.value],
 	description="Lista arquivos do Google Drive e faz upload para o GCS",
