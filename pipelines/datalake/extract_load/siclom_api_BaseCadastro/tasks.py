@@ -69,6 +69,7 @@ def get_siclom_period_data(
 
   data = response.json()["resultado"]
   df = DataFrame(data)
+  df.columns = [str(c).lower().replace(' ', '_').replace('.', '_') if c else f'coluna_{i}' for i, c in enumerate(df.columns)]
   df["extracted_at"] = now_str()
   log("✅ Extração realizada com sucesso!")
   return df
@@ -94,12 +95,25 @@ def get_siclom_cadastro_data(base_url: str, endpoint: str, api_key: str, period:
             data = response.json()["resultado"]
             df = DataFrame(data)
             df["extracted_at"] = now_str()
-
+            #drop coluna 19 vazia
+            df = df.drop(columns=["coluna_19"])
+            df = df.drop_duplicates(ignore_index=True)
             log("✅ Extração realizada com sucesso!")
             return df
         else:
             return DataFrame()
     else:
+        data = response.json()["resultado"]
+        df = DataFrame(data)
+        #df.columns = [c.lower().replace(' ', '_').replace('.', '_') if c else f'coluna_{i}' for i, c in enumerate(df.columns)]
+        #df.columns = [str(c).lower().replace(' ', '_').replace('.', '_') if c else f'coluna_{i}' for i, c in enumerate(df.columns)]
+        df["extracted_at"] = now_str()
+        #drop coluna 19 vazia
+        df = df.drop(columns=["coluna_19"])
+        df = df.drop_duplicates(ignore_index=True)
+        log("✅ Extração realizada com sucesso!")
+        return df
+        '''
         payload = response.json()
         if "resultado" not in payload:
             log("Nenhum dado retornado para o período solicitado.")
@@ -126,3 +140,4 @@ def get_siclom_cadastro_data(base_url: str, endpoint: str, api_key: str, period:
     df = DataFrame(extracted_data)
     df["extracted_at"] = now_str()
     return df
+'''
