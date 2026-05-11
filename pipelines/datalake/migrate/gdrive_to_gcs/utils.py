@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from pipelines.utils.logger import log
 
 
 def normalize_blob_path(*parts: str) -> str:
@@ -68,13 +69,37 @@ def build_execution_summary(items: list[dict]) -> dict:
       "error_detail": item.get("error_detail"),
     }
     for item in items
-    if item.get("status") == "failed"
+    if item.get("status") != "success"
   ]
 
-  return {
+  summary = {
     "total_files_found": len(items),
     "total_successful": sum(1 for item in items if item["status"] == "success"),
-    "total_failed": sum(1 for item in items if item["status"] == "failed"),
+    "total_failed": len(failed_items),
     "failed_items": failed_items,
     "items": items,
   }
+
+  if failed_items:
+    failed_items_log = "\n".join(
+      (
+        "- "
+        f"{item.get('relative_path') or item.get('source_file_name') or '<sem nome>'} "
+        f"(id={item.get('source_file_id') or '<sem id>'}) "
+        f"erro={item.get('error_detail') or '<sem detalhe>'}"
+      )
+      for item in failed_items
+    )
+    log(
+      "Arquivos sem sucesso no gdrive_to_gcs:\n"
+      f"Total: {summary['total_failed']}/{summary['total_files_found']}\n"
+      f"{failed_items_log}",
+      level="warning",
+    )
+  else:
+    log(
+      "Todos os arquivos do gdrive_to_gcs foram processados com sucesso "
+      f"({summary['total_successful']}/{summary['total_files_found']})"
+    )
+
+  return summary
