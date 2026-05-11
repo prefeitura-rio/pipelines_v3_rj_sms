@@ -47,7 +47,7 @@ def gdrive_to_gcs(
 			),
 			level="warning",
 		)
-		log('finished')
+		log('finishedddd')
 
 	return build_execution_summary(results)
 

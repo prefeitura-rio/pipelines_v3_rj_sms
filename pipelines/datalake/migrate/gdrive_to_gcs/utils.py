@@ -20,7 +20,7 @@ def build_gdrive_to_gcs_result(
 	status: str,
 	error_detail: str = None,
 	uploaded_paths: list = None,
-	inner_file_paths: list = None,
+	inner_file_paths: list = None
 ) -> dict:
 	"""
 	Monta o resultado do processamento de um arquivo do Drive.
