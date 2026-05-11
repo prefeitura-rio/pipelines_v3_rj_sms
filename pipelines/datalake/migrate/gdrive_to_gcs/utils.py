@@ -60,9 +60,21 @@ def build_execution_summary(items: list[dict]) -> dict:
   Returns:
           dict: Resumo com totais e lista de itens.
   """
+  failed_items = [
+    {
+      "source_file_id": item.get("source_file_id"),
+      "source_file_name": item.get("source_file_name"),
+      "relative_path": item.get("relative_path"),
+      "error_detail": item.get("error_detail"),
+    }
+    for item in items
+    if item.get("status") == "failed"
+  ]
+
   return {
     "total_files_found": len(items),
     "total_successful": sum(1 for item in items if item["status"] == "success"),
     "total_failed": sum(1 for item in items if item["status"] == "failed"),
+    "failed_items": failed_items,
     "items": items,
   }
