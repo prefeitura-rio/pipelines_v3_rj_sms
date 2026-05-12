@@ -33,8 +33,9 @@ def clone_bigquery(
     destination_dataset_name (str):
       Nome do dataset de destino
     dbt_select_exp (str?):
-      Expressão de `--select` do dbt para ser executada após
-      a clonagem das tabelas. Cria uma nova flow run de dbt.
+      Expressão a ser usada após um `--select` de dbt. Se presente,
+      é executada após a clonagem das tabelas.
+      Cria uma nova flow run de dbt.
     environment: (str?):
       Ambiente de execução; "dev" por padrão.
   """
@@ -63,7 +64,7 @@ def clone_bigquery(
         "rename_flow": True,
         "send_discord_report": False,
       },
-      upstream_tasks=[clone_table_task],
+      wait_for=[clone_table_task],
     )
 
 
