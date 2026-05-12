@@ -6,6 +6,7 @@ import unicodedata
 
 from prefect import Task, get_client
 from prefect.context import FlowRunContext
+from prefect.deployments import run_deployment
 from prefect.flows import Flow as OriginalFlow, FlowDecorator as OriginalFlowDecorator
 from prefect.schedules import Schedule
 
@@ -282,3 +283,28 @@ def as_task(function, args: list = None, kwargs: dict = None):
   kwargs = dict() if not kwargs else kwargs
 
   return function(*args, **kwargs)
+
+
+@authenticated_task
+def create_flow_run(
+  flow_name, parameters: dict = None, wait: bool = False, environment: str = "dev"
+):
+  """
+  Cria uma nova flow run de um determinado flow.
+  Args
+    flow_name(str):
+      Nome do flow, especificado em `@flow(name=...)`
+    parameters(dict):
+      Parâmetros do flow.
+    wait(bool):
+      Se deve esperar o flow terminar, ou retornar imediatamente.
+    environment(str):
+      Ambiente de execução; se "prod", executa o deployment em
+      produção; se "dev", executa o deployment em staging.
+  """
+  deployment_name = f"{flow_name}/{flow_name}" + (
+    "" if environment == "prod" else " (stg)"
+  )
+  run_deployment(
+    name=deployment_name, parameters=parameters, timeout=(0 if wait else None)
+  )
