@@ -6,7 +6,7 @@ import unicodedata
 
 from prefect import Task, get_client
 from prefect.context import FlowRunContext
-from prefect.deployments import run_deployment
+from prefect.deployments.flow_runs import run_deployment
 from prefect.flows import Flow as OriginalFlow, FlowDecorator as OriginalFlowDecorator
 from prefect.schedules import Schedule
 
