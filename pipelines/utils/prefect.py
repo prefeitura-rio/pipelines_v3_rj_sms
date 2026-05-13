@@ -161,7 +161,7 @@ def create_flow_run(
   deployment_name = f"{flow_name}/{flow_name}" + (
     "" if environment == "prod" else " (stg)"
   )
-  log(f"Requisitando execução de flow '{deployment_name}'...")
+  log(f"[create_flow_run] Requisitando execução de flow '{deployment_name}'...")
   flow_run = run_deployment(
     name=deployment_name,
     parameters=parameters,
@@ -169,7 +169,9 @@ def create_flow_run(
     as_subflow=False,  # tenho recebido erro 422 sem isso aqui --Avellar
   )
   base_url = get_prefect_url()
-  log(f"Flow run criada; confira em: {base_url}/runs/flow-run/{flow_run.id}")
+  log(
+    f"[create_flow_run] Flow run criada; confira em: {base_url}/runs/flow-run/{flow_run.id}"
+  )
 
 
 @authenticated_task
