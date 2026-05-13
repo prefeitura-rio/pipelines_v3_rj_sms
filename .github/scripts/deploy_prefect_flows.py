@@ -205,10 +205,10 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
     #  6 vCPU | 4 - 24 GiB
     #  8 vCPU | 4 - 32 GiB
     infra_map = {
-			"small":  { "memory":  "4Gi", "cpu": "1" },
-			"medium": { "memory": "16Gi", "cpu": "4" },
-			"large":  { "memory": "24Gi", "cpu": "6" },
-		}  # fmt: skip
+      "small":  { "memory":  "4Gi", "cpu": "1" },
+      "medium": { "memory": "16Gi", "cpu": "4" },
+      "large":  { "memory": "24Gi", "cpu": "6" },
+    }  # fmt: skip
     infra = infra_map.get(memory_label)
     if not infra:
       logging.warning(f"Requisição de memória '{memory_label}' desconhecida!")

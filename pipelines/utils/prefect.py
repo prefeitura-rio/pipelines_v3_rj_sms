@@ -10,7 +10,7 @@ from prefect.deployments.flow_runs import run_deployment
 from prefect.flows import Flow as OriginalFlow, FlowDecorator as OriginalFlowDecorator
 from prefect.schedules import Schedule
 
-from pipelines.utils.env import get_current_environment, is_dev_run
+from pipelines.utils.env import get_current_environment, get_prefect_url, is_dev_run
 from pipelines.utils.infisical import inject_bd_credentials
 from pipelines.utils.logger import log
 
@@ -161,12 +161,15 @@ def create_flow_run(
   deployment_name = f"{flow_name}/{flow_name}" + (
     "" if environment == "prod" else " (stg)"
   )
-  run_deployment(
+  log(f"Requisitando execução de flow '{deployment_name}'...")
+  flow_run = run_deployment(
     name=deployment_name,
     parameters=parameters,
     timeout=(0 if not wait else None),
-    as_subflow=False,
+    as_subflow=False,  # tenho recebido erro 422 sem isso aqui --Avellar
   )
+  base_url = get_prefect_url()
+  log(f"Flow run criada; confira em: {base_url}/runs/flow-run/{flow_run.flow_id}")
 
 
 @authenticated_task

@@ -105,20 +105,20 @@ def jsonify_dataframe(
   essa função se você precisa acessar algum valor original posteriormente.
 
   Args:
-          df (pd.DataFrame):
-                  Dataframe original.
-          keep_columns (List[str] | str?):
-                  Lista opcional de nomes de colunas para não incluir no JSON.
-                  Se não especificado, o dataframe resultante terá uma única
-                  coluna, `json`. Se a string `"s"` é passada ao invés de uma lista,
-                  isso será equivalente a `keep_columns=["s"]`. Se todas as
-                  colunas do dataframe original estiverem na lista passada para
-                  `keep_columns`, uma coluna `"json"` de strings vazias será
-                  adicionada ao dataframe.
+    df (pd.DataFrame):
+      Dataframe original.
+    keep_columns (List[str] | str?):
+      Lista opcional de nomes de colunas para não incluir no JSON.
+      Se não especificado, o dataframe resultante terá uma única
+      coluna, `json`. Se a string `"s"` é passada ao invés de uma lista,
+      isso será equivalente a `keep_columns=["s"]`. Se todas as
+      colunas do dataframe original estiverem na lista passada para
+      `keep_columns`, uma coluna `"json"` de strings vazias será
+      adicionada ao dataframe.
 
   Returns:
-          df (DataFrame):
-                  Modified dataframe.
+    df (DataFrame):
+      Modified dataframe.
 
   Exemplo de uso:
   >>> a = pd.DataFrame({'col1': [1, 2, 3], 'col2': [4, 5, 6], 'col3': [7, 8, 9]})

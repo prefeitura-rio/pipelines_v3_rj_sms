@@ -117,12 +117,12 @@ def fdb2csv(input_file: str, output_dir: str):
       # Lista todas as tabelas na database
       # [Ref] https://ib-aid.com/download/docs/firebird-language-reference-2.5/fblangref-appx04-relations.html
       cur.execute("""
-			SELECT RDB$RELATION_NAME
-			FROM RDB$RELATIONS
-			WHERE (RDB$SYSTEM_FLAG IS NULL OR RDB$SYSTEM_FLAG = 0)
-				AND RDB$VIEW_BLR IS NULL
-			ORDER BY RDB$RELATION_NAME
-			""")
+      SELECT RDB$RELATION_NAME
+      FROM RDB$RELATIONS
+      WHERE (RDB$SYSTEM_FLAG IS NULL OR RDB$SYSTEM_FLAG = 0)
+        AND RDB$VIEW_BLR IS NULL
+      ORDER BY RDB$RELATION_NAME
+      """)
 
       tables = [row[0].strip() for row in cur.fetchall()]
       log(f"Encontrada(s) {len(tables)} tabela(s)")

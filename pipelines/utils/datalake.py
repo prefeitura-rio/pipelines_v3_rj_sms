@@ -370,33 +370,33 @@ def upload_df_to_datalake_task(
   Faz upload de um DataFrame como tabela no BigQuery, com opção de coluna de partição
   por data
   Args:
-          df(pd.DataFrame):
-                  O DataFrame com dados que virará uma tabela
-          dataset_id(str):
-                  Nome do dataset que conterá a tabela ("project.{dataset}.table")
-          table_id(str):
-                  Nome da tabela a ser criada ("project.dataset.{table}")
-          dump_mode(str?):
-                  Modo de criação da tabela em caso de existência prévia: `"replace"`
-                  (padrão) substitui os dados anteriores; `"append"` adiciona
-                  os dados ao final dos já existentes
-          source_format(str?):
-                  Formato dos dados que serão salvos no GCS, na camada _staging;
-                  por padrão, é `"csv"`, mas também pode ser `"parquet"`. CSVs são
-                  melhores caso o arquivo original queira ser baixado e compartilhado;
-                  Parquets são melhores caso a intenção seja fazer consultas na tabela
-                  externa, 'BigLake'
-          biglake_table(bool?):
-                  Se deve ou não criar uma tabela externa no BigQuery; por padrão,
-                  é `True`
-          csv_delimiter(str?):
-                  Delimitador de campos no caso de `source_format="csv"`; por padrão,
-                  é `;`. Só importa se você pretende compartilhar os CSVs originais
-          date_partition_column(str?):
-                  Nome da coluna de particionamento por data; normalmente algo
-                  como `"data_particao"`. Por padrão, nenhuma (`None`)
-          dataset_is_public(bool?):
-                  Flag de dataset público; por padrão, `False`
+    df(pd.DataFrame):
+      O DataFrame com dados que virará uma tabela
+    dataset_id(str):
+      Nome do dataset que conterá a tabela ("project.{dataset}.table")
+    table_id(str):
+      Nome da tabela a ser criada ("project.dataset.{table}")
+    dump_mode(str?):
+      Modo de criação da tabela em caso de existência prévia: `"replace"`
+      (padrão) substitui os dados anteriores; `"append"` adiciona
+      os dados ao final dos já existentes
+    source_format(str?):
+      Formato dos dados que serão salvos no GCS, na camada _staging;
+      por padrão, é `"csv"`, mas também pode ser `"parquet"`. CSVs são
+      melhores caso o arquivo original queira ser baixado e compartilhado;
+      Parquets são melhores caso a intenção seja fazer consultas na tabela
+      externa, 'BigLake'
+    biglake_table(bool?):
+      Se deve ou não criar uma tabela externa no BigQuery; por padrão,
+      é `True`
+    csv_delimiter(str?):
+      Delimitador de campos no caso de `source_format="csv"`; por padrão,
+      é `;`. Só importa se você pretende compartilhar os CSVs originais
+    date_partition_column(str?):
+      Nome da coluna de particionamento por data; normalmente algo
+      como `"data_particao"`. Por padrão, nenhuma (`None`)
+    dataset_is_public(bool?):
+      Flag de dataset público; por padrão, `False`
   """
   return upload_df_to_datalake(
     df=df,
