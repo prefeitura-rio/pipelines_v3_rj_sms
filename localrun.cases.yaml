@@ -41,6 +41,15 @@ cases:
       dataset_id: brutos_sheets
       # table_id: ...
       rename_flow: true
+  
+  # Extração Google Sheets (URL) -> tabela staging
+  - case_slug: "1746_web"
+    flow_path: "pipelines.datalake.extract_load.1746_web.flows"
+    flow_name: "extract_1746_web"
+    params:
+      environment: dev
+      target_date: today
+      rename_flow: true
 
   # Extração de DBC/DBF (GCS) -> CSV (GCS)
   - case_slug: "datalake-extract-dbc"
