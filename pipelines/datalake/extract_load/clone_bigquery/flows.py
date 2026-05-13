@@ -10,9 +10,9 @@ from .tasks import clone_bigquery_table
 
 @flow(
   name="DataLake - Extração e Carga de Dados - Clonagem de BigQuery",
+  description="Clona dataset de projeto externo no BigQuery para o nosso datalake",
   state_handlers=[handle_flow_state_change],
   owners=[global_consts.CIT_ID.value],
-  description="Clona dataset de projeto externo no BigQuery para o nosso datalake",
 )
 def clone_bigquery(
   source_project_name: str,  # ex. "rj-smfp"
@@ -44,7 +44,9 @@ def clone_bigquery(
     new_name=f"Cloning dataset '{source_project_name}.{source_dataset_name}' into '{bigquery_project}'"
   )
 
-  clone_table_task = clone_bigquery_table(
+  # Sem .submit(), em teoria essa chamada é bloqueante
+  # então só segue pro `if` abaixo quando termina
+  clone_bigquery_table(
     source_project_name=source_project_name,
     source_dataset_name=source_dataset_name,
     source_table_list=source_table_list,
@@ -64,7 +66,6 @@ def clone_bigquery(
         "rename_flow": True,
         "send_discord_report": False,
       },
-      wait_for=[clone_table_task],
     )
 
 
