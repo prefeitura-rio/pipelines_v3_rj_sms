@@ -162,7 +162,10 @@ def create_flow_run(
     "" if environment == "prod" else " (stg)"
   )
   run_deployment(
-    name=deployment_name, parameters=parameters, timeout=(0 if not wait else None)
+    name=deployment_name,
+    parameters=parameters,
+    timeout=(0 if not wait else None),
+    as_subflow=False,
   )
 
 
