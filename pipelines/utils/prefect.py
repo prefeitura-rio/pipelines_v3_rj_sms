@@ -169,7 +169,7 @@ def create_flow_run(
     as_subflow=False,  # tenho recebido erro 422 sem isso aqui --Avellar
   )
   base_url = get_prefect_url()
-  log(f"Flow run criada; confira em: {base_url}/runs/flow-run/{flow_run.flow_id}")
+  log(f"Flow run criada; confira em: {base_url}/runs/flow-run/{flow_run.id}")
 
 
 @authenticated_task
