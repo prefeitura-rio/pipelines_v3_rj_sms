@@ -73,11 +73,11 @@ def create_data_folders_task() -> dict[str, str]:
   apaga seu conteúdo.
 
   Returns:
-          dict: O dicionário:
-          {
-                  "data": "{cwd}/data/raw"
-                  "partition_directory": "{cwd}/data/partition_directory"
-          }
+    dict: O dicionário:
+    {
+      "data": "{cwd}/data/raw"
+      "partition_directory": "{cwd}/data/partition_directory"
+    }
   """
   try:
     path_raw = os.path.join(os.getcwd(), "data", "raw")
@@ -131,13 +131,13 @@ def list_files_in_folder_task(folder: str, endswith: str = None, recursive: bool
   """
   Retorna uma lista com o caminho de arquivos em uma pasta.
   Args:
-          folder(str):
-                  Caminho da pasta
-          endswith(str?):
-                  Filtro pelo final de arquivos; ex. `endswith=".csv"`
-          recursive(bool?):
-                  Quando `recursive=True` é passado, também procura por
-                  arquivos em subpastas
+    folder(str):
+      Caminho da pasta
+    endswith(str?):
+      Filtro pelo final de arquivos; ex. `endswith=".csv"`
+    recursive(bool?):
+      Quando `recursive=True` é passado, também procura por
+      arquivos em subpastas
   """
   return list_files_in_folder(folder, endswith=endswith, recursive=recursive)
 

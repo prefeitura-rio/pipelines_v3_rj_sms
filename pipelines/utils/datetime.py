@@ -17,9 +17,9 @@ def now(utc: bool = False) -> datetime.datetime:
   Retorna datetime.now() ou em BRT (padrão) ou em UTC
 
   Args:
-          utc(bool?):
-                  Se deve usar fuso horário UTC. Por padrão, é `False`,
-                  e usa o fuso BRT (America/Sao_Paulo).
+    utc(bool?):
+      Se deve usar fuso horário UTC. Por padrão, é `False`,
+      e usa o fuso BRT (America/Sao_Paulo).
   """
   if utc:
     return datetime.datetime.now(tz=UTC_TZ)
@@ -47,9 +47,9 @@ def from_relative_date(
   Converte uma data relativa para um objeto de data.
 
   Suporta os formatos:
-          `D-N`: data atual menos `N` dias
-          `M-N`: primeiro dia do mês atual menos `N` meses
-          `Y-N`: primeiro dia do ano atual menos `N` anos
+    `D-N`: data atual menos `N` dias
+    `M-N`: primeiro dia do mês atual menos `N` meses
+    `Y-N`: primeiro dia do ano atual menos `N` anos
 
   Caso o valor não seja uma data relativa, tenta convertê-lo
   para `datetime` via `datetime.fromisoformat()`.

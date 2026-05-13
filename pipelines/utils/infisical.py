@@ -37,14 +37,14 @@ def get_secret(secret_name: str, environment: str = None, path: str = "/") -> di
   Obtém o secret no Infisical com nome e caminho especificados
 
   Args:
-          secret_name (str): Nome do secret
-          environment (str?):
-                  Environment em que se deve buscar o secret. Por padrão, valor da
-                  variável de ambiente `environment`
-          path (str?): Caminho do secret; valor padrão "/"
+    secret_name (str): Nome do secret
+    environment (str?):
+      Environment em que se deve buscar o secret. Por padrão, valor da
+      variável de ambiente `environment`
+    path (str?): Caminho do secret; valor padrão "/"
 
   Returns:
-          str: Valor do secret
+    str: Valor do secret
   """
   client = get_infisical_client()
   environment = environment or get_current_environment()
@@ -64,11 +64,11 @@ def inject_env(secret_name: str, environment: str = None, path: str = "/") -> No
   Carrega secret do Infisical em variável de ambiente de mesmo nome
 
   Args:
-          secret_name (str): Nome do secret
-          environment (str?):
-                  Environment em que se deve buscar o secret. Por padrão, valor da
-                  variável de ambiente `environment`
-          path (str?): Caminho do secret; valor padrão "/"
+    secret_name (str): Nome do secret
+    environment (str?):
+      Environment em que se deve buscar o secret. Por padrão, valor da
+      variável de ambiente `environment`
+    path (str?): Caminho do secret; valor padrão "/"
   """
   secret_value = get_secret(secret_name=secret_name, environment=environment, path=path)
   os.environ[secret_name] = secret_value
@@ -79,14 +79,14 @@ def inject_bd_credentials(environment: str = "dev", force_injection=False) -> No
   Carrega credenciais de Base dos Dados do Infisical em variáveis de ambiente.
 
   Args:
-          environment(str?):
-                  Ambiente do Infiscal onde estão as credenciais, p.ex. "dev"/"prod".
-                  Valor padrão de "dev".
-          force_injection(bool?):
-                  Caso todas as variáveis já estejam carregadas no ambiente, o servidor
-                  do Infisical não é contactado, a não ser que a função receba
-                  `force_injection=True`, situação em que elas são obtidas novamente.
-                  Valor padrão de False.
+    environment(str?):
+      Ambiente do Infiscal onde estão as credenciais, p.ex. "dev"/"prod".
+      Valor padrão de "dev".
+    force_injection(bool?):
+      Caso todas as variáveis já estejam carregadas no ambiente, o servidor
+      do Infisical não é contactado, a não ser que a função receba
+      `force_injection=True`, situação em que elas são obtidas novamente.
+      Valor padrão de False.
 
   """
   # Confere se todas as variáveis já foram obtidas
