@@ -77,9 +77,10 @@ cases:
 
   # Extração SICLOM API - BaseCadastro
   - case_slug: "datalake-extract-siclom-api-base-cadastro"
-    flow_path: "pipelines.datalake.extract_load.siclom_api_BaseCadastro.flows"
-    flow_name: "siclom_api_base_cadastro_extraction"
+    flow_path: "pipelines.datalake.extract_load.siclom_api.flows"
+    flow_name: "siclom_period_extraction"
     params:
+      # environment: prod
       environment: dev
       dataset_id: brutos_siclom_api
       table_id: cadastro

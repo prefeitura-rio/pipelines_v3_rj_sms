@@ -9,6 +9,7 @@ from pipelines.datalake.extract_load.siclom_api.constants import (
 from pipelines.datalake.extract_load.siclom_api.tasks import (
   format_month,
   generate_formatted_months,
+  get_siclom_cadastro_data,
   get_siclom_period_data,
   get_siclom_prep_data,
 )
@@ -18,6 +19,10 @@ from pipelines.utils.prefect import flow, flow_config, rename_flow_run
 from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
+
+
+CADASTRO_ENDPOINT = "/mostraPaciente/"
+PREP_ENDPOINT = "/resultadoprepperiodo/"
 
 
 @flow(
@@ -65,12 +70,16 @@ def siclom_period_extraction(
     formated_month = format_month(month=month, year=year)
 
     # 2 - Faz a requisição na API do SICLOM
-    if endpoint != "/resultadoprepperiodo/":
-      month_data = get_siclom_period_data(
+    if endpoint == PREP_ENDPOINT:
+      month_data = get_siclom_prep_data(
+        base_url=BASE_URL, endpoint=endpoint, api_key=API_KEY, period=formated_month
+      )
+    elif endpoint == CADASTRO_ENDPOINT:
+      month_data = get_siclom_cadastro_data(
         base_url=BASE_URL, endpoint=endpoint, api_key=API_KEY, period=formated_month
       )
     else:
-      month_data = get_siclom_prep_data(
+      month_data = get_siclom_period_data(
         base_url=BASE_URL, endpoint=endpoint, api_key=API_KEY, period=formated_month
       )
 
@@ -94,15 +103,21 @@ def siclom_period_extraction(
     months_data_futures: list[PrefectFuture] = []
     for period in formated_periods:
       rate_limit("um-por-segundo")
-      if endpoint != "/resultadoprepperiodo/":
+      if endpoint == PREP_ENDPOINT:
         months_data_futures.append(
-          get_siclom_period_data.submit(
+          get_siclom_prep_data.submit(
+            base_url=BASE_URL, period=period, endpoint=endpoint, api_key=API_KEY
+          )
+        )
+      elif endpoint == CADASTRO_ENDPOINT:
+        months_data_futures.append(
+          get_siclom_cadastro_data.submit(
             base_url=BASE_URL, period=period, endpoint=endpoint, api_key=API_KEY
           )
         )
       else:
         months_data_futures.append(
-          get_siclom_prep_data.submit(
+          get_siclom_period_data.submit(
             base_url=BASE_URL, period=period, endpoint=endpoint, api_key=API_KEY
           )
         )

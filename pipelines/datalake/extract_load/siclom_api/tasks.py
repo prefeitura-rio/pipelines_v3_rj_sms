@@ -121,3 +121,46 @@ def get_siclom_prep_data(
   df = DataFrame(extracted_data)
   df["extracted_at"] = now_str()
   return df
+
+
+@task
+def get_siclom_cadastro_data(
+  base_url: str, endpoint: str, api_key: str, period: str
+) -> DataFrame:
+  """
+  Faz a requisição para a API do SICLOM utilizando a busca por mês e ano para
+  dados de cadastro de pacientes.
+  """
+  log(f"Buscando dados de cadastro de {period}...")
+
+  headers = {"Accept": "application/json", "X-API-KEY": api_key}
+  url = f"{base_url}{endpoint}{period}?page=1&numItemsPerPage=50"
+  response = GET(url=url, headers=headers, retry_on=[104, 502, 503, 504])
+
+  if not response:
+    url = f"{base_url}{endpoint}{period}"
+    response = GET(url=url, headers=headers, retry_on=[104, 502, 503, 504])
+
+  if not response:
+    log(f"Erro ao requisitar URL '{url}'", level="error")
+    return DataFrame()
+  if response.status_code != 200:
+    log(f"URL '{url}' retornou status '{response.status_code}'", level="error")
+    return DataFrame()
+
+  payload = response.json()
+  if "resultado" not in payload:
+    log("Nenhum dado retornado para o período solicitado.", level="warning")
+    return DataFrame()
+
+  df = DataFrame(payload["resultado"])
+  df.columns = [
+    str(c).strip().lower().replace(" ", "_").replace(".", "_")
+    if str(c).strip()
+    else f"coluna_{i}"
+    for i, c in enumerate(df.columns)
+  ]
+  df["extracted_at"] = now_str()
+  df = df.drop_duplicates(ignore_index=True)
+  log("✅ Extração realizada com sucesso!")
+  return df
