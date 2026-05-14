@@ -3,8 +3,7 @@ from pipelines.utils.schedules import create_schedule_list
 
 weekly_parameters = [
   {
-    # "environment": "prod",
-    "environment": "dev",
+    "environment": "prod",
     "endpoint": "/mostracargacd4periodo/",
     "annual": False,
     "year": None,
@@ -14,8 +13,7 @@ weekly_parameters = [
     "table_id": "carga_cd4",
   },
   {
-    # "environment": "prod",
-    "environment": "dev",
+    "environment": "prod",
     "endpoint": "/mostracargaviralperiodo/",
     "annual": False,
     "year": None,
@@ -25,8 +23,7 @@ weekly_parameters = [
     "table_id": "carga_viral",
   },
   {
-    # "environment": "prod",
-    "environment": "dev",
+    "environment": "prod",
     "endpoint": "/tratamentoperiodo/",
     "annual": False,
     "year": None,
@@ -36,8 +33,7 @@ weekly_parameters = [
     "table_id": "tratamento",
   },
   {
-    # "environment": "prod",
-    "environment": "dev",
+    "environment": "prod",
     "endpoint": "/resultadopepperiodo/",
     "annual": False,
     "year": None,
@@ -47,8 +43,7 @@ weekly_parameters = [
     "table_id": "pep",
   },
   {
-    # "environment": "prod",
-    "environment": "dev",
+    "environment": "prod",
     "endpoint": "/resultadoprepperiodo/",
     "annual": False,
     "year": None,
@@ -61,8 +56,7 @@ weekly_parameters = [
 
 monthly_parameters = [
   {
-    # "environment": "prod",
-    "environment": "dev",
+    "environment": "prod",
     "endpoint": "/mostraPaciente/",
     "annual": False,
     "year": None,

@@ -80,8 +80,7 @@ cases:
     flow_path: "pipelines.datalake.extract_load.siclom_api.flows"
     flow_name: "siclom_period_extraction"
     params:
-      # environment: prod
-      environment: dev
+      environment: prod
       dataset_id: brutos_siclom_api
       table_id: cadastro
       endpoint: /mostraPaciente/
