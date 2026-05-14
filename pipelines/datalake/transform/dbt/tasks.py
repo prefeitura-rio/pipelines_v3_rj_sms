@@ -127,24 +127,24 @@ def estimate_dbt_costs(execution_info: dict, environment: str) -> float:
   query_string = '/* {"app": "dbt",%'
   project_id = get_google_project_for_environment(environment=environment)
   query = f"""
-	SELECT
-		destination_table.project_id as destination_project_id,
-		destination_table.dataset_id as destination_dataset_id,
-		destination_table.table_id as destination_table_id,
-		CASE statement_type
-			WHEN 'SCRIPT'
-				THEN 0
-			WHEN 'CREATE_MODEL'
-				THEN 50 * 6.25 * (total_bytes_billed / 1024 / 1024 / 1024 / 1024)
-			ELSE 6.25 * (total_bytes_billed / 1024 / 1024 / 1024 / 1024)
-		END as cost_in_usd,
-	FROM `{project_id}.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
-	WHERE
-		query like '{query_string}' and
-		creation_time >= '{start_time}' and
-		creation_time <= '{end_time}'
-	ORDER BY creation_time
-	"""
+  SELECT
+    destination_table.project_id as destination_project_id,
+    destination_table.dataset_id as destination_dataset_id,
+    destination_table.table_id as destination_table_id,
+    CASE statement_type
+      WHEN 'SCRIPT'
+        THEN 0
+      WHEN 'CREATE_MODEL'
+        THEN 50 * 6.25 * (total_bytes_billed / 1024 / 1024 / 1024 / 1024)
+      ELSE 6.25 * (total_bytes_billed / 1024 / 1024 / 1024 / 1024)
+    END as cost_in_usd,
+  FROM `{project_id}.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+  WHERE
+    query like '{query_string}' and
+    creation_time >= '{start_time}' and
+    creation_time <= '{end_time}'
+  ORDER BY creation_time
+  """
   client = bigquery.Client()
   query_job = client.query(query)
   results: pd.DataFrame = query_job.result().to_dataframe()
@@ -273,11 +273,11 @@ def get_dbt_target_from_environment(environment: str, requested_target: str = No
   # Nem todo target existe/é permitido
   # https://github.com/prefeitura-rio/queries-rj-sms/blob/master/profiles.yml
   allowed_targets = [
-		"prod",    # rj-sms     (dataset.table)
-		"dev",     # rj-sms-dev (username__dataset.table)
-		"ci",      # rj-sms-dev (dataset.table)
-		"sandbox", # rj-sms-sandbox (dataset.table)
-	]  # fmt: skip
+    "prod",    # rj-sms     (dataset.table)
+    "dev",     # rj-sms-dev (username__dataset.table)
+    "ci",      # rj-sms-dev (dataset.table)
+    "sandbox", # rj-sms-sandbox (dataset.table)
+  ]  # fmt: skip
 
   if requested_target in allowed_targets:
     return requested_target

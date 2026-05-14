@@ -21,24 +21,24 @@ def download_gh_repo(
   Baixa o conteúdo de um repositório no GitHub para uma pasta local.
 
   Args:
-          repo (str):
-                  Nome do repositório no GitHub, no formato "organizacao/repositorio".
-                  Ex.: "prefeitura-rio/queries-rj-sms"
-          branch (str?):
-                  Branch a ser baixada. Por padrão, possui o valor "main".
-          destination_path (str?):
-                  Pasta para onde o código baixado deve ser baixado.
-                  Por padrão, "/tmp/runtime_download_repository".
-          if_destination_exists (str?):
-                  Ação a ser feita se a pasta de destino local já existir.
-                  Recebe valores "delete" (pasta existente deve ser apagada)
-                  ou "raise" (FileExistsError). Valor padrão é "raise".
-          repository_folder (str?):
-                  Pasta no repositório de onde buscar o conteúdo.
-                  Se não for informado, o repositório inteiro é copiado.
+    repo (str):
+      Nome do repositório no GitHub, no formato "organizacao/repositorio".
+      Ex.: "prefeitura-rio/queries-rj-sms"
+    branch (str?):
+      Branch a ser baixada. Por padrão, possui o valor "main".
+    destination_path (str?):
+      Pasta para onde o código baixado deve ser baixado.
+      Por padrão, "/tmp/runtime_download_repository".
+    if_destination_exists (str?):
+      Ação a ser feita se a pasta de destino local já existir.
+      Recebe valores "delete" (pasta existente deve ser apagada)
+      ou "raise" (FileExistsError). Valor padrão é "raise".
+    repository_folder (str?):
+      Pasta no repositório de onde buscar o conteúdo.
+      Se não for informado, o repositório inteiro é copiado.
 
   Returns:
-          path (str): Caminho onde o repositório baixado está.
+    path (str): Caminho onde o repositório baixado está.
   """
   repo_format_matches = re.fullmatch(r"[a-z0-9_\-]+/[a-z0-9_\-]+", repo, re.IGNORECASE)
   if not repo_format_matches:
@@ -113,24 +113,24 @@ def download_gh_repo_task(
   Baixa o conteúdo de um repositório no GitHub para uma pasta local.
 
   Args:
-          repo (str):
-                  Nome do repositório no GitHub, no formato "organizacao/repositorio".
-                  Ex.: "prefeitura-rio/queries-rj-sms"
-          branch (str?):
-                  Branch a ser baixada. Por padrão, possui o valor "main".
-          destination_path (str?):
-                  Pasta para onde o código baixado deve ser baixado.
-                  Por padrão, "/tmp/runtime_download_repository".
-          if_destination_exists (str?):
-                  Ação a ser feita se a pasta de destino local já existir.
-                  Recebe valores "delete" (pasta existente deve ser apagada)
-                  ou "raise" (FileExistsError). Valor padrão é "raise".
-          repository_folder (str?):
-                  Pasta no repositório de onde buscar o conteúdo.
-                  Se não for informado, o repositório inteiro é copiado.
+    repo (str):
+      Nome do repositório no GitHub, no formato "organizacao/repositorio".
+      Ex.: "prefeitura-rio/queries-rj-sms"
+    branch (str?):
+      Branch a ser baixada. Por padrão, possui o valor "main".
+    destination_path (str?):
+      Pasta para onde o código baixado deve ser baixado.
+      Por padrão, "/tmp/runtime_download_repository".
+    if_destination_exists (str?):
+      Ação a ser feita se a pasta de destino local já existir.
+      Recebe valores "delete" (pasta existente deve ser apagada)
+      ou "raise" (FileExistsError). Valor padrão é "raise".
+    repository_folder (str?):
+      Pasta no repositório de onde buscar o conteúdo.
+      Se não for informado, o repositório inteiro é copiado.
 
   Returns:
-          path (str): Caminho onde o repositório baixado está.
+    path (str): Caminho onde o repositório baixado está.
   """
   return download_gh_repo(
     repo,

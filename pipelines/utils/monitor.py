@@ -24,14 +24,14 @@ async def send_discord_webhook(
   é necessário definir pelo menos um.
 
   Args:
-          slug(str):
-                  Referência ao canal destino, usada para obter o URL do webhook
-          text_content(str?):
-                  Conteúdo textual da mensagem
-          embed_content(list[Embed]?):
-                  Conteúdo já formatado como `Embed`
-          file_path(str?):
-                  Caminho de arquivo a anexar à mensagem; ex.: arquivo de logs em .txt
+    slug(str):
+      Referência ao canal destino, usada para obter o URL do webhook
+    text_content(str?):
+      Conteúdo textual da mensagem
+    embed_content(list[Embed]?):
+      Conteúdo já formatado como `Embed`
+    file_path(str?):
+      Caminho de arquivo a anexar à mensagem; ex.: arquivo de logs em .txt
   """
   if not slug:
     raise ValueError("É preciso informar um `slug`!")
@@ -66,9 +66,9 @@ async def send_discord_webhook(
       # Código legado, migrei por abundância de caução; acho que
       # a gente nunca nem usa PNG, mas deixo abaixo como referência
       # if file_path.endswith(".png"):
-      # 	embed = Embed()
-      # 	embed.set_image(url=f"attachment://{file_path}")
-      # 	params["embeds"].append(embed)
+      #   embed = Embed()
+      #   embed.set_image(url=f"attachment://{file_path}")
+      #   params["embeds"].append(embed)
 
   async with aiohttp.ClientSession() as session:
     webhook = Webhook.from_url(webhook_url, session=session)
@@ -87,8 +87,8 @@ def send_discord_embed(
   Envia um ou mais Embeds pré-formatados para o Discord
 
   Args:
-          contents(list[Embed]): Conteúdo a ser enviado
-          slug(str): Referência ao canal de destino
+    contents(list[Embed]): Conteúdo a ser enviado
+    slug(str): Referência ao canal de destino
   """
   asyncio.run(send_discord_webhook(slug=slug, embed_content=contents))
 
@@ -105,16 +105,16 @@ def send_discord_message(
   sobre o flow e task que fizeram a requisição
 
   Args:
-          title(str): Título da mensagem, formatado como H2
-          message(str): Conteúdo textual da mensagem
-          slug(str): Referência ao canal de destino
-          multiple_messages_ok(bool):
-                  Flag indicando se, caso a mensagem seja longa demais, ela deve ser
-                  quebrada em várias mensagens distintas. Por padrão, é `False`, e
-                  mensagens longas são truncadas com "...". Somente passe `True` em
-                  flows cujas mensagens são muito relevantes e não muito longas –
-                  p.ex. relatórios do dbt. Caso contrário, envie uma mensagem resumida
-                  no Discord e coloque maiores detalhes nos logs do flow em si.
+    title(str): Título da mensagem, formatado como H2
+    message(str): Conteúdo textual da mensagem
+    slug(str): Referência ao canal de destino
+    multiple_messages_ok(bool):
+      Flag indicando se, caso a mensagem seja longa demais, ela deve ser
+      quebrada em várias mensagens distintas. Por padrão, é `False`, e
+      mensagens longas são truncadas com "...". Somente passe `True` em
+      flows cujas mensagens são muito relevantes e não muito longas –
+      p.ex. relatórios do dbt. Caso contrário, envie uma mensagem resumida
+      no Discord e coloque maiores detalhes nos logs do flow em si.
   """
   environment = get_current_environment()
   prefect_url = get_prefect_url()
