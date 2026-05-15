@@ -454,6 +454,7 @@ def build_postgres_parameters(
     if blob.get("sql") and cnes != "2273349"  # Este CNES não possui base POSTGRES
   ]
 
+
 @task(retries=3, retry_delay_seconds=60)
 def upload_file_to_native_table(
   environment: str, dataset_id: str, file: str, base_type: str, cnes: str
