@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pipelines.constants import constants as global_consts
+from pipelines.constants import CIT
 from pipelines.utils.google import (
   dissect_gcs_uri,
   download_file_from_bucket_task,
@@ -14,7 +14,7 @@ from .tasks import run_conversion
 @flow(
   name="DataLake - Extração e Carga de Dados - DBC e DBF",
   state_handlers=[handle_flow_state_change],
-  owners=[global_consts.AVELLAR_ID.value],
+  owners=[CIT.AVELLAR_ID.value],
   description="Converte arquivos DBC e DBF para CSV a partir de um URI de bucket GCS",
 )
 def extract_dbc(gcs_uri: str, environment: str = "dev"):

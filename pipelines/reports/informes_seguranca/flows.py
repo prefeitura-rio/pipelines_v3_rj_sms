@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import List
 
-from pipelines.constants import constants as global_consts
+from pipelines.constants import CIT
 from pipelines.utils.datalake import get_email_recipients_task
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.prefect import flow, flow_config
@@ -15,7 +15,7 @@ from .tasks import build_email, fetch_cids, send_email
 @flow(
   name="Report: Informes de Segurança",
   state_handlers=[handle_flow_state_change],
-  owners=[global_consts.AVELLAR_ID.value],
+  owners=[CIT.AVELLAR_ID.value],
 )
 def report_informes_seguranca(
   date: str | None = None,

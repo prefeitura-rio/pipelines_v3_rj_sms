@@ -2,7 +2,7 @@
 from prefect.concurrency.sync import rate_limit
 from prefect.futures import wait
 
-from pipelines.constants import constants as global_consts
+from pipelines.constants import CIT
 from pipelines.utils.google import (
   dissect_gcs_uri,
   download_file_from_bucket_task,
@@ -22,7 +22,7 @@ from .tasks import run_conversion, upload_csv_as_table
 @flow(
   name="DataLake - Extração e Carga de Dados - GDB",
   state_handlers=[handle_flow_state_change],
-  owners=[global_consts.AVELLAR_ID.value],
+  owners=[CIT.AVELLAR_ID.value],
   description="Converte arquivos GDB para CSV a partir de um URI de bucket GCS",
 )
 def extract_gdb(
