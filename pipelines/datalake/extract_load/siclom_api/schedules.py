@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from pipelines.utils.schedules import create_schedule_list
 
-flow_parameters = [
+weekly_parameters = [
   {
     "environment": "prod",
     "endpoint": "/mostracargacd4periodo/",
@@ -54,8 +54,28 @@ flow_parameters = [
   },
 ]
 
-schedules = create_schedule_list(
-  parameters_list=flow_parameters,
-  interval="weekly",
-  config={"weekday": "saturday", "hour": 3, "minute": 0},
-)
+monthly_parameters = [
+  {
+    "environment": "prod",
+    "endpoint": "/mostraPaciente/",
+    "annual": False,
+    "year": None,
+    "month": None,
+    "extraction_range": None,
+    "dataset_id": "brutos_siclom_api",
+    "table_id": "cadastro",
+  }
+]
+
+schedules = [
+  *create_schedule_list(
+    parameters_list=weekly_parameters,
+    interval="weekly",
+    config={"weekday": "saturday", "hour": 3, "minute": 0},
+  ),
+  *create_schedule_list(
+    parameters_list=monthly_parameters,
+    interval="monthly",
+    config={"day": 16, "hour": 4, "minute": 30},
+  ),
+]

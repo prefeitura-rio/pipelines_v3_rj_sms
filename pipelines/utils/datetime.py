@@ -37,6 +37,7 @@ def now_str() -> str:
 
 
 def current_year() -> int:
+  """Retorna o ano atual (fuso BRT)"""
   return now().year
 
 
