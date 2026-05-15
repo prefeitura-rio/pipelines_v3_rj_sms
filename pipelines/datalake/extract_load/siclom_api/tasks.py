@@ -43,7 +43,8 @@ def generate_formatted_months(reference_year: str, interval: int) -> list[str]:
   de forma regressiva a partir do ano de referência, seguindo o formato MM/YYYY.
   """
   periods = []
-  reference_year = int(reference_year)  # Ano precisa ser int, e se não for, precisa dar erro mesmo
+  # Ano precisa ser int, e se não for, precisa dar erro mesmo
+  reference_year = int(reference_year)
   for year in range(reference_year, reference_year - interval, -1):
     periods.extend([f"{str(month).zfill(2)}/{year}" for month in range(1, 13)])
   log(periods)
