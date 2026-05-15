@@ -87,6 +87,32 @@ cases:
       # destination_dataset_name: ...
       # dbt_select_exp: ...
 
+  # Extração de tabelas do Postgre do prontuaRio, via backup em blob storage 
+  - case_slug: "prontuaRio_postgres"
+    flow_path: "pipelines.datalake.extract_load.prontua_rio.flows"
+    flow_name: "prontuario_postgres_operator"
+    params:
+      environment: dev
+      cnes: '2269945'
+      blob_path: '2026-05/hospubAF-mai-2269945-sql-07-05-2026-06h01m.tar.gz'
+      folder: '2026-05'
+      bucket_name: 'subhue_backups'
+      dataset: 'brutos_prontuario_prontuaRio_continuo_staging'
+      lines_per_chunk: 1000
+
+  # Extração de tabelas do OpenBase do prontuaRio, via backup em blob storage
+  - case_slug: "prontuaRio_openbase"
+    flow_path: "pipelines.datalake.extract_load.prontua_rio.flows"
+    flow_name: "prontuario_openbase_operator"
+    params:
+      environment: dev
+      cnes: '2269945'
+      blob_path: '2026-05/hospubAF-mai-2269945-openbase-07-05-2026-05h00m.tar.gz'
+      folder: '2026-05'
+      bucket_name: 'subhue_backups'
+      dataset: 'brutos_prontuario_prontuaRio_continuo_staging'
+      lines_per_chunk: 5000
+
 
   ################################
   #  MIGRATE                     #
