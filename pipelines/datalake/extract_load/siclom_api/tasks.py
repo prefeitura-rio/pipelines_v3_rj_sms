@@ -2,6 +2,7 @@
 from pandas import DataFrame, DateOffset
 
 from pipelines.utils.api import GET
+from pipelines.utils.cleanup import cleanup_columns_for_bigquery
 from pipelines.utils.datetime import current_year, now, now_str
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
@@ -156,12 +157,7 @@ def get_siclom_cadastro_data(
     return DataFrame()
 
   df = DataFrame(payload["resultado"])
-  df.columns = [
-    str(c).strip().lower().replace(" ", "_").replace(".", "_")
-    if str(c).strip()
-    else f"coluna_{i}"
-    for i, c in enumerate(df.columns)
-  ]
+  df = cleanup_columns_for_bigquery(df, lowercase=True)
   df["extracted_at"] = now_str()
   df = df.drop_duplicates(ignore_index=True)
   log("✅ Extração realizada com sucesso!")
