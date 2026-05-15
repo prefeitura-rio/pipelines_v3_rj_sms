@@ -7,6 +7,7 @@
       "request": "launch",
       "program": "localrun.py",
       "console": "integratedTerminal",
+      "python": "${workspaceFolder}/.venv/bin/python",
       "justMyCode": false,
       "subProcess": false,
       "env": {
