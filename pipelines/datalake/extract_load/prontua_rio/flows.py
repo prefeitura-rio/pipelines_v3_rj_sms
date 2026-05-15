@@ -93,7 +93,7 @@ def prontuario_openbase_operator(
 
 
 @flow(
-  name="DataLake - Extração e Carga de Dados - ProntuaRio Postgre",
+  name="DataLake - Extração e Carga de Dados - ProntuaRio Postgres",
   state_handlers=[handle_flow_state_change],
   owners=[global_consts.HERIAN_ID.value],
 )
@@ -170,7 +170,6 @@ def prontuario_postgres_operator(
 def prontuario_extraction_manager(
   environment: str = "dev",
   bucket_name: str = "subhue_backups",
-  rename_flow: str = None,
   dataset: str = "brutos_prontuario_prontuaRio_staging",
   folder: str = "",
   chunk_size: int = 1_000,
@@ -206,7 +205,7 @@ def prontuario_extraction_manager(
   # 2.2 Criar as flows runs para Openbase
   for param in openbase_params:
     create_flow_run(
-      flow_name="DataLake - Extração e Carga de Dados - ProntuaRio OpenBase",
+      flow_=prontuario_openbase_operator,
       parameters=param,
       environment=environment
     )
@@ -214,7 +213,7 @@ def prontuario_extraction_manager(
   # 2.3 Criar as flows runs para Postgres
   for param in postgres_params:
     create_flow_run(
-      flow_name="DataLake - Extração e Carga de Dados - ProntuaRio Postgres",
+      flow_=prontuario_postgres_operator,
       parameters=param,
       environment=environment
     )
