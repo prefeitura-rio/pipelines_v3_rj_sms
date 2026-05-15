@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from prefect.futures import wait
 from prefect.concurrency.sync import rate_limit
+from prefect.futures import wait
 
 from pipelines.constants import constants as global_consts
 from pipelines.utils.google import (

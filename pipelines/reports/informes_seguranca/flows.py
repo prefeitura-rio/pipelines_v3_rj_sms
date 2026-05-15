@@ -2,10 +2,10 @@
 from typing import List
 
 from pipelines.constants import constants as global_consts
+from pipelines.utils.datalake import get_email_recipients_task
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.prefect import flow, flow_config
 from pipelines.utils.state_handlers import handle_flow_state_change
-from pipelines.utils.datalake import get_email_recipients_task
 
 from .constants import informes_seguranca_constants
 from .schedules import schedules

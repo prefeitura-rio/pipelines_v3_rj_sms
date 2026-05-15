@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from pipelines.utils.prefect import flow, flow_config, rename_flow_run
-from pipelines.utils.git import download_gh_repo_task
-from pipelines.utils.state_handlers import handle_flow_state_change
 from pipelines.constants import constants as global_consts
+from pipelines.utils.git import download_gh_repo_task
+from pipelines.utils.prefect import flow, flow_config, rename_flow_run
+from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 from .tasks import (

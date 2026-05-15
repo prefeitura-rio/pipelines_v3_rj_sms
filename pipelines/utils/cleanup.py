@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import re
-from typing import List, Optional
 import unicodedata
+from typing import List, Optional
+
 import pandas as pd
 
 

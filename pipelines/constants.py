@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # fmt: off
-from zoneinfo import ZoneInfo
 from enum import Enum
+from zoneinfo import ZoneInfo
 
 
 class constants(Enum):

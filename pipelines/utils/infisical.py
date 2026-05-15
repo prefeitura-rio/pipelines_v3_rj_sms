@@ -4,18 +4,18 @@ import json
 import os
 from typing import List
 
-from .logger import log
+import basedosdados as bd
+from google.oauth2 import service_account
+
+# from infisical import InfisicalClient
+from infisical_sdk import InfisicalSDKClient as InfisicalClient
+
 from .env import (
   get_current_environment,
   get_google_project_for_environment,
   getenv_or_action,
 )
-
-import basedosdados as bd
-
-# from infisical import InfisicalClient
-from infisical_sdk import InfisicalSDKClient as InfisicalClient
-from google.oauth2 import service_account
+from .logger import log
 
 
 def get_project():

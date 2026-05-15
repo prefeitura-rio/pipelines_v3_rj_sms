@@ -20,7 +20,6 @@ from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 
-
 CADASTRO_ENDPOINT = "/mostraPaciente/"
 PREP_ENDPOINT = "/resultadoprepperiodo/"
 

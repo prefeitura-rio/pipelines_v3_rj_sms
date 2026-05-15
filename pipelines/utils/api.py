@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import datetime
-import requests
 
+import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 

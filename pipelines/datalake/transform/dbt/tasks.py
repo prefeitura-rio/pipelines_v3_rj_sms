@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from datetime import datetime
 import os
 import shutil
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
+import pandas as pd
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from google.cloud import bigquery
-import pandas as pd
 from prefect.states import Failed
 
 from pipelines.utils.api import convert_usd_to_brl
@@ -17,10 +17,11 @@ from pipelines.utils.env import environment_is_valid, get_google_project_for_env
 from pipelines.utils.google import download_path_from_bucket, upload_to_cloud_storage
 from pipelines.utils.logger import log
 from pipelines.utils.monitor import send_discord_message
-from pipelines.utils.prefect import authenticated_task as task, get_run_parameters
+from pipelines.utils.prefect import authenticated_task as task
+from pipelines.utils.prefect import get_run_parameters
 
-from .utils import Summarizer, log_to_file, process_dbt_logs
 from .constants import constants as dbt_constants
+from .utils import Summarizer, log_to_file, process_dbt_logs
 
 
 @task
