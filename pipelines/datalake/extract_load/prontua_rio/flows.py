@@ -18,12 +18,7 @@ from pipelines.datalake.extract_load.prontua_rio.tasks import (
   unpack_files,
   generate_current_folder,
 )
-from pipelines.utils.prefect import (
-  flow,
-  flow_config,
-  rename_flow_run,
-  create_flow_run
-)
+from pipelines.utils.prefect import flow, flow_config, rename_flow_run, create_flow_run
 from pipelines.utils.state_handlers import handle_flow_state_change
 from pipelines.utils.logger import log
 from .schedules import schedules
@@ -48,7 +43,7 @@ def prontuario_openbase_operator(
   dataset: str = "brutos_prontuario_prontuaRio_staging",
   lines_per_chunk: int = 5_000,
 ):
-  #rename_flow_run(new_name=f"{folder} - {cnes}")
+  # rename_flow_run(new_name=f"{folder} - {cnes}")
 
   # 1 - Cria diretórios temporários
   create_temp_folders(
@@ -111,8 +106,8 @@ def prontuario_postgres_operator(
   dataset: str = "brutos_prontuario_prontuaRio_staging",
   lines_per_chunk: int = 1_000,
 ):
-  #rename_flow_run(new_name=f"{folder} - {cnes}")
-  
+  # rename_flow_run(new_name=f"{folder} - {cnes}")
+
   # 1 - Cria diretórios temporários
   create_temp_folders(
     folders=[
@@ -149,7 +144,7 @@ def prontuario_postgres_operator(
     environment=environment,
     sql_file="hospub.sql",
     target_tables=prontuario_constants.SELECTED_HOSPUB_TABLES.value,
-    wait_for=unpacked_hospub
+    wait_for=unpacked_hospub,
   )
 
   # 5 - Deletar arquivos e diretórios
@@ -210,11 +205,19 @@ def prontuario_extraction_manager(
 
   # 2.2 Criar as flows runs para Openbase
   for param in openbase_params:
-    prontuario_openbase_operator(**param)
+    create_flow_run(
+      flow_name="DataLake - Extração e Carga de Dados - ProntuaRio OpenBase",
+      parameters=param,
+      environment=environment
+    )
 
   # 2.3 Criar as flows runs para Postgres
   for param in postgres_params:
-    prontuario_postgres_operator(**param)
+    create_flow_run(
+      flow_name="DataLake - Extração e Carga de Dados - ProntuaRio Postgres",
+      parameters=param,
+      environment=environment
+    )
 
 
 _flows = [
