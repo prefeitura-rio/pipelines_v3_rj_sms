@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from enum import Enum
 
-from pipelines.constants import CIT
+from pipelines.constants import CIT, SUBGERAL, SUBPAV
 
 
 class constants(Enum):
@@ -18,6 +18,6 @@ class constants(Enum):
     "karen": CIT.KAREN_ID.value,
     "pedro": CIT.PEDRO_ID.value,
     ## Outros
-    "dayaners": CIT.DAYANE_ID.value,
-    "miloskimatheus": CIT.MILOSKI_ID.value,
+    "dayaners": SUBPAV.DAYANE_ID.value,
+    "miloskimatheus": SUBGERAL.MILOSKI_ID.value,
   }
