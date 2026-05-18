@@ -13,6 +13,7 @@ import pytz
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery, storage
 from pandas.errors import EmptyDataError
+from prefect.concurrency.sync import rate_limit
 
 from pipelines.datalake.extract_load.prontua_rio.constants import (
   constants as prontuario_constants,
@@ -472,7 +473,7 @@ def upload_file_to_native_table(
       base_type (str): Tipo de base (openbase ou postgres)
       cnes (str): CNES da unidade de saúde
   """
-
+  rate_limit("um-por-segundo")
   # Lê e prepara os dados para envio
   data_list = []
   csv.field_size_limit(sys.maxsize)
