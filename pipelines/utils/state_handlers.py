@@ -47,7 +47,7 @@ def handle_flow_state_change(flow: Flow, flow_run: FlowRun, state: State, **kwar
     prefect_url = get_prefect_url()
     message = [
       " ".join([f"<@{owner}>" for owner in flow.get_owners()]),
-      f"> Flow (v3): [{flow_run.name}]({prefect_url}/flow-run/{info['flow_run_id']})",
+      f"> Flow (v3): [{flow_run.name}]({prefect_url}/runs/flow-run/{info['flow_run_id']})",
       "*Parâmetros:*",
     ]
     for key, value in flow_run.parameters.items():
