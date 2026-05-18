@@ -70,10 +70,16 @@ def cloud_function_request(
 
   try:
     response = requests.request(
-      "POST", cloud_function_url, headers=headers, data=json.dumps(payload), timeout=timeout
+      "POST",
+      cloud_function_url,
+      headers=headers,
+      data=json.dumps(payload),
+      timeout=timeout,
     )
     if response.status_code != 200:
-      message = f"[Cloud Function] Request failed: {response.status_code} - {response.reason}"
+      message = (
+        f"[Cloud Function] Request failed: {response.status_code} - {response.reason}"
+      )
       log(message, level="error")
       raise RuntimeError(message)
 

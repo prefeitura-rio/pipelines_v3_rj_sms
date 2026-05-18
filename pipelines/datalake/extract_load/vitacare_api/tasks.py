@@ -36,9 +36,7 @@ def generate_endpoint_params(
     dataset_name="saude_dados_mestres",
     table_name="estabelecimento",
   )[["id_cnes", "area_programatica", "prontuario_versao"]]
-  estabelecimentos = estabelecimentos[
-    estabelecimentos["prontuario_versao"] == "vitacare"
-  ]
+  estabelecimentos = estabelecimentos[estabelecimentos["prontuario_versao"] == "vitacare"]
   estabelecimentos = estabelecimentos.groupby("area_programatica").agg(
     cnes_list=("id_cnes", list)
   )
@@ -231,8 +229,7 @@ def send_email_notification(logs: list, endpoint: str, environment: str, target_
   for _, row in logs_df.iterrows():
     if not row["success"]:
       message += (
-        f"- [{row['ap']}] CNES: {row['cnes']} às {row['datetime']}: "
-        f"`{row['result']}`\n"
+        f"- [{row['ap']}] CNES: {row['cnes']} às {row['datetime']}: `{row['result']}`\n"
       )
 
   target_emails = get_secret(

@@ -217,12 +217,7 @@ def send_email(
   )
   token = get_secret(secret_name="API_TOKEN", path="/datarelay", environment=environment)
 
-  request_body = {
-    **recipients,
-    "subject": subject,
-    "body": message,
-    "is_html_body": True,
-  }
+  request_body = {**recipients, "subject": subject, "body": message, "is_html_body": True}
   endpoint = api_base_url.rstrip("/?#") + "/data/mailman"
   response = requests.request(
     "POST", endpoint, headers={"x-api-key": token}, json=request_body

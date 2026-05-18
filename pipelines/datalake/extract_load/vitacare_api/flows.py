@@ -27,7 +27,7 @@ def vitacare_api(
   environment: str = "dev",
   rename_flow: bool = False,
   target_date: str = "D-1",
-  endpoint: str = None, 
+  endpoint: str = None,
   dataset_id: str = flow_constants.DATASET_ID.value,
   table_id_prefix: str = None,
 ):
@@ -61,7 +61,9 @@ def vitacare_api(
   extracted_data = [
     get_property_from_dict(data=result, key="data") for result in extraction_results
   ]
-  logs = [get_property_from_dict(data=result, key="logs") for result in extraction_results]
+  logs = [
+    get_property_from_dict(data=result, key="logs") for result in extraction_results
+  ]
 
   upload_futures = []
   for df, table_name in zip(extracted_data, table_names):
