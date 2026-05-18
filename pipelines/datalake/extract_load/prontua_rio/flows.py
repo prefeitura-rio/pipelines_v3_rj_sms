@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=C0103
-# flake8: noqa E501
 
-from pipelines.constants import constants as global_consts
+from pipelines.constants import CIT
 from pipelines.datalake.extract_load.prontua_rio.constants import (
   constants as prontuario_constants,
 )
@@ -18,7 +16,6 @@ from pipelines.datalake.extract_load.prontua_rio.tasks import (
   list_files_from_bucket,
   unpack_files,
 )
-from pipelines.utils.logger import log
 from pipelines.utils.prefect import create_flow_run, flow, flow_config, rename_flow_run
 from pipelines.utils.state_handlers import handle_flow_state_change
 
@@ -32,7 +29,7 @@ from .schedules import schedules
 @flow(
   name="DataLake - Extração e Carga de Dados - ProntuaRio OpenBase",
   state_handlers=[handle_flow_state_change],
-  owners=[global_consts.HERIAN_ID.value],
+  owners=[CIT.HERIAN_ID.value],
 )
 def prontuario_openbase_operator(
   cnes: str,
@@ -80,6 +77,7 @@ def prontuario_openbase_operator(
     dataset_id=dataset,
     lines_per_chunk=lines_per_chunk,
     tables_to_extract=prontuario_constants.SELECTED_OPENBASE_TABLES.value,
+    wait_for=unpacked_openbase,
   )
 
   # 5 - Deletar arquivos e diretórios
@@ -95,7 +93,7 @@ def prontuario_openbase_operator(
 @flow(
   name="DataLake - Extração e Carga de Dados - ProntuaRio Postgres",
   state_handlers=[handle_flow_state_change],
-  owners=[global_consts.HERIAN_ID.value],
+  owners=[CIT.HERIAN_ID.value],
 )
 def prontuario_postgres_operator(
   cnes: str,
@@ -165,7 +163,7 @@ def prontuario_postgres_operator(
 @flow(
   name="DataLake - Extração e Carga de Dados - ProntuaRio Backups (MANAGER)",
   state_handlers=[handle_flow_state_change],
-  owners=[global_consts.HERIAN_ID.value],
+  owners=[CIT.HERIAN_ID.value],
 )
 def prontuario_extraction_manager(
   environment: str = "dev",
