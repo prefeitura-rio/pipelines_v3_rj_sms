@@ -13,6 +13,7 @@ import requests
 from google.oauth2 import service_account
 from google.auth.transport import requests as google_requests
 from google.cloud import storage
+from google.cloud import bigquery
 from google.cloud.storage.blob import Blob
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
@@ -202,6 +203,21 @@ def download_file_from_bucket_task(gcs_uri: str):
   URI 'gs://...' para um arquivo local, e retorna seu caminho
   """
   return download_file_from_bucket(gcs_uri)
+
+
+@task
+def load_file_from_bigquery(
+  project_name: str, dataset_name: str, table_name: str, environment: str = "dev"
+) -> pd.DataFrame:
+  """
+  Carrega uma tabela do BigQuery em DataFrame.
+  """
+  log(f"[Ignore] Using Parameter to avoid Warnings: {environment}")
+  client = bigquery.Client()
+  dataset_ref = bigquery.DatasetReference(project_name, dataset_name)
+  table_ref = dataset_ref.table(table_name)
+  table = client.get_table(table_ref)
+  return client.list_rows(table).to_dataframe()
 
 
 def upload_to_cloud_storage(

@@ -251,11 +251,23 @@ def create_date_partitions(
     if file_format == "csv":
       dataframe.to_csv(file_folder, index=False, sep=csv_delimiter)
     elif file_format == "parquet":
-      # FIXME
-      # safe_export_df_to_parquet.run(df=dataframe, output_path=file_folder)
-      raise NotImplementedError("`safe_export_df_to_parquet` ainda não foi implementado")
+      safe_export_df_to_parquet(df=dataframe, output_path=file_folder)
 
   return root_folder
+
+
+def safe_export_df_to_parquet(df: pd.DataFrame, output_path: str) -> str:
+  """
+  Exporta um DataFrame para Parquet garantindo que o schema use strings.
+  """
+  csv_path = output_path.replace(".parquet", ".csv")
+  df.to_csv(csv_path, index=False)
+  dataframe = pd.read_csv(
+    csv_path, sep=",", dtype=str, keep_default_na=False, encoding="utf-8"
+  )
+  dataframe.to_parquet(output_path, index=False)
+  os.remove(csv_path)
+  return output_path
 
 
 def upload_df_to_datalake(
@@ -328,9 +340,7 @@ def upload_df_to_datalake(
     if source_format == "csv":
       df.to_csv(file_path, index=False, sep=csv_delimiter)
     elif source_format == "parquet":
-      # FIXME
-      # safe_export_df_to_parquet.run(df=df, output_path=file_path)
-      raise NotImplementedError("`safe_export_df_to_parquet` ainda não foi implementado")
+      safe_export_df_to_parquet(df=df, output_path=file_path)
 
   log(f"Fazendo upload de dados em '{root_folder}'")
   upload_to_datalake(
