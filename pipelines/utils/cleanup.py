@@ -63,7 +63,7 @@ def cleanup_columns_for_bigquery(
   column_mapping = dict()
   existing_columns = set()
   if ignore_empty:
-    df = df.loc[:, df.columns.str.strip() != '']
+    df = df.loc[:, df.columns.str.strip() != ""]
   for col in df.columns:
     # Limpa nome da coluna
     clean_col = cleanup_bigquery_name(col)
