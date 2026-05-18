@@ -6,11 +6,11 @@ from typing import List, Optional, Tuple
 import requests
 from google.cloud import bigquery
 
-from pipelines.utils.io import create_tmp_data_folder
-from pipelines.utils.prefect import authenticated_task as task
-from pipelines.utils.logger import log
-from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.datetime import get_age_from_birthdate, now, parse_date_or_today
+from pipelines.utils.env import get_google_project_for_environment
+from pipelines.utils.io import create_tmp_data_folder
+from pipelines.utils.logger import log
+from pipelines.utils.prefect import authenticated_task as task
 
 from . import utils as utils
 from .constants import informes_seguranca_constants

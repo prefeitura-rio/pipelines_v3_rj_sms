@@ -2,7 +2,7 @@
 from prefect.concurrency.sync import rate_limit
 from prefect.futures import PrefectFuture, wait
 
-from pipelines.constants import constants as global_consts
+from pipelines.constants import SUBPAV
 from pipelines.datalake.extract_load.siclom_api.constants import (
   constants as siclom_constants,
 )
@@ -20,7 +20,6 @@ from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 
-
 CADASTRO_ENDPOINT = "/mostraPaciente/"
 PREP_ENDPOINT = "/resultadoprepperiodo/"
 
@@ -28,7 +27,7 @@ PREP_ENDPOINT = "/resultadoprepperiodo/"
 @flow(
   name="DataLake - Extração e Carga de Dados - SICLOM API",
   state_handlers=[handle_flow_state_change],
-  owners=[global_consts.HERIAN_ID.value],
+  owners=[SUBPAV.MAUES_ID.value],
 )
 def siclom_period_extraction(
   environment: str = "dev",  # required=True in v1

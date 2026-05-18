@@ -3,8 +3,8 @@
 import glob
 import os
 import shutil
-from typing import Dict, List, Literal, Optional
 import uuid
+from typing import Dict, List, Literal, Optional
 
 import basedosdados as bd
 import pandas as pd

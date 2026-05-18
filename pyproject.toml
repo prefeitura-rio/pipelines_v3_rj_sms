@@ -20,6 +20,8 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+  "isort>=8.0.1",
+  "pre-commit>=4.6.0",
   "prefect-docker>=0.6.5",
   "ruff>=0.15.6",
   "taskipy>=1.14.1",
@@ -48,5 +50,12 @@ line-ending = "lf"
 skip-magic-trailing-comma = true
 
 [tool.taskipy.tasks]
+isort = "isort ."
 lint = "ruff check --no-fix . && ruff format --check ."
 lint-autofix = "ruff check --fix . && ruff format ."
+
+[tool.isort]
+profile = "black"
+line_length = 90
+indent = 2
+

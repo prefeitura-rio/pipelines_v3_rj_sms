@@ -7,7 +7,6 @@ from pipelines.utils.logger import log
 
 from .constants import informes_seguranca_constants
 
-
 MONTH = [
   "jan",
   "fev",
