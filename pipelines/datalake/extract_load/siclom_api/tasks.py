@@ -157,7 +157,7 @@ def get_siclom_cadastro_data(
     return DataFrame()
 
   df = DataFrame(payload["resultado"])
-  df = cleanup_columns_for_bigquery(df, lowercase=True)
+  df = cleanup_columns_for_bigquery(df, lowercase=True, ignore_empty=True)
   df["extracted_at"] = now_str()
   df = df.drop_duplicates(ignore_index=True)
   log("✅ Extração realizada com sucesso!")
