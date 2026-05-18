@@ -351,7 +351,7 @@ def process_sql_file_streaming(
     for line in f:
       line_count += 1
 
-      # Feedback de progresso a cada 100000 linhas
+      # Feedback de progresso a cada 500_000 linhas
       if line_count % 500_000 == 0:
         print(
           f"Processadas {line_count} linhas, {processed_count} registros extraídos..."
