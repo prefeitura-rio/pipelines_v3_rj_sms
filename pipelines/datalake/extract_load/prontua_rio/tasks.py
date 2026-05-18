@@ -22,15 +22,15 @@ from pipelines.datalake.extract_load.prontua_rio.utils import (
   get_metadata_info,
   get_table_and_dictionary_files,
   load_all_dictionaries,
+  openbase_write_csv_row,
   parse_record,
   process_insert_statement,
   write_csv_header,
-  openbase_write_csv_row,
 )
-from pipelines.utils.prefect import authenticated_task as task
+from pipelines.utils.datalake import upload_df_to_datalake
 from pipelines.utils.google import download_path_from_bucket
 from pipelines.utils.logger import log
-from pipelines.utils.datalake import upload_df_to_datalake
+from pipelines.utils.prefect import authenticated_task as task
 
 
 @task

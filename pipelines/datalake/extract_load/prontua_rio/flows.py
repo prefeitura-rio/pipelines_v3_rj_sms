@@ -13,16 +13,16 @@ from pipelines.datalake.extract_load.prontua_rio.tasks import (
   delete_temp_folders,
   extract_openbase_data,
   extract_postgres_data,
+  generate_current_folder,
   get_file,
   list_files_from_bucket,
   unpack_files,
-  generate_current_folder,
 )
-from pipelines.utils.prefect import flow, flow_config, rename_flow_run, create_flow_run
-from pipelines.utils.state_handlers import handle_flow_state_change
 from pipelines.utils.logger import log
-from .schedules import schedules
+from pipelines.utils.prefect import create_flow_run, flow, flow_config, rename_flow_run
+from pipelines.utils.state_handlers import handle_flow_state_change
 
+from .schedules import schedules
 
 ######################################################################################
 #                                 OPERATORS
