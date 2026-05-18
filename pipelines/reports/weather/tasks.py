@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 import httpx
+from google.cloud import bigquery
 from pandas import DataFrame
 
 from pipelines.utils.io import create_tmp_data_folder
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
-from google.cloud import bigquery
 
 from .constants import BASE_API_URL, FORECAST_ENDPOINT
 

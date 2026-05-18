@@ -4,10 +4,11 @@ import re
 import shutil
 import tarfile
 from typing import Literal
+
 import requests
 
-from pipelines.utils.prefect import authenticated_task as task
 from pipelines.utils.logger import log
+from pipelines.utils.prefect import authenticated_task as task
 
 
 def download_gh_repo(

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from enum import Enum
+
 from pipelines.constants import constants as global_consts
 
 

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from pipelines.utils.schedules import create_schedule_list
 
-
 flow_parameters = [
   {
     "source_project_name": "basedosdados",

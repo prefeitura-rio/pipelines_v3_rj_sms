@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime, timedelta
 from typing import List, Literal, Optional, TypedDict
-from datetime import timedelta, datetime
 
 from prefect.schedules import Interval
 

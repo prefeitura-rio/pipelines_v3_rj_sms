@@ -5,7 +5,6 @@ from prefect.exceptions import MissingContextError
 from prefect.logging import get_run_logger
 from typing_extensions import Literal
 
-
 LEVELS_CONFIG = {
   "debug":    { "type": logging.DEBUG,    "icon": "🟦" },
   "info":     { "type": logging.INFO,     "icon": "🟩" },

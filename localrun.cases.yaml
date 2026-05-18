@@ -75,6 +75,19 @@ cases:
       # month: ...
       # year: ...
 
+  # Extração SICLOM API - BaseCadastro
+  - case_slug: "datalake-extract-siclom-api-base-cadastro"
+    flow_path: "pipelines.datalake.extract_load.siclom_api.flows"
+    flow_name: "siclom_period_extraction"
+    params:
+      environment: prod
+      dataset_id: brutos_siclom_api
+      table_id: cadastro
+      endpoint: /mostraPaciente/
+      annual: false
+      month: null
+      year: null
+
   # Clona tabelas do BigQuery, de um projeto qualquer para a SMS
   - case_slug: "datalake-clone-bigquery-table"
     flow_path: "pipelines.datalake.extract_load.clone_bigquery.flows"

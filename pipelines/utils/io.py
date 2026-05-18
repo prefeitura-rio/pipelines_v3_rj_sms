@@ -2,14 +2,15 @@
 import os
 import shutil
 import sys
-from typing import List
 import zipfile
+from typing import List
 
 from pipelines.utils.cleanup import prettify_byte_size
 from pipelines.utils.datetime import today_str
 from pipelines.utils.env import is_local_run
 from pipelines.utils.logger import log
-from pipelines.utils.prefect import authenticated_task as task, get_normalized_flow_name
+from pipelines.utils.prefect import authenticated_task as task
+from pipelines.utils.prefect import get_normalized_flow_name
 
 
 def get_gcs_mount_dir():

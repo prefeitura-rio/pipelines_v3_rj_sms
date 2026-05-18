@@ -3,10 +3,10 @@ import datetime
 import re
 from typing import Optional
 from zoneinfo import ZoneInfo
+
 from dateutil import parser
 
 from pipelines.utils.logger import log
-
 
 UTC_TZ = ZoneInfo("UTC")
 SAO_PAULO_TZ = ZoneInfo("America/Sao_Paulo")
@@ -37,6 +37,7 @@ def now_str() -> str:
 
 
 def current_year() -> int:
+  """Retorna o ano atual (fuso BRT)"""
   return now().year
 
 
