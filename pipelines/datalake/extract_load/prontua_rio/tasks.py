@@ -27,7 +27,9 @@ from pipelines.datalake.extract_load.prontua_rio.utils import (
   process_insert_statement,
   write_csv_header,
 )
+from pipelines.utils.cleanup import cleanup_bigquery_name, cleanup_columns_for_bigquery
 from pipelines.utils.datalake import upload_df_to_datalake
+from pipelines.utils.datetime import now_str
 from pipelines.utils.google import download_path_from_bucket
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
@@ -330,13 +332,14 @@ def upload_file_to_datalake(
     )
     if not df.empty:
       # Remove possíveis pontos em nome de colunas que invialibizam o upload
-      cols_renamed = [col.replace(".", "") for col in df.columns]
-      df.rename(columns=dict(zip(df.columns, cols_renamed)), inplace=True)
+      df = cleanup_columns_for_bigquery(
+        df, lowercase=True, ignore_empty=True, raise_on_repeats=True
+      )
 
-      df["loaded_at"] = datetime.now().isoformat()
+      df["loaded_at"] = now_str()
       df["cnes"] = cnes
       table_name = file.split("/")[-1]
-      table_name = table_name.replace(".csv", "")
+      table_name = cleanup_bigquery_name(table_name.replace(".csv", ""))
       table_name = f"{base_type}_{table_name}"
       log(f"⬆️ Relizando upload de {file} com {df.shape[0]} linhas...")
 
