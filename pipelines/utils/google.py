@@ -9,16 +9,15 @@ from typing import Iterator, List, Literal
 import gspread
 import pandas as pd
 import requests
-
-from google.oauth2 import service_account
 from google.auth.transport import requests as google_requests
 from google.cloud import storage
 from google.cloud import bigquery
 from google.cloud.storage.blob import Blob
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
-from pipelines.utils.cleanup import prettify_byte_size, cleanup_columns_for_bigquery
+from pipelines.utils.cleanup import cleanup_columns_for_bigquery, prettify_byte_size
 from pipelines.utils.datetime import from_relative_date
 from pipelines.utils.infisical import get_credentials_from_env
 from pipelines.utils.io import create_tmp_data_folder

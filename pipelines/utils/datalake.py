@@ -3,8 +3,8 @@
 import glob
 import os
 import shutil
-from typing import Dict, List, Literal, Optional
 import uuid
+from typing import Dict, List, Literal, Optional
 
 import basedosdados as bd
 import pandas as pd
@@ -34,33 +34,33 @@ def upload_to_datalake(
   cria ou adiciona dados a uma tabela do BigQuery.
 
   Args:
-          input_path (str):
-                  Caminho para o arquivo com dados; pode ser pasta ou arquivo
-          dataset_id (str):
-                  Nome do dataset no BigQuery
-          table_id (str):
-                  Nome da tabela no BigQuery
-          dump_mode (str?):
-                  Como criar os dados: `"append"` não apaga dados existentes, `"replace"` substitui
-                  tudo que existia. Por padrão, é `"append"`.
-          delete_mode (str?):
-                  `"all"` apaga tanto a tabela externa (`_staging`) quanto a materializada;
-                  `"staging"` apaga somente a tabela externa. Por padrão, é `"staging"`.
-          source_format (str?):
-                  Formato dos dados (`"csv"` ou `"parquet"`). Por padrão, é `"csv"`.
-          csv_delimiter (str?):
-                  Separador usado no arquivo CSV. Por padrão, é `";"`.
-          if_storage_data_exists (str?):
-                  O que fazer se o dado já existir no GCS: `"raise"` dispara erro de conflito;
-                  `"replace"` substitui o dado; `"pass"` não faz nada. Por padrão, é `"replace"`.
-          biglake_table (bool?):
-                  Se a tabela é BigLake – i.e. permite consultas mesmo sem ser materializada.
-                  Por padrão, é `True`.
-          dataset_is_public (bool?):
-                  Se o dataset é público. Por padrão, é `False`.
-          exception_on_missing_input_file (bool?):
-                  Se deve disparar um `FileNotFoundError` caso `input_path` seja string vazia ou
-                  uma pasta sem arquivos. Por padrão, é `False`.
+    input_path (str):
+      Caminho para o arquivo com dados; pode ser pasta ou arquivo
+    dataset_id (str):
+      Nome do dataset no BigQuery
+    table_id (str):
+      Nome da tabela no BigQuery
+    dump_mode (str?):
+      Como criar os dados: `"append"` não apaga dados existentes, `"replace"` substitui
+      tudo que existia. Por padrão, é `"append"`.
+    delete_mode (str?):
+      `"all"` apaga tanto a tabela externa (`_staging`) quanto a materializada;
+      `"staging"` apaga somente a tabela externa. Por padrão, é `"staging"`.
+    source_format (str?):
+      Formato dos dados (`"csv"` ou `"parquet"`). Por padrão, é `"csv"`.
+    csv_delimiter (str?):
+      Separador usado no arquivo CSV. Por padrão, é `";"`.
+    if_storage_data_exists (str?):
+      O que fazer se o dado já existir no GCS: `"raise"` dispara erro de conflito;
+      `"replace"` substitui o dado; `"pass"` não faz nada. Por padrão, é `"replace"`.
+    biglake_table (bool?):
+      Se a tabela é BigLake – i.e. permite consultas mesmo sem ser materializada.
+      Por padrão, é `True`.
+    dataset_is_public (bool?):
+      Se o dataset é público. Por padrão, é `False`.
+    exception_on_missing_input_file (bool?):
+      Se deve disparar um `FileNotFoundError` caso `input_path` seja string vazia ou
+      uma pasta sem arquivos. Por padrão, é `False`.
   """
   if input_path == "":
     log("`input_path` vazio; nada para fazer upload", level="warning")
@@ -157,9 +157,9 @@ def upload_to_datalake(
 
     raise ValueError(f"`dump_mode` '{dump_mode}' desconhecido!")
 
-  except Exception as e:  # pylint: disable=W0703
+  except Exception as e:
     log(f"An error occurred: {e}", level="error")
-    raise RuntimeError() from e
+    raise e
 
 
 @task(retries=3, retry_delay_seconds=60)

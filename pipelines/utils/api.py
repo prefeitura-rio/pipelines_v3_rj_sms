@@ -6,6 +6,8 @@ import requests
 import google.auth.transport.requests
 import google.oauth2.id_token
 from google.cloud import storage
+
+import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 

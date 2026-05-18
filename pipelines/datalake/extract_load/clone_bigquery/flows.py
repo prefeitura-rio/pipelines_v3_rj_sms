@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pipelines.constants import constants as global_consts
+from pipelines.constants import CIT
 from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.prefect import create_flow_run, flow, flow_config, rename_flow_run
 from pipelines.utils.state_handlers import handle_flow_state_change
@@ -12,7 +12,7 @@ from .tasks import clone_bigquery_table
   name="DataLake - Extração e Carga de Dados - Clonagem de BigQuery",
   description="Clona dataset de projeto externo no BigQuery para o nosso datalake",
   state_handlers=[handle_flow_state_change],
-  owners=[global_consts.CIT_ID.value],
+  owners=[CIT.CIT_ID.value],
 )
 def clone_bigquery(
   source_project_name: str,  # ex. "rj-smfp"

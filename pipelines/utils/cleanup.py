@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import re
-from typing import List, Optional
 import unicodedata
+from typing import List, Optional
+
 import pandas as pd
 
 
@@ -62,9 +63,9 @@ def cleanup_columns_for_bigquery(
   """
   column_mapping = dict()
   existing_columns = set()
+  if ignore_empty:
+    df = df.loc[:, df.columns.str.strip() != ""]
   for col in df.columns:
-    if ignore_empty and (not col or len(col) <= 0):
-      continue
     # Limpa nome da coluna
     clean_col = cleanup_bigquery_name(col)
     if lowercase:

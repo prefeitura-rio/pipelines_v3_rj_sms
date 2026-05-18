@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import re
-from typing import Any, Callable, Literal, Union, List, Optional
 import unicodedata
+from typing import Any, Callable, List, Literal, Optional, Union
 
 from prefect import Task, get_client
 from prefect.context import FlowRunContext
 from prefect.deployments.flow_runs import run_deployment
-from prefect.flows import Flow as OriginalFlow, FlowDecorator as OriginalFlowDecorator
+from prefect.flows import Flow as OriginalFlow
+from prefect.flows import FlowDecorator as OriginalFlowDecorator
 from prefect.schedules import Schedule
 
 from pipelines.utils.env import get_current_environment, get_prefect_url, is_dev_run
 from pipelines.utils.infisical import inject_bd_credentials
 from pipelines.utils.logger import log
-
 
 #################
 ## FLOWS

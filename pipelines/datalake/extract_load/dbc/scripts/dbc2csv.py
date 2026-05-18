@@ -18,9 +18,9 @@
 Executado com `uv run --script dbc2csv.py (filename)`
 """
 
+import csv
 import os
 import sys
-import csv
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
