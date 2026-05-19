@@ -92,7 +92,7 @@ def vitai_db_extraction(
         df=df,
         dataset_id=vitai_db_constants.DATASET_NAME.value,
         table_id=target_name,
-        dump_mode="replace",
+        dump_mode="append",
         source_format="parquet",
         biglake_table=True,
         dataset_is_public=False,
