@@ -57,8 +57,6 @@ def vitai_db_extraction(
     secret_name="DB_URL", environment=environment, path="/prontuario-vitai"
   )
 
-  log(f"DB_URL: {db_url}", level="debug")
-
   start, end = create_working_time_range(
     interval_start=interval_start, interval_end=interval_end, relative_date=relative_date
   )
