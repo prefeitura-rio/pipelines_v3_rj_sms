@@ -82,7 +82,7 @@ def from_relative_date(
     log(
       f"O valor passado, '{relative_date}', não é uma data relativa; "
       "tentando conversão para datetime",
-      level="warning"
+      level="warning",
     )
     result = datetime.datetime.fromisoformat(relative_date)
 

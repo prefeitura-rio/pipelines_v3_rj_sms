@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from pipelines.utils.schedules import create_schedule_list
 
-
 flow_parameters = [
   {
     "db_url_infisical_key": "DB_URL",
@@ -30,8 +29,6 @@ flow_parameters = [
 
 schedules = [
   *create_schedule_list(
-    parameters_list=flow_parameters,
-    interval="daily",
-    config={"hour": 5},
-  ),
+    parameters_list=flow_parameters, interval="daily", config={"hour": 5}
+  )
 ]

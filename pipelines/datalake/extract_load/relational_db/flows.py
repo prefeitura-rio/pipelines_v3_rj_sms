@@ -2,49 +2,40 @@
 from typing import Optional
 
 from pipelines.constants import constants as global_consts
-
 from pipelines.utils.datalake import upload_df_to_datalake
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
 from pipelines.utils.state_handlers import handle_flow_state_change
 
-from .tasks import download_from_db
 from .schedules import schedules
+from .tasks import download_from_db
 
 
 @flow(
   name="DataLake - Extração e Carga de Dados - Banco de Dados Relacional",
   state_handlers=[handle_flow_state_change],
-  owners=[
-    global_consts.PEDRO_ID.value,
-  ],
+  owners=[global_consts.PEDRO_ID.value],
 )
 def extract_load_relational_db(
   # Parâmetros para o secret com o URL do banco de dados
   db_url_infisical_key: str,
   db_url_infisical_path: str,
-
   # Identificador da tabela, `dataset.table`, a ser criada
   target_dataset_id: str,
   target_table_id: str,
-
   # Identificador da tabela, `schema.table`, a ser extraída
   source_schema_name: str,
   source_table_name: str,
-
   # Nome da coluna de data a ser usada para restringir
   # o intervalo dos dados
   source_datetime_column: Optional[str] = "created_at",
-
   # Data relativa a ser usada para restringir
   # o intervalo dos dados
   relative_date: str = "D-1",
-
   # Flag indicando se a tabela inteira deve ser extraída;
   # sendo `True`, os parâmetros `source_datetime_column`
   # e `relative_date` são ignorados
   extract_whole_table: bool = False,
-
   rename_flow: bool = True,
   environment: str = "dev",
 ):
@@ -52,9 +43,7 @@ def extract_load_relational_db(
     rename_flow_run(new_name=f"({environment}) '{target_dataset_id}.{target_table_id}'")
 
   database_url = get_secret(
-    secret_name=db_url_infisical_key,
-    path=db_url_infisical_path,
-    environment=environment,
+    secret_name=db_url_infisical_key, path=db_url_infisical_path, environment=environment
   )
 
   dataframe = download_from_db(
@@ -71,7 +60,7 @@ def extract_load_relational_db(
     dataset_id=target_dataset_id,
     table_id=f"{source_schema_name}__{source_table_name}",
     source_format="parquet",
-    date_partition_column ="loaded_at",
+    date_partition_column="loaded_at",
   )
 
 
