@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13,<3.14"  # dbt não existe pra Python 3.14+
 dependencies = [
   "basedosdados>=2.0.3",
+  "beautifulsoup4>=4.14.3",
   "db-dtypes>=1.4.4",  # BigQuery reclama sem db-dtypes
   "dbt-bigquery>=1.11.1",
   "dbt-core>=1.11.7",

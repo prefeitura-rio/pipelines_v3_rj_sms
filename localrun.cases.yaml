@@ -100,6 +100,15 @@ cases:
       # destination_dataset_name: ...
       # dbt_select_exp: ...
 
+  # Extração do Diário Oficial -> tabela no BigQuery
+  - case_slug: "extract_diario_oficial_rj"
+    flow_path: "pipelines.datalake.extract_load.diario_oficial_rj.flows"
+    flow_name: "extract_diario_oficial_rj"
+    params:
+      environment: dev
+      date: null
+      dataset_id: brutos_diario_oficial
+
 
   ################################
   #  MIGRATE                     #
