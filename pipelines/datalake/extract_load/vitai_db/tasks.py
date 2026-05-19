@@ -30,7 +30,7 @@ def create_working_time_range(
   return start, end
 
 
-@task(retries=3, retry_delay_seconds=120, timeout_seconds=1200)
+@task(retries=3, retry_delay_seconds=120)
 def define_queries(
   db_url: str,
   schema_name: str,
@@ -75,7 +75,7 @@ def define_queries(
   return queries
 
 
-@task(retries=3, retry_delay_seconds=120, timeout_seconds=300)
+@task(retries=3, retry_delay_seconds=120)
 def run_query(db_url: str, query: str, partition_column: str) -> pd.DataFrame:
   log("Running query: \n" + query)
 
