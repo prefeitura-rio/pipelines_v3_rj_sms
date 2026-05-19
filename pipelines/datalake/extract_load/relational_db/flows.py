@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Optional
 
-from pipelines.constants import constants as global_consts
+from pipelines.constants import CIT
 from pipelines.utils.datalake import upload_df_to_datalake
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
@@ -14,7 +14,7 @@ from .tasks import download_from_db
 @flow(
   name="DataLake - Extração e Carga de Dados - Banco de Dados Relacional",
   state_handlers=[handle_flow_state_change],
-  owners=[global_consts.PEDRO_ID.value],
+  owners=[CIT.PEDRO_ID.value],
 )
 def extract_load_relational_db(
   # Parâmetros para o secret com o URL do banco de dados
