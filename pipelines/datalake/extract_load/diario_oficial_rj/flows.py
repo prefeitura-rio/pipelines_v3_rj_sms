@@ -29,7 +29,9 @@ def extract_diario_oficial_rj(
   # Podemos ter múltiplos DOs em um dia...
   diario_ids = get_current_DO_identifiers(date=date, env=environment)
   # Para cada DO, pegamos todos os artigos...
-  do_article_tuple: PrefectFutureList = get_article_names_ids.map(diario_id_date=diario_ids)
+  do_article_tuple: PrefectFutureList = get_article_names_ids.map(
+    diario_id_date=diario_ids
+  )
   # No Prefect v1, tínhamos uma função `flatten()`;
   # no v3 não mais, então fazemos na mão
   # TODO: não é possível que isso seja a melhor forma de fazer
@@ -41,7 +43,9 @@ def extract_diario_oficial_rj(
   # Para cada par de nome/id, pega o conteúdo do artigo
   article_contents = get_article_contents.map(do_tuple=article_tuples)
   # Upload dos resultados no final :)
-  upload_results(results_list=article_contents, dataset=dataset_id, date=date, env=environment)
+  upload_results(
+    results_list=article_contents, dataset=dataset_id, date=date, env=environment
+  )
 
 
 _flows = [

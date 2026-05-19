@@ -78,6 +78,7 @@ flow = FlowDecorator
 ## TASKS
 #################
 
+
 def authenticated_task(
   fn: Callable = None, **task_init_kwargs: Any
 ) -> Union[Task, Callable[[Callable], Task]]:
@@ -110,14 +111,10 @@ def authenticated_task(
 
   # Instância de Task
   if fn is not None:
-    return Task(
-      fn=inject_credential_setting_in_function(fn),
-      **task_init_kwargs,
-    )
+    return Task(fn=inject_credential_setting_in_function(fn), **task_init_kwargs)
   # Decorator
   return lambda any_function: Task(
-    fn=inject_credential_setting_in_function(any_function),
-    **task_init_kwargs,
+    fn=inject_credential_setting_in_function(any_function), **task_init_kwargs
   )
 
 

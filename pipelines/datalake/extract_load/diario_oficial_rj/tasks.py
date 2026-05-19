@@ -5,10 +5,10 @@ from typing import List, Optional
 import pandas as pd
 from bs4 import BeautifulSoup
 
-from pipelines.utils.prefect import authenticated_task as task
-from pipelines.utils.logger import log
 from pipelines.utils.datalake import upload_df_to_datalake
 from pipelines.utils.datetime import now, parse_date_or_today
+from pipelines.utils.logger import log
+from pipelines.utils.prefect import authenticated_task as task
 
 from .utils import (
   get_links_for_path,
@@ -19,7 +19,7 @@ from .utils import (
 )
 
 
-@task(retries=3, retry_delay_seconds=10*60)
+@task(retries=3, retry_delay_seconds=10 * 60)
 def get_current_DO_identifiers(date: Optional[str], env: Optional[str]) -> List[str]:
   date = parse_date_or_today(date).strftime("%Y-%m-%d")
 
@@ -64,7 +64,7 @@ def get_current_DO_identifiers(date: Optional[str], env: Optional[str]) -> List[
   return result
 
 
-@task(retries=3, retry_delay_seconds=10*60)
+@task(retries=3, retry_delay_seconds=10 * 60)
 def get_article_names_ids(diario_id_date: tuple) -> List[tuple]:
   assert len(diario_id_date) == 2, "Tupla deve ser par (id, date)!"
   diario_id = diario_id_date[0]
@@ -154,7 +154,9 @@ def get_article_contents(do_tuple: tuple) -> List[dict]:
   (folder_path, title, id) = do_tuple[1]
 
   log(f"Obtendo conteúdo do artigo '{title}' (id '{id}')...")
-  URL = f"https://doweb.rio.rj.gov.br/apifront/portal/edicoes/publicacoes_ver_conteudo/{id}"
+  URL = (
+    f"https://doweb.rio.rj.gov.br/apifront/portal/edicoes/publicacoes_ver_conteudo/{id}"
+  )
   # Faz requisição GET, recebe HTML
   html = send_get_request(URL, "html")
   # Talvez o resultado não seja HTML (pode ser PDF por exemplo)
@@ -201,7 +203,9 @@ def get_article_contents(do_tuple: tuple) -> List[dict]:
 
 
 @task(retries=1, retry_delay_seconds=30)
-def upload_results(results_list: List[dict], dataset: str, date: Optional[str], env: Optional[str]):
+def upload_results(
+  results_list: List[dict], dataset: str, date: Optional[str], env: Optional[str]
+):
   if len(results_list) == 0:
     log("Nada para fazer upload; saindo")
     return
@@ -224,13 +228,18 @@ def upload_results(results_list: List[dict], dataset: str, date: Optional[str], 
     for section in result["sections"]:
       # Constrói objeto a ser upado com informações base
       # Remove `sections` (obviamente)
-      prepped_section = {**{k: v for k, v in result.items() if k != "sections"}, **section}
+      prepped_section = {
+        **{k: v for k, v in result.items() if k != "sections"},
+        **section,
+      }
       # Constrói DataFrame a partir do objeto
       single_df = pd.DataFrame.from_records([prepped_section])
       # Concatena com os outros resultados
       main_df = pd.concat([main_df, single_df], ignore_index=True)
 
-  log(f"Fazendo upload de DataFrame: {len(main_df)} linha(s); colunas: {list(main_df.columns)}")
+  log(
+    f"Fazendo upload de DataFrame: {len(main_df)} linha(s); colunas: {list(main_df.columns)}"
+  )
   # Chama a task de upload
   upload_df_to_datalake(
     df=main_df,

@@ -8,9 +8,9 @@ from google.cloud import bigquery
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from pipelines.utils.datetime import now, parse_date_or_today
 from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.logger import log
-from pipelines.utils.datetime import now, parse_date_or_today
 
 
 def report_extraction_status(status: bool, date: str, environment: str = "dev"):
@@ -211,11 +211,7 @@ def filter_paragraphs(arr: List[str], type: str) -> List[str]:
     r"^controladora?",
     r"^rio de janeiro, [0-9]+ de",
   ]
-  remove_body = [
-    r"^decreta:?$",
-    r"^resolve:?$",
-    r"^rio de janeiro, [0-9]+ de",
-  ]
+  remove_body = [r"^decreta:?$", r"^resolve:?$", r"^rio de janeiro, [0-9]+ de"]
   if type == "header":
     return filter_for_regex(arr, remove_header)
   return filter_for_regex(arr, remove_body)
@@ -236,8 +232,8 @@ def parse_do_contents(root: BeautifulSoup) -> List[str]:
   def clean_text(text: str):
     text = str(text).strip()
     replace_list = [
-      ("\u00A0", " "),  # NO-BREAK SPACE
-      ("\u202F", " "),  # NARROW NO-BREAK SPACE
+      ("\u00a0", " "),  # NO-BREAK SPACE
+      ("\u202f", " "),  # NARROW NO-BREAK SPACE
       ("\r", ""),
       ("\n", " "),
     ]
