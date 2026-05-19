@@ -4,11 +4,12 @@ from typing import Any
 
 import google.auth.transport.requests
 import google.oauth2.id_token
+import pandas as pd
 import requests
+from google.cloud import bigquery, storage
+
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
-from google.cloud import bigquery, storage
-import pandas as pd
 
 
 @task(retries=2, retry_delay_seconds=120)
