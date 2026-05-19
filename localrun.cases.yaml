@@ -119,6 +119,16 @@ cases:
       # destination_dataset_name: ...
       # dbt_select_exp: ...
 
+  # Extração de Diário Oficial da União (API) -> BigQuery
+  - case_slug: "extract-dou-api"
+    flow_path: "pipelines.datalake.extract_load.diario_oficial_uniao.flows"
+    flow_name: "dou_extraction"
+    params:
+      environment: "dev"
+      date: ""
+      dou_section: "DO1 DO2 DO3"
+      dataset_id: "brutos_diario_oficial"
+
 
   ################################
   #  MIGRATE                     #
