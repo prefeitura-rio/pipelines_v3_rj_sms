@@ -15,32 +15,34 @@ from pipelines.utils.io import create_tmp_data_folder
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
+
 @task
 def safe_export_df_to_parquet(df: pd.DataFrame, output_path: str) -> str:
-    """
-    Safely exports a DataFrame to a Parquet file.
+  """
+  Safely exports a DataFrame to a Parquet file.
 
-    Args:
-        df (pd.DataFrame): The DataFrame to export.
-        output_path (str): The path to the output Parquet file.
+  Args:
+      df (pd.DataFrame): The DataFrame to export.
+      output_path (str): The path to the output Parquet file.
 
-    Returns:
-        str: The path to the output Parquet file.
-    """
-    df.to_csv(output_path.replace("parquet", "csv"), index=False)
+  Returns:
+      str: The path to the output Parquet file.
+  """
+  df.to_csv(output_path.replace("parquet", "csv"), index=False)
 
-    dataframe = pd.read_csv(
-        output_path.replace("parquet", "csv"),
-        sep=",",
-        dtype=str,
-        keep_default_na=False,
-        encoding="utf-8",
-    )
-    dataframe.to_parquet(output_path, index=False)
+  dataframe = pd.read_csv(
+    output_path.replace("parquet", "csv"),
+    sep=",",
+    dtype=str,
+    keep_default_na=False,
+    encoding="utf-8",
+  )
+  dataframe.to_parquet(output_path, index=False)
 
-    # Delete the csv file
-    os.remove(output_path.replace("parquet", "csv"))
-    return output_path
+  # Delete the csv file
+  os.remove(output_path.replace("parquet", "csv"))
+  return output_path
+
 
 def upload_to_datalake(
   input_path: str,
