@@ -26,6 +26,7 @@ def restrict_int_interval(value, min: int, max: int, default: int = 0):
 
 class ScheduleConfig(TypedDict):
   month: Optional[int]
+  """Mês do ano; só se aplica em schedules de frequência anual"""
   weekday: Literal[
     "monday",    "segunda",
     "tuesday",   "terça",
@@ -36,8 +37,11 @@ class ScheduleConfig(TypedDict):
     "sunday",    "domingo",
   ]  # fmt: skip
   day: Optional[int]
+  """Dia do mês; só se aplica em schedules de frequência mensal ou anual"""
   hour: Optional[int]
+  """Hora do dia; é par de `minute` para definir o horário da execução"""
   minute: Optional[int]
+  """Minuto da hora; é par de `hour` para definir o horário da execução"""
 
 
 def create_schedule_list(
@@ -183,6 +187,8 @@ def create_schedule(
     )
 
   if interval == "monthly":
+    # TODO: investigar se, por ser '30 dias' e não '1 mês', o
+    #       schedule não vai gradualmente desviar da data desejada
     return Interval(
       timedelta(days=30),
       anchor_date=datetime(2026, 1, day, hour, minute, tzinfo=constants.TIMEZONE.value),
