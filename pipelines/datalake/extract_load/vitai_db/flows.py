@@ -103,4 +103,4 @@ def vitai_db_extraction(
   wait(upload_futures)
 
 
-_flows = [flow_config(flow=vitai_db_extraction, schedules=schedules, memory="medium")]
+_flows = [flow_config(flow=vitai_db_extraction, schedules=schedules, memory="small")]
