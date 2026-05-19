@@ -5,13 +5,12 @@ from prefect.exceptions import MissingContextError
 from prefect.logging import get_run_logger
 from typing_extensions import Literal
 
-
 LEVELS_CONFIG = {
-	"debug":    { "type": logging.DEBUG,    "icon": "🟦" },
-	"info":     { "type": logging.INFO,     "icon": "🟩" },
-	"warning":  { "type": logging.WARNING,  "icon": "⚠️" },
-	"error":    { "type": logging.ERROR,    "icon": "❌" },
-	"critical": { "type": logging.CRITICAL, "icon": "🔴" },
+  "debug":    { "type": logging.DEBUG,    "icon": "🟦" },
+  "info":     { "type": logging.INFO,     "icon": "🟩" },
+  "warning":  { "type": logging.WARNING,  "icon": "⚠️" },
+  "error":    { "type": logging.ERROR,    "icon": "❌" },
+  "critical": { "type": logging.CRITICAL, "icon": "🔴" },
 }  # fmt: skip
 
 
@@ -22,13 +21,13 @@ def log(
 ) -> None:
   """
   Args:
-          *args (...):
-                  Mensagem a ser logada.
-          level (Literal["debug", "info", "warning", "error", "critical"]):
-                  Nível de gravidade da mensagem.
-          fwd_discord (bool?):
-                  Flag de conveniência; quando `True`, encaminha a mensagem
-                  também para o Discord.
+    *args (...):
+      Mensagem a ser logada.
+    level (Literal["debug", "info", "warning", "error", "critical"]):
+      Nível de gravidade da mensagem.
+    fwd_discord (bool?):
+      Flag de conveniência; quando `True`, encaminha a mensagem
+      também para o Discord.
   """
   try:
     get_run_logger().log(LEVELS_CONFIG[level]["type"], *args)

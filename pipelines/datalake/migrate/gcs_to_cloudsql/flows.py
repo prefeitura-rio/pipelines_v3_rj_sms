@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pipelines.constants import constants as global_consts
+from pipelines.constants import CIT
 from pipelines.utils.google import ensure_instance_running, ensure_instance_stopped
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import flow, flow_config
@@ -11,7 +11,7 @@ from .tasks import restore_gcs_backup_to_cloudsql
 @flow(
   name="Migrate - GCS to Cloud SQL",
   state_handlers=[handle_flow_state_change],
-  owners=[global_consts.DANIEL_ID.value],
+  owners=[CIT.DANIEL_ID.value],
   description="Restaura backups do GCS para uma instância Cloud SQL",
 )
 def gcs_to_cloudsql(

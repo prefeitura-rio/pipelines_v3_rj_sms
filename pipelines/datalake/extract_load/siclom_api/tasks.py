@@ -2,6 +2,7 @@
 from pandas import DataFrame, DateOffset
 
 from pipelines.utils.api import GET
+from pipelines.utils.cleanup import cleanup_columns_for_bigquery
 from pipelines.utils.datetime import current_year, now, now_str
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
@@ -37,12 +38,14 @@ def format_month(month: str, year: str) -> str:
 
 
 @task
-def generate_formatted_months(reference_year: str, interval) -> list[str]:
+def generate_formatted_months(reference_year: str, interval: int) -> list[str]:
   """
   Gera strings numéricas formatadas referente aos meses para extrações anuais
   de forma regressiva a partir do ano de referência, seguindo o formato MM/YYYY.
   """
   periods = []
+  # Ano precisa ser int, e se não for, precisa dar erro mesmo
+  reference_year = int(reference_year)
   for year in range(reference_year, reference_year - interval, -1):
     periods.extend([f"{str(month).zfill(2)}/{year}" for month in range(1, 13)])
   log(periods)
@@ -120,4 +123,42 @@ def get_siclom_prep_data(
 
   df = DataFrame(extracted_data)
   df["extracted_at"] = now_str()
+  return df
+
+
+@task
+def get_siclom_cadastro_data(
+  base_url: str, endpoint: str, api_key: str, period: str
+) -> DataFrame:
+  """
+  Faz a requisição para a API do SICLOM utilizando a busca por mês e ano para
+  dados de cadastro de pacientes.
+  """
+  log(f"Buscando dados de cadastro de {period}...")
+
+  headers = {"Accept": "application/json", "X-API-KEY": api_key}
+  url = f"{base_url}{endpoint}{period}?page=1&numItemsPerPage=50"
+  response = GET(url=url, headers=headers, retry_on=[104, 502, 503, 504])
+
+  if not response:
+    url = f"{base_url}{endpoint}{period}"
+    response = GET(url=url, headers=headers, retry_on=[104, 502, 503, 504])
+
+  if not response:
+    log(f"Erro ao requisitar URL '{url}'", level="error")
+    return DataFrame()
+  if response.status_code != 200:
+    log(f"URL '{url}' retornou status '{response.status_code}'", level="error")
+    return DataFrame()
+
+  payload = response.json()
+  if "resultado" not in payload:
+    log("Nenhum dado retornado para o período solicitado.", level="warning")
+    return DataFrame()
+
+  df = DataFrame(payload["resultado"])
+  df = cleanup_columns_for_bigquery(df, lowercase=True, ignore_empty=True)
+  df["extracted_at"] = now_str()
+  df = df.drop_duplicates(ignore_index=True)
+  log("✅ Extração realizada com sucesso!")
   return df

@@ -3,10 +3,10 @@ import datetime
 import re
 from typing import Optional
 from zoneinfo import ZoneInfo
+
 from dateutil import parser
 
 from pipelines.utils.logger import log
-
 
 UTC_TZ = ZoneInfo("UTC")
 SAO_PAULO_TZ = ZoneInfo("America/Sao_Paulo")
@@ -42,6 +42,7 @@ def today_str() -> str:
 
 
 def current_year() -> int:
+  """Retorna o ano atual (fuso BRT)"""
   return now().year
 
 
@@ -52,9 +53,9 @@ def from_relative_date(
   Converte uma data relativa para um objeto de data.
 
   Suporta os formatos:
-          `D-N`: data atual menos `N` dias
-          `M-N`: primeiro dia do mês atual menos `N` meses
-          `Y-N`: primeiro dia do ano atual menos `N` anos
+    `D-N`: data atual menos `N` dias
+    `M-N`: primeiro dia do mês atual menos `N` meses
+    `Y-N`: primeiro dia do ano atual menos `N` anos
 
   Caso o valor não seja uma data relativa, tenta convertê-lo
   para `datetime` via `datetime.fromisoformat()`.

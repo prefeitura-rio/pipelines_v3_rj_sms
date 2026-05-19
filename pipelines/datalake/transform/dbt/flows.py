@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from pipelines.utils.prefect import flow, flow_config, rename_flow_run
+from pipelines.constants import CIT
 from pipelines.utils.git import download_gh_repo_task
+from pipelines.utils.prefect import flow, flow_config, rename_flow_run
 from pipelines.utils.state_handlers import handle_flow_state_change
-from pipelines.constants import constants as global_consts
 
 from .schedules import schedules
 from .tasks import (
@@ -20,7 +20,7 @@ from .tasks import (
 @flow(
   name="DataLake - Transformação - DBT",
   state_handlers=[handle_flow_state_change],
-  owners=[global_consts.CIT_ID.value],
+  owners=[CIT.CIT_ID.value],
 )
 def sms_execute_dbt(
   command: str = "test",

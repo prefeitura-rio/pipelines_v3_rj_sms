@@ -68,6 +68,14 @@ cases:
       environment: "dev"
 ```
 
+### 6 - Git Hooks (Pre-push)
+
+Para garantir que o código suba sempre formatado para o repositório, ative o hook de pre-push em sua máquina. Ele executará a formatação e o linter automaticamente a cada `git push`.
+
+```sh
+$ uv run pre-commit install
+```
+> **Nota:** Se você já contribuía com o projeto e possuía hooks configurados para `pre-commit`, limpe a configuração antiga rodando `$ uv run pre-commit uninstall` antes do comando de instalação.
 
 ---
 

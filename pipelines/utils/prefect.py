@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import re
-from typing import Any, Callable, Literal, Union, List, Optional
 import unicodedata
+from typing import Any, Callable, List, Literal, Optional, Union
 
 from prefect import Task, get_client
 from prefect.context import FlowRunContext
-from prefect.flows import Flow as OriginalFlow, FlowDecorator as OriginalFlowDecorator
+from prefect.deployments.flow_runs import run_deployment
+from prefect.flows import Flow as OriginalFlow
+from prefect.flows import FlowDecorator as OriginalFlowDecorator
 from prefect.schedules import Schedule
 
-from pipelines.utils.env import get_current_environment, is_dev_run
+from pipelines.utils.env import get_current_environment, get_prefect_url, is_dev_run
 from pipelines.utils.infisical import inject_bd_credentials
 from pipelines.utils.logger import log
-
 
 #################
 ## FLOWS
@@ -86,14 +87,14 @@ flow = FlowDecorator
 # - É possível que ele continue executando com o status Failed? Não sei,
 #   problema pra ser testado caso a gente vá usar mesmo um dia
 # def on_task_fail_kill_flow_run(task: Task, task_run: TaskRun, state: State):
-# 	log(
-# 		"[on_task_fail_kill_flow_run] Task falhou, enviando status 'Failed' para Flow Run"
-# 	)
-# 	fr_ctx = FlowRunContext.get()
-# 	fr_ctx.client.set_flow_run_state(fr_ctx.flow_run.id, Failed(), force=True)
-# 	log(
-# 		"[on_task_fail_kill_flow_run] Status de 'Failed' para Flow Run foi requisitado! :)"
-# 	)
+#   log(
+#     "[on_task_fail_kill_flow_run] Task falhou, enviando status 'Failed' para Flow Run"
+#   )
+#   fr_ctx = FlowRunContext.get()
+#   fr_ctx.client.set_flow_run_state(fr_ctx.flow_run.id, Failed(), force=True)
+#   log(
+#     "[on_task_fail_kill_flow_run] Status de 'Failed' para Flow Run foi requisitado! :)"
+#   )
 
 
 def authenticated_task(
@@ -110,7 +111,7 @@ def authenticated_task(
 
   @task(...)
   def xxxxx():
-          # ...
+    # ...
   ```
   """
 
@@ -141,24 +142,44 @@ def authenticated_task(
   )
 
 
-@authenticated_task
-def authenticated_create_flow_run(**kwargs):
+def create_flow_run(
+  flow_name, parameters: dict = None, wait: bool = False, environment: str = "dev"
+):
   """
-  Cria uma execução de flow a partir dos parâmetros passados
+  Cria uma nova flow run de um determinado flow.
+  Args
+    flow_name(str):
+      Nome do flow, especificado em `@flow(name=...)`
+    parameters(dict):
+      Parâmetros do flow.
+    wait(bool):
+      Se deve esperar o flow terminar, ou retornar imediatamente.
+    environment(str):
+      Ambiente de execução; se "prod", executa o deployment em
+      produção; se "dev", executa o deployment em staging.
   """
-  raise NotImplementedError()  # TODO
-  # log(f"Created Flow Run with params: {kwargs}")
-  # return create_flow_run.run(**kwargs)
+  deployment_name = f"{flow_name}/{flow_name}" + (
+    "" if environment == "prod" else " (stg)"
+  )
+  log(f"[create_flow_run] Requisitando execução de flow '{deployment_name}'...")
+  flow_run = run_deployment(
+    name=deployment_name,
+    parameters=parameters,
+    timeout=(0 if not wait else None),
+    as_subflow=False,  # tenho recebido erro 422 sem isso aqui --Avellar
+  )
+  base_url = get_prefect_url()
+  log(
+    f"[create_flow_run] Flow run criada; confira em: {base_url}/runs/flow-run/{flow_run.id}"
+  )
 
 
 @authenticated_task
-def authenticated_wait_for_flow_run(**kwargs):
+def wait_for_flow_run(**kwargs):
   """
   Aguarda uma execução de flow terminar
   """
   raise NotImplementedError()  # TODO
-  # log(f"Waiting Flow Run with params: {kwargs}")
-  # return wait_for_flow_run.run(**kwargs)
 
 
 @authenticated_task
@@ -196,29 +217,29 @@ def flow_config(
   `_flows`: `_flows = [ flow_config(...), ... ]`
 
   Args:
-          flow(Flow):
-                  O flow a ser executado.
-          schedules(list[Schedule]):
-                  Lista de schedules para o flow; pode ser vazia/None.
-          dockerfile(str):
-                  Caminho do Dockerfile customizado que executa o flow.
-                  Pode ser vazio/None. Ex.: `"./pipelines/datalake/..."`
-          memory(Literal["small", "medium", "large"]):
-                  Quantidade de memória RAM disponibilizada para a VM
-                  executando o flow. Atenção: em Google Cloud Run Jobs,
-                  não existe disco rígido; o filesystem reside na
-                  própria memória RAM.
-                  * Para `memory="small"` (valor padrão), é alocado 4 GB
-                          de RAM, ideal para flows que não fazem escrita de
-                          muitos dados em "disco".
-                  * Para `memory="medium"`, são alocados 12 GB de RAM
-                  * Para `memory="large"`, são alocados 24 GB de RAM
-          mount_gcs(bool):
-                  Flag indicando se um bucket do GCS deve ser montado
-                  em `/mnt/gcs` ou não. Como não há disco, se for
-                  necessário escrever arquivos maiores que a RAM
-                  disponível, é necessário usar um bucket externo.
-                  Falso por padrão.
+    flow(Flow):
+      O flow a ser executado.
+    schedules(list[Schedule]):
+      Lista de schedules para o flow; pode ser vazia/None.
+    dockerfile(str):
+      Caminho do Dockerfile customizado que executa o flow.
+      Pode ser vazio/None. Ex.: `"./pipelines/datalake/..."`
+    memory(Literal["small", "medium", "large"]):
+      Quantidade de memória RAM disponibilizada para a VM
+      executando o flow. Atenção: em Google Cloud Run Jobs,
+      não existe disco rígido; o filesystem reside na
+      própria memória RAM.
+      * Para `memory="small"` (valor padrão), são alocados 4 GB
+        de RAM, ideal para flows que não fazem escrita de
+        muitos dados em "disco".
+      * Para `memory="medium"`, são alocados 12 GB de RAM
+      * Para `memory="large"`, são alocados 24 GB de RAM
+    mount_gcs(bool):
+      Flag indicando se um bucket do GCS deve ser montado
+      em `/mnt/gcs` ou não. Como não há disco, se for
+      necessário escrever arquivos maiores que a RAM
+      disponível, é necessário usar um bucket externo.
+      Falso por padrão.
   """
   if not schedules:
     schedules = []
