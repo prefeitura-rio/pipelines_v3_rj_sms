@@ -88,6 +88,18 @@ cases:
       month: null
       year: null
 
+  # Extração VitaCare API v2
+  - case_slug: "datalake-extract-vitacare-api-v2"
+    flow_path: "pipelines.datalake.extract_load.vitacare_api_v2.flows"
+    flow_name: "sms_vitacare_api_v2"
+    params:
+      environment: dev
+      endpoint: posicao
+      target_date: D-1
+      dataset_id: brutos_prontuario_vitacare
+      table_id_prefix: posicao
+      rename_flow: true
+
   # Clona tabelas do BigQuery, de um projeto qualquer para a SMS
   - case_slug: "datalake-clone-bigquery-table"
     flow_path: "pipelines.datalake.extract_load.clone_bigquery.flows"

@@ -251,9 +251,7 @@ def create_date_partitions(
     if file_format == "csv":
       dataframe.to_csv(file_folder, index=False, sep=csv_delimiter)
     elif file_format == "parquet":
-      # FIXME
-      # safe_export_df_to_parquet.run(df=dataframe, output_path=file_folder)
-      raise NotImplementedError("`safe_export_df_to_parquet` ainda não foi implementado")
+      dataframe.to_parquet(file_folder, index=False)
 
   return root_folder
 
@@ -328,9 +326,7 @@ def upload_df_to_datalake(
     if source_format == "csv":
       df.to_csv(file_path, index=False, sep=csv_delimiter)
     elif source_format == "parquet":
-      # FIXME
-      # safe_export_df_to_parquet.run(df=df, output_path=file_path)
-      raise NotImplementedError("`safe_export_df_to_parquet` ainda não foi implementado")
+      df.to_parquet(file_path, index=False)
 
   log(f"Fazendo upload de dados em '{root_folder}'")
   upload_to_datalake(
