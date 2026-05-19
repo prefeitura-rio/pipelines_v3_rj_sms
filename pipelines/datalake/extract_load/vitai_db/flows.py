@@ -14,7 +14,6 @@ from pipelines.datalake.extract_load.vitai_db.tasks import (
 )
 from pipelines.utils.datalake import upload_df_to_datalake_task
 from pipelines.utils.infisical import get_secret
-from pipelines.utils.logger import log  # DEV
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
 from pipelines.utils.state_handlers import handle_flow_state_change
 

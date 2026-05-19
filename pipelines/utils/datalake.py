@@ -16,31 +16,26 @@ from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
 
-@task
-def safe_export_df_to_parquet(df: pd.DataFrame, output_path: str) -> str:
+def safe_df_to_parquet(df: pd.DataFrame, output_path: Optional[str]) -> str:
   """
-  Safely exports a DataFrame to a Parquet file.
+  Cria um arquivo Parquet que é preenchido com os dados de um DataFrame,
+  convertidos para string.
 
   Args:
-      df (pd.DataFrame): The DataFrame to export.
-      output_path (str): The path to the output Parquet file.
-
+    df(pd.DataFrame): O DataFrame a ser exportado.
+    output_path(str?):
+      O caminho do arquivo a ser criado. Algo como `/tmp/file.parquet`.
+      Se não for passado, uma pasta temporária local será criada, e o
+      nome do arquivo será um UUID v4.
   Returns:
-      str: The path to the output Parquet file.
+    O caminho do arquivo criado.
   """
-  df.to_csv(output_path.replace("parquet", "csv"), index=False)
+  if not output_path:
+    root_folder = create_tmp_data_folder()
+    output_path = os.path.join(root_folder, f"{uuid.uuid4()}.parquet")
 
-  dataframe = pd.read_csv(
-    output_path.replace("parquet", "csv"),
-    sep=",",
-    dtype=str,
-    keep_default_na=False,
-    encoding="utf-8",
-  )
-  dataframe.to_parquet(output_path, index=False)
-
-  # Delete the csv file
-  os.remove(output_path.replace("parquet", "csv"))
+  df = df.fillna("").astype(str)
+  df.to_parquet(output_path, index=False)
   return output_path
 
 
@@ -279,7 +274,7 @@ def create_date_partitions(
     if file_format == "csv":
       dataframe.to_csv(file_folder, index=False, sep=csv_delimiter)
     elif file_format == "parquet":
-      safe_export_df_to_parquet.run(df=dataframe, output_path=file_folder)
+      safe_df_to_parquet(df=dataframe, output_path=file_folder)
 
   return root_folder
 
