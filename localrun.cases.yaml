@@ -89,15 +89,13 @@ cases:
       year: null
 
   # Extração Exames Laboratoriais API
-  - case_slug: "datalake-extract-exames-laboratoriais"
+  - case_slug: "exames_laboratoriais"
     flow_path: "pipelines.datalake.extract_load.exames_laboratoriais.flows"
-    flow_name: "exames_laboratoriais_operator"
+    flow_name: "exames_laboratoriais"
     params:
       environment: dev
-      ap: "10"
-      dt_inicio: "2025-10-21T10:00:00-0300"
-      dt_fim: "2025-10-21T11:30:00-0300"
-      rename_flow: false
+      intervalo: "D-1"
+      hours_per_window: 1.5
       dataset: brutos_exames_laboratoriais
 
   # Extração de tabela (banco relacional) -> tabela (BigQuery)

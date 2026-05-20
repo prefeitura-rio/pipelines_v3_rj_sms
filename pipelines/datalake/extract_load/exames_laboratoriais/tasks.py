@@ -5,21 +5,20 @@ from datetime import timedelta
 
 import pandas as pd
 import requests
+from markdown_it import MarkdownIt
 
 from pipelines.datalake.extract_load.exames_laboratoriais.constants import (
   AREA_PROGRAMATICA,
   CREDENTIALS,
 )
-from pipelines.datalake.extract_load.exames_laboratoriais.utils import (
-  send_api_error_report,
-)
 from pipelines.utils.datetime import now_str
+from pipelines.utils.email import send_email
+from pipelines.utils.infisical import get_secret
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
 
-@task(retries=3, retry_delay_seconds=60)
-def authenticate_fetch(
+def _authenticate_fetch(
   username: str,
   apccodigo: str,
   password: str,
@@ -110,8 +109,7 @@ def authenticate_fetch(
     raise
 
 
-@task
-def transform(json_result: dict, source: str):
+def _transform(json_result: dict, source: str):
   solicitacoes_rows = []
   exames_rows = []
   resultados_rows = []
@@ -213,8 +211,7 @@ def transform(json_result: dict, source: str):
   return solicitacoes_df, exames_df, resultados_df
 
 
-@task
-def parse_identificador(identificador: str, ap: str) -> str:
+def _parse_identificador(identificador: str, ap: str) -> str:
   try:
     identificador_corrigido = identificador.replace("“", '"').replace("”", '"')
     identificador_dict = json.loads(identificador_corrigido)
@@ -225,13 +222,7 @@ def parse_identificador(identificador: str, ap: str) -> str:
     return identificador
 
 
-@task
-def get_credential_param(source: str):
-  return CREDENTIALS[source]
-
-
-@task
-def get_source_from_ap(ap: str) -> str:
+def _get_extraction_context(ap: str, environment: str) -> dict:
   source = AREA_PROGRAMATICA.get(ap)
 
   if not source:
@@ -239,7 +230,81 @@ def get_source_from_ap(ap: str) -> str:
     log(message, level="error")
     raise ValueError(message)
 
-  return source
+  credential = CREDENTIALS[source]
+  infisical_path = credential["INFISICAL_PATH"]
+
+  username_secret = get_secret(
+    secret_name=credential["INFISICAL_USERNAME"],
+    path=infisical_path,
+    environment=environment,
+  )
+  password_secret = get_secret(
+    secret_name=credential["INFISICAL_PASSWORD"],
+    path=infisical_path,
+    environment=environment,
+  )
+  apccodigo_secret = get_secret(
+    secret_name=credential["INFISICAL_APCCODIGO"],
+    path=infisical_path,
+    environment=environment,
+  )
+  identificador_lis_secret = get_secret(
+    secret_name=credential["INFISICAL_AP_LIS"],
+    path=infisical_path,
+    environment=environment,
+  )
+  base_url_secret = get_secret(
+    secret_name=credential["INFISICAL_BASE_URL"],
+    path=infisical_path,
+    environment=environment,
+  )
+
+  return {
+    "source": source,
+    "username": username_secret,
+    "password": password_secret,
+    "apccodigo": apccodigo_secret,
+    "identificador_lis": _parse_identificador(
+      identificador=identificador_lis_secret, ap=ap
+    ),
+    "base_url": base_url_secret,
+  }
+
+
+@task(retries=3, retry_delay_seconds=60)
+def extract_exames_laboratoriais(
+  ap: str,
+  environment: str,
+  dt_inicio: str,
+  dt_fim: str,
+  dataset: str,
+) -> dict:
+  context = _get_extraction_context(ap=ap, environment=environment)
+  results = _authenticate_fetch(
+    username=context["username"],
+    password=context["password"],
+    apccodigo=context["apccodigo"],
+    identificador_lis=context["identificador_lis"],
+    dt_start=dt_inicio,
+    dt_end=dt_fim,
+    environment=environment,
+    source=context["source"],
+    base_url=context["base_url"],
+  )
+  solicitacoes_df, exames_df, resultados_df = _transform(
+    json_result=results, source=context["source"]
+  )
+
+  return {
+    "ap": ap,
+    "dt_inicio": dt_inicio,
+    "dt_fim": dt_fim,
+    "dataset": dataset,
+    "source": context["source"],
+    "solicitacoes_df": solicitacoes_df,
+    "exames_df": exames_df,
+    "resultados_df": resultados_df,
+  }
 
 
 @task
@@ -249,7 +314,7 @@ def get_all_aps():
 
 @task
 def generate_time_windows(
-  start_date: pd.Timestamp, end_date: str, hours_per_window: int = 2
+  start_date: pd.Timestamp, end_date: str, hours_per_window: int | float = 2
 ):
   """
   Gera janelas de tempo desde a start_date até a meia-noite do dia de referência.
@@ -294,7 +359,7 @@ def generate_time_windows(
 
 
 @task
-def build_operator_params(windows: list, aps: list, env: str, dataset: str):
+def build_extraction_params(windows: list, aps: list, env: str, dataset: str):
   """
   Cria uma entrada de parâmetros para cada combinação de AP e janela de tempo.
   """
@@ -314,3 +379,29 @@ def build_operator_params(windows: list, aps: list, env: str, dataset: str):
 
   log(f"Parâmetros gerados para {len(params)} combinações (AP x Janela).")
   return params
+
+
+def send_api_error_report(status_code: int, source: str, environment: str) -> None:
+  md = MarkdownIt()
+
+  subject = f"[ALERTA] API {source.upper()} Indisponível"
+  message = "## A extração de exames laboratoriais encontrou um erro de servidor.\n\n"
+  message += f"- **Sistema:** {source.upper()}\n"
+  message += f"- **Status Code:** {status_code}\n"
+  message += f"- **Ambiente:** {environment}\n"
+  message += "- **Motivo:** Servidor em manutenção ou indisponível.\n\n"
+  message += "---\n"
+  message += "*O fluxo continuará tentando a extração automaticamente conforme a política de retries.*"
+
+  recipients = ["daniel.lira@prefeitura.rio"]
+
+  try:
+    send_email(
+      subject=subject,
+      message=md.render(message),
+      recipients={"to_addresses": recipients, "cc_addresses": [], "bcc_addresses": []},
+      environment=environment,
+    )
+    log(f"E-mail de alerta enviado com sucesso para {recipients}")
+  except Exception as exc:
+    log(f"Falha ao enviar e-mail de alerta: {str(exc)}", level="error")
