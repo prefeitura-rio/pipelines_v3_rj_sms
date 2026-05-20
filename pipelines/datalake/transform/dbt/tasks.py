@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
-import shutil
 import secrets
+import shutil
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -13,7 +13,11 @@ from prefect.states import Failed
 from pipelines.utils.api import convert_usd_to_brl
 from pipelines.utils.cleanup import process_null_str
 from pipelines.utils.datetime import now
-from pipelines.utils.env import environment_is_valid, get_google_project_for_environment, setenv_if_empty
+from pipelines.utils.env import (
+  environment_is_valid,
+  get_google_project_for_environment,
+  setenv_if_empty,
+)
 from pipelines.utils.google import download_path_from_bucket, upload_to_cloud_storage
 from pipelines.utils.logger import log
 from pipelines.utils.monitor import send_discord_message
