@@ -3,7 +3,6 @@ from pipelines.utils.schedules import create_schedule_list
 
 from .constants import constants as tpc_constants
 
-
 parameters = [
   {
     "blob_file": "posicao",
