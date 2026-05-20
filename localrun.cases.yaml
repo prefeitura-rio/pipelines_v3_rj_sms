@@ -88,6 +88,17 @@ cases:
       month: null
       year: null
 
+  # Extração VitaCare API v2
+  - case_slug: "datalake-extract-vitacare-api-v2"
+    flow_path: "pipelines.datalake.extract_load.vitacare_api_v2.flows"
+    flow_name: "sms_vitacare_api_v2"
+    params:
+      environment: dev
+      endpoint: posicao
+      target_date: D-1
+      dataset_id: brutos_prontuario_vitacare
+      table_id_prefix: posicao
+      rename_flow: true
   # Extração de tabela (banco relacional) -> tabela (BigQuery)
   - case_slug: "datalake-extract-relational-db"
     flow_path: "pipelines.datalake.extract_load.relational_db.flows"

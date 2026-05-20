@@ -4,6 +4,7 @@ import os
 from typing import List, Literal
 
 import aiohttp
+import requests
 from discord import AllowedMentions, Embed, File, Webhook
 from prefect.context import FlowRunContext, TaskRunContext
 
@@ -202,3 +203,39 @@ def send_discord_message(
         await send_discord_webhook(slug=slug, text_content=content)
 
   asyncio.run(send_multiple_discord_messages(pages))
+
+
+def send_email(subject: str, message: str, recipients: dict, environment: str = None):
+  """
+  Envia email pela API DataRelay/Mailman da Iplan.
+
+  Args:
+    subject: Assunto do email.
+    message: Corpo do email em HTML.
+    recipients: Dicionário com chaves `to_addresses`, `cc_addresses` e `bcc_addresses`.
+    environment: Ambiente usado para buscar os secrets. Se omitido, usa o ambiente atual.
+  """
+  environment = environment or get_current_environment()
+  api_url = get_secret(secret_name="API_URL", path="/datarelay", environment=environment)
+  api_token = get_secret(
+    secret_name="API_TOKEN", path="/datarelay", environment=environment
+  )
+
+  request_headers = {"x-api-key": api_token}
+  request_body = {**recipients, "subject": subject, "body": message, "is_html_body": True}
+
+  if api_url.endswith("/"):
+    api_url = api_url.rstrip("/?#")
+
+  response = requests.request(
+    "POST", api_url + "/data/mailman", headers=request_headers, json=request_body
+  )
+  response.raise_for_status()
+  response.encoding = response.apparent_encoding
+  response_json = response.json()
+
+  if "success" in response_json and response_json["success"]:
+    log("Envio de email requisitado com sucesso")
+    return
+
+  raise RuntimeError(f"Envio de email falhou: {response_json}")
