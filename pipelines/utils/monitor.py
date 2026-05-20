@@ -11,9 +11,20 @@ from pipelines.utils.env import get_current_environment, get_prefect_url
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.logger import log
 
+DISCORD_WEBHOOK_SLUGS = (
+  "custo_jobs",
+  "data-ingestion",
+  "dbt-runs",
+  "error",
+  "hci_status",
+  "warning",
+)
+
+DiscordWebhookSlug = Literal[*DISCORD_WEBHOOK_SLUGS]
+
 
 async def send_discord_webhook(
-  slug: Literal["dbt-runs", "data-ingestion", "warning", "hci_status"],
+  slug: DiscordWebhookSlug,
   text_content: str = None,
   embed_content: List[Embed] = None,
   file_path: str = None,
@@ -79,10 +90,7 @@ async def send_discord_webhook(
       raise e
 
 
-def send_discord_embed(
-  contents: List[Embed],
-  slug: Literal["dbt-runs", "data-ingestion", "warning", "hci_status"],
-):
+def send_discord_embed(contents: List[Embed], slug: DiscordWebhookSlug):
   """
   Envia um ou mais Embeds pré-formatados para o Discord
 
@@ -96,7 +104,7 @@ def send_discord_embed(
 def send_discord_message(
   title: str,
   message: str,
-  slug: Literal["dbt-runs", "data-ingestion", "warning", "hci_status"],
+  slug: DiscordWebhookSlug,
   file_path: str = None,
   multiple_messages_ok: bool = False,
 ):
