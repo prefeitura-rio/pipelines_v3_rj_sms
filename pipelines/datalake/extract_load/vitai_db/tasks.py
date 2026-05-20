@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from pipelines.utils.datetime import from_relative_date
+from pipelines.utils.datetime import from_relative_date, now
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
@@ -86,13 +86,12 @@ def run_query(db_url: str, query: str, partition_column: str) -> pd.DataFrame:
     log("Detected `id` column in dataframe. Renaming to `gid`", level="warning")
     df.rename(columns={"id": "gid"}, inplace=True)
 
-  now = pd.Timestamp.now(tz="America/Sao_Paulo")
-  df["datalake_loaded_at"] = now
+  df["datalake_loaded_at"] = now()
 
   # We shouldn't fail if the partition_column doesn't exist, or we can handle it
   if partition_column in df.columns:
     df["partition_date"] = pd.to_datetime(df[partition_column]).dt.date
   else:
-    df["partition_date"] = now.date()
+    df["partition_date"] = now().date()
 
   return df
