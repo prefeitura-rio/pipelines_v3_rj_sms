@@ -61,6 +61,17 @@ cases:
       # lines_per_chunk: 100000
       # data_referencia: ...
 
+  # Extração TPC (Azure Blob) -> tabela staging
+  - case_slug: "datalake-extract-tpc-azure-blob"
+    flow_path: "pipelines.datalake.extract_load.tpc_azure_blob.flows"
+    flow_name: "sms_dump_tpc"
+    params:
+      environment: dev
+      blob_file: posicao
+      dataset_id: brutos_estoque_central_tpc
+      table_id: estoque_posicao
+      rename_flow: true
+
   # Extração SICLOM API
   - case_slug: "datalake-extract-siclom-api"
     flow_path: "pipelines.datalake.extract_load.siclom_api.flows"

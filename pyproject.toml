@@ -5,6 +5,7 @@ description = "Pipelines"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"  # dbt ainda não existe pra Python 3.14+
 dependencies = [
+  "azure-storage-blob>=12.27.1",
   "basedosdados>=2.0.3",
   "db-dtypes>=1.4.4",  # BigQuery reclama sem db-dtypes
   "dbt-bigquery>=1.11.1",
@@ -59,4 +60,3 @@ lint-autofix = "ruff check --fix . && ruff format ."
 profile = "black"
 line_length = 90
 indent = 2
-
