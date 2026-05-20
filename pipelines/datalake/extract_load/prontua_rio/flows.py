@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from pipelines.constants import CIT
 from pipelines.datalake.extract_load.prontua_rio.constants import (
   constants as prontuario_constants,
