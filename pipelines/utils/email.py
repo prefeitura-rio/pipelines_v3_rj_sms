@@ -32,7 +32,9 @@ def send_email(
   secret_path: str = "/datarelay",
   endpoint: str = "/data/mailman",
 ) -> None:
-  url_secret = get_secret(secret_name="API_URL", path=secret_path, environment=environment)
+  url_secret = get_secret(
+    secret_name="API_URL", path=secret_path, environment=environment
+  )
   token_secret = get_secret(
     secret_name="API_TOKEN", path=secret_path, environment=environment
   )

@@ -273,11 +273,7 @@ def _get_extraction_context(ap: str, environment: str) -> dict:
 
 @task(retries=3, retry_delay_seconds=60)
 def extract_exames_laboratoriais(
-  ap: str,
-  environment: str,
-  dt_inicio: str,
-  dt_fim: str,
-  dataset: str,
+  ap: str, environment: str, dt_inicio: str, dt_fim: str, dataset: str
 ) -> dict:
   context = _get_extraction_context(ap=ap, environment=environment)
   results = _authenticate_fetch(

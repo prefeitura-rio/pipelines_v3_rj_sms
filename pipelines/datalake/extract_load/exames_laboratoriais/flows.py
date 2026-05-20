@@ -45,12 +45,9 @@ def exames_laboratoriais(
   failed_parameters = []
 
   for start_index in range(0, len(extraction_parameters), concurrency_limit):
-    parameter_batch = extraction_parameters[
-      start_index : start_index + concurrency_limit
-    ]
+    parameter_batch = extraction_parameters[start_index : start_index + concurrency_limit]
     extraction_futures = [
-      extract_exames_laboratoriais.submit(**parameters)
-      for parameters in parameter_batch
+      extract_exames_laboratoriais.submit(**parameters) for parameters in parameter_batch
     ]
 
     wait(extraction_futures)
