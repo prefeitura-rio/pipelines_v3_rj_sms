@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 import csv
-import datetime
-import io
 import os
 import time
 from typing import Iterator, List, Literal
@@ -342,53 +340,64 @@ def get_google_drive_service():
   )
   return build("drive", "v3", credentials=credentials)
 
-
 def list_google_drive_files(
-  folder_id: str, last_modified_date: str = "M-0", last_modified_end_date: str = "D-0"
-) -> List[dict[str, str]]:
-  """
-  Lista arquivos de uma pasta do Google Drive, incluindo subpastas.
+  folder_id: str,
+  start_date: str,
+  end_date: str
+) -> list[dict]:
+  '''
+  Lista arquivos de uma pasta e subpastas do Google Drive.
 
   Args:
-    folder_id (str): ID da pasta raiz no Google Drive.
-    last_modified_date (str, optional): Data mínima de modificação para filtrar arquivos.
-    last_modified_end_date (str, optional): Data máxima de modificação para filtrar arquivos.
+      folder_id (str): ID da pasta raiz no Google Drive.
+      start_date (str): Data inicial (YYYY-MM-DD) de modificação do arquivo.
+      end_date (str): Data limite (YYYY-MM-DD) de modificação do arquivo. 
 
   Returns:
-    List[dict[str, str]]: Lista de arquivos encontrados com metadados básicos.
-  """
+      list[dict]: Lista de arquivos encontrados, contendo o ID, nome e caminho relativo.
+  '''
+
   service = get_google_drive_service()
-  modified_since = from_relative_date(last_modified_date)
-  modified_until = from_relative_date(last_modified_end_date)
 
-  if isinstance(modified_since, datetime.datetime):
-    modified_since = modified_since.date()
-
-  if isinstance(modified_until, datetime.datetime):
-    modified_until = modified_until.date()
-
-  if modified_since and modified_until and modified_since > modified_until:
-    raise ValueError(
-      "'last_modified_date' não pode ser maior que 'last_modified_end_date'."
-    )
-
+  if not end_date:
+    end_date = str(from_relative_date("D-0"))
+  if start_date and start_date > end_date:
+    raise ValueError('start date precisa ser anterior a end_date')
+  
+  listed_files = []
+  
+  folder_mime_type = "application/vnd.google-apps.folder"
   root_folder = (
     service.files()
-    .get(fileId=folder_id, fields="id, name", supportsAllDrives=True)
+    .get(fileId=folder_id, fields="name", supportsAllDrives=True)
     .execute()
   )
   root_folder_name = root_folder["name"]
 
-  def _list_files(current_folder_id: str, parent_path: str = "") -> List[dict[str, str]]:
-    files = []
+  def list_files(current_folder_id: str, current_path: str):
     page_token = None
+    date_filters = [f"modifiedTime <= '{end_date}T23:59:59'"]
+
+    if start_date:
+      date_filters.append(f"modifiedTime >= '{start_date}T00:00:00'")
+
+    file_date_filter = date_filters[0]
+    if start_date:
+      file_date_filter = f"{file_date_filter} and {date_filters[1]}"
+
+    query = (
+      f"'{current_folder_id}' in parents "
+      f"and trashed = false "
+      f"and (mimeType = '{folder_mime_type}' or ({file_date_filter}))"
+    )
 
     while True:
       response = (
         service.files()
         .list(
-          q=f"'{current_folder_id}' in parents and trashed = false",
+          q=query,
           fields="nextPageToken, files(id, name, mimeType, modifiedTime)",
+          pageSize=1000,
           pageToken=page_token,
           supportsAllDrives=True,
           includeItemsFromAllDrives=True,
@@ -397,32 +406,17 @@ def list_google_drive_files(
       )
 
       for item in response.get("files", []):
-        relative_path = f"{parent_path}/{item['name']}" if parent_path else item["name"]
+        relative_path = f"{current_path}/{item['name']}" if current_path else item["name"]
 
-        # Se for pasta, continua a busca dentro dela
-        if item["mimeType"] == "application/vnd.google-apps.folder":
-          files.extend(_list_files(item["id"], relative_path))
+        if item["mimeType"] == folder_mime_type:
+          list_files(item["id"], relative_path)
           continue
 
-        modified_time = item["modifiedTime"]
-        modified_date = datetime.datetime.fromisoformat(
-          modified_time.replace("Z", "+00:00")
-        ).date()
-
-        # Ignora arquivos mais antigos que a data inicial informada
-        if modified_since and modified_date < modified_since:
-          continue
-
-        # Ignora arquivos mais novos que a data final informada
-        if modified_until and modified_date > modified_until:
-          continue
-
-        files.append(
+        listed_files.append(
           {
             "id": item["id"],
             "name": item["name"],
             "relative_path": relative_path,
-            "modified_time": modified_time,
           }
         )
 
@@ -430,16 +424,18 @@ def list_google_drive_files(
       if not page_token:
         break
 
-    return files
+  list_files(folder_id, root_folder_name)
 
-  # Começa a listagem incluindo o nome da pasta raiz no caminho relativo
-  items = _list_files(folder_id, root_folder_name)
-  log(f"Encontrado(s) {len(items)} arquivo(s) no Google Drive")
-  return items
+  log(f"Encontrado(s) {len(listed_files)} arquivo(s) no Google Drive")
+  return listed_files
 
 
-def download_google_drive_file(file_id: str, destination_path: str = None) -> str:
-  """
+def download_google_drive_file(
+  file_id: str, 
+  destination_path: str = None
+) -> str:
+  '''
+
   Baixa um arquivo do Google Drive para um caminho local.
 
   Args:
@@ -448,31 +444,36 @@ def download_google_drive_file(file_id: str, destination_path: str = None) -> st
 
   Returns:
     str: Caminho final do arquivo baixado.
-  """
+  '''
+  
   service = get_google_drive_service()
   file_metadata = (
-    service.files().get(fileId=file_id, fields="name", supportsAllDrives=True).execute()
+    service.files()
+    .get(fileId=file_id, fields="name", supportsAllDrives=True)
+    .execute()
   )
 
-  # Se nenhum destino for informado, cria um caminho temporário com o nome original
-  if not destination_path:
-    destination_path = os.path.join(create_tmp_data_folder(), file_metadata["name"])
-  elif os.path.isdir(destination_path):
-    destination_path = os.path.join(destination_path, file_metadata["name"])
+  file_name = f"{file_id}_{file_metadata['name']}"
 
-  os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+  if not destination_path:
+    destination_path = os.path.join(create_tmp_data_folder(prefix="gdrive"), file_name)
+  elif os.path.isdir(destination_path):
+    destination_path = os.path.join(
+      destination_path, file_name
+    )
+
+  destination_folder = os.path.dirname(destination_path)
+  if destination_folder:
+    os.makedirs(destination_folder, exist_ok=True)
 
   request = service.files().get_media(fileId=file_id)
-  buffer = io.BytesIO()
 
   with open(destination_path, "wb") as output_file:
-    downloader = MediaIoBaseDownload(buffer, request)
-
+    downloader = MediaIoBaseDownload(output_file, request)
     done = False
+
     while not done:
       _, done = downloader.next_chunk()
-
-    output_file.write(buffer.getvalue())
 
   return destination_path
 
