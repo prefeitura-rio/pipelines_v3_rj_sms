@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-
 import os
 import shutil
+import secrets
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -13,7 +13,7 @@ from prefect.states import Failed
 from pipelines.utils.api import convert_usd_to_brl
 from pipelines.utils.cleanup import process_null_str
 from pipelines.utils.datetime import now
-from pipelines.utils.env import environment_is_valid, get_google_project_for_environment
+from pipelines.utils.env import environment_is_valid, get_google_project_for_environment, setenv_if_empty
 from pipelines.utils.google import download_path_from_bucket, upload_to_cloud_storage
 from pipelines.utils.logger import log
 from pipelines.utils.monitor import send_discord_message
@@ -38,25 +38,27 @@ def execute_dbt(
   Executa um comando dbt com os parâmetros especificados.
 
   Args:
-          repository_path (str):
-                  Caminho, na máquina local, para o repositório do dbt.
-          command (str?):
-                  O comando dbt a ser executado; p.ex.: "run", "build", etc.
-                  Possui valor padrão de "run".
-          target (str?):
-                  O target (`--target`) do dbt; p.ex.: "dev", "ci", "prod".
-                  Possui valor padrão de "dev".
-          select (str?):
-                  Valor passado ao argumento `--select`. É vazio por padrão.
-          exclude (str?):
-                  Valor passado ao argumento `--exclude`. É vazio por padrão.
-          state (str?):
-                  Valor passado ao argumento `--state`. É vazio por padrão.
-          flag (str?):
-                  Flags adicionais passadas ao comando.
+    repository_path (str):
+      Caminho, na máquina local, para o repositório do dbt.
+    command (str?):
+      O comando dbt a ser executado; p.ex.: "run", "build", etc.
+      Possui valor padrão de "run".
+    target (str?):
+      O target (`--target`) do dbt; p.ex.: "dev", "ci", "prod".
+      Possui valor padrão de "dev".
+    select (str?):
+      Valor passado ao argumento `--select`. É vazio por padrão.
+    exclude (str?):
+      Valor passado ao argumento `--exclude`. É vazio por padrão.
+    state (str?):
+      Valor passado ao argumento `--state`. É vazio por padrão.
+    flag (str?):
+      Flags adicionais passadas ao comando.
   """
-  commands = command.split(" ")
+  # Cria HASH_SECRET no ambiente se não existir
+  setenv_if_empty("HASH_SECRET", secrets.token_hex(32))
 
+  commands = command.split(" ")
   cli_args = commands + [
     "--profiles-dir",
     repository_path,
@@ -115,6 +117,10 @@ def estimate_dbt_costs(execution_info: dict, environment: str) -> float:
   """
   affected_datasets = []
   running_result: dbtRunnerResult = execution_info["running_result"]
+  if not running_result.result:
+    log(f"Erro ao executar dbt! {repr(running_result)}", level="error")
+    raise running_result.exception
+
   for command_result in running_result.result:
     affected_datasets.append(command_result.node.schema)
 
@@ -164,13 +170,13 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
   uma falha do flow se detectar erro na execução.
 
   Args:
-          execution_info(dict):
-                  Dicionário com informações sobre a execução. Deve conter chaves
-                  `command` (str), `running_result` (dbtRunnerResult),
-                  `execution_time` (float), `start_time`, `end_time` (datetime)
-                  e `log_path` (str).
-          estimated_total_cost(float):
-                  Custo estimado em BRL.
+    execution_info(dict):
+      Dicionário com informações sobre a execução. Deve conter chaves
+      `command` (str), `running_result` (dbtRunnerResult),
+      `execution_time` (float), `start_time`, `end_time` (datetime)
+      e `log_path` (str).
+    estimated_total_cost(float):
+      Custo estimado em BRL.
   """
   runner_result: dbtRunnerResult = execution_info["running_result"]
   running_results = runner_result.result.results
@@ -305,12 +311,6 @@ def download_dbt_artifacts_from_gcs(dbt_path: str, environment: str):
   except Exception as e:
     log(f"Erro baixando dbt artifacts do bucket: {e}", level="error")
     return None
-
-
-@task
-def should_upload_artifacts(command: str):
-  """Confere se `command` é `"build"` ou `"source freshness"`"""
-  return command in ["build", "source freshness"]
 
 
 @task
