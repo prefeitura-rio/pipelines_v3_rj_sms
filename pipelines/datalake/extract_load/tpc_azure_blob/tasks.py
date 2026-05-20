@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 import csv
-from datetime import datetime
 
 import pandas as pd
 
-from pipelines.constants import constants
 from pipelines.utils.azure import download_azure_blob
+from pipelines.utils.datetime import now_str, today_str
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
@@ -54,7 +53,7 @@ def extract_data_from_blob(
   replication_date = pd.Timestamp(df.data_atualizacao[0]).strftime("%Y-%m-%d")
   log(f"Data de replicação do arquivo: {replication_date}")
 
-  today = pd.Timestamp.now().strftime("%Y-%m-%d")
+  today = today_str()
   if replication_date != today:
     raise RuntimeError(
       f"Arquivo não é da data atual. Data de replicação: {replication_date}"
@@ -119,7 +118,7 @@ def transform_data(file_path: str, blob_file: str) -> str:
     )
     df["qt_rec"] = df.qt_rec.apply(lambda x: float(x.replace(",", ".")) if x != "" else x)
 
-  df["_data_carga"] = datetime.now(constants.TIMEZONE.value).strftime("%Y-%m-%d %H:%M:%S")
+  df["_data_carga"] = now_str()
 
   df.to_csv(file_path, index=False, sep=";", encoding="utf-8", quoting=0, decimal=".")
 
