@@ -20,12 +20,7 @@ from pipelines.utils.state_handlers import handle_flow_state_change
 from .schedules import schedules
 
 
-@flow(
-  name="DataLake - Extração e Carga de Dados - Exames Laboratoriais (Operator)",
-  state_handlers=[handle_flow_state_change],
-  owners=[CIT.DANIEL_ID.value],
-)
-def exames_laboratoriais_operator(
+def _run_exames_laboratoriais_operator(
   ap: str = "10",
   environment: str = "dev",
   dt_inicio: str = "2025-10-21T10:00:00-0300",
@@ -116,6 +111,29 @@ def exames_laboratoriais_operator(
 
 
 @flow(
+  name="DataLake - Extração e Carga de Dados - Exames Laboratoriais (Operator)",
+  state_handlers=[handle_flow_state_change],
+  owners=[CIT.DANIEL_ID.value],
+)
+def exames_laboratoriais_operator(
+  ap: str = "10",
+  environment: str = "dev",
+  dt_inicio: str = "2025-10-21T10:00:00-0300",
+  dt_fim: str = "2025-10-21T11:30:00-0300",
+  rename_flow: bool = True,
+  dataset: str = "brutos_exames_laboratoriais",
+):
+  _run_exames_laboratoriais_operator(
+    ap=ap,
+    environment=environment,
+    dt_inicio=dt_inicio,
+    dt_fim=dt_fim,
+    rename_flow=rename_flow,
+    dataset=dataset,
+  )
+
+
+@flow(
   name="DataLake - Extração e Carga de Dados - Exames Laboratoriais (Manager)",
   state_handlers=[handle_flow_state_change],
   owners=[CIT.DANIEL_ID.value],
@@ -139,7 +157,7 @@ def exames_laboratoriais_manager(
   failed_parameters = []
   for parameters in operator_parameters:
     try:
-      exames_laboratoriais_operator(**parameters)
+      _run_exames_laboratoriais_operator(**parameters, rename_flow=False)
     except Exception as exc:
       failed_parameters.append({**parameters, "error": str(exc)})
       log(
