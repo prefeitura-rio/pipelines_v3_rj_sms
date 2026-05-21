@@ -33,31 +33,20 @@ def get_sqlserver_connection_string(
     f"para database '{database_name}'"
   )
   host = get_secret(
-    secret_name=host_secret_name,
-    path=secret_path,
-    environment=environment,
+    secret_name=host_secret_name, path=secret_path, environment=environment
   )
   username = get_secret(
-    secret_name=username_secret_name,
-    path=secret_path,
-    environment=environment,
+    secret_name=username_secret_name, path=secret_path, environment=environment
   )
   password = get_secret(
-    secret_name=password_secret_name,
-    path=secret_path,
-    environment=environment,
+    secret_name=password_secret_name, path=secret_path, environment=environment
   )
   if port_secret_name:
     log(
-      f"(get_sqlserver_connection_string) buscando porta pelo secret "
-      f"'{port_secret_name}'"
+      f"(get_sqlserver_connection_string) buscando porta pelo secret '{port_secret_name}'"
     )
     port = int(
-      get_secret(
-        secret_name=port_secret_name,
-        path=secret_path,
-        environment=environment,
-      )
+      get_secret(secret_name=port_secret_name, path=secret_path, environment=environment)
     )
 
   connection_string = build_sqlserver_odbc_connection_string(
@@ -128,8 +117,7 @@ def extract_query_sample_to_parquet(
   import duckdb
 
   log(
-    f"(extract_query_sample_to_parquet) preparando extração da database "
-    f"'{database_name}'"
+    f"(extract_query_sample_to_parquet) preparando extração da database '{database_name}'"
   )
   connection_string = get_sqlserver_connection_string(
     host_secret_name=host_secret_name,
@@ -145,8 +133,7 @@ def extract_query_sample_to_parquet(
 
   os.makedirs(output_dir, exist_ok=True)
   output_path = build_sample_parquet_path(
-    database_name=database_name,
-    output_dir=output_dir,
+    database_name=database_name, output_dir=output_dir
   )
 
   duckdb_connection = duckdb.connect()

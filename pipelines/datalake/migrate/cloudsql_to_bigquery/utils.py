@@ -4,12 +4,7 @@ from urllib.parse import quote_plus
 
 
 def build_sqlserver_odbc_connection_string(
-  host: str,
-  username: str,
-  password: str,
-  database_name: str,
-  port: int,
-  driver: str,
+  host: str, username: str, password: str, database_name: str, port: int, driver: str
 ) -> str:
   return (
     f"DRIVER={{{driver}}};"

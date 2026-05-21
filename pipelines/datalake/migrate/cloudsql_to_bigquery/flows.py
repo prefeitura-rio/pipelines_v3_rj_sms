@@ -11,10 +11,7 @@ from .constants import (
   DEFAULT_SQLSERVER_PORT,
 )
 from .schedules import schedules
-from .tasks import (
-  extract_query_sample_to_parquet,
-  test_sqlserver_connection,
-)
+from .tasks import extract_query_sample_to_parquet, test_sqlserver_connection
 
 
 @flow(
