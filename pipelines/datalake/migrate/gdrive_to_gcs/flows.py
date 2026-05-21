@@ -9,6 +9,7 @@ from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 from .tasks import (
+  cleanup_downloaded_file,
   download_file,
   list_files,
   prepare_files_for_upload,
@@ -59,6 +60,8 @@ def gdrive_to_gcs(
           prepared_file=prepared_file, bucket_name=resolved_bucket_name
         )
         log_items.append(result)
+
+      cleanup_downloaded_file(downloaded_file=downloaded_file)
 
   finally:
     if log_items:

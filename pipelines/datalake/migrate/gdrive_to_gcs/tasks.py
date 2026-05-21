@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import posixpath
+import shutil
 import zipfile
 
 from google.cloud import bigquery
@@ -29,15 +30,18 @@ def list_files(
 
 @task
 def download_file(file: dict) -> dict:
+  tmp_path = None
   try:
     source_path = file.get("relative_path") or file.get("name")
-    destination_path = os.path.join(create_tmp_data_folder(prefix="gdrive"), source_path)
+    tmp_path = create_tmp_data_folder(prefix="gdrive")
+    destination_path = os.path.join(tmp_path, source_path)
     local_path = download_google_drive_file(
       file_id=file["id"], destination_path=destination_path
     )
     return {
       "file": file,
       "local_path": local_path,
+      "tmp_path": tmp_path,
       "status": "success",
       "error_message": None,
     }
@@ -47,6 +51,7 @@ def download_file(file: dict) -> dict:
     return {
       "file": file,
       "local_path": None,
+      "tmp_path": tmp_path,
       "status": "failed",
       "error_message": str(exc),
     }
@@ -168,6 +173,15 @@ def upload_file(prepared_file: dict, bucket_name: str) -> dict:
     prepared_file["status"] = "failed"
     prepared_file["error_message"] = str(exc)
     return prepared_file
+
+
+@task
+def cleanup_downloaded_file(downloaded_file: dict) -> None:
+  tmp_path = downloaded_file.get("tmp_path")
+
+  if tmp_path and os.path.exists(tmp_path):
+    log(f"Apagando arquivos temporários em '{tmp_path}'")
+    shutil.rmtree(tmp_path, ignore_errors=True)
 
 
 @task
