@@ -21,7 +21,7 @@ LOG_DATASET_ID = "controle_pipelines"
 
 
 @flow(
-  name="Migrate - Google Drive to GCS",
+  name="Migrate: Google Drive to GCS",
   state_handlers=[handle_flow_state_change],
   owners=[CIT.DANIEL_ID.value],
   description="Lista arquivos do Google Drive e envia para o GCS",
