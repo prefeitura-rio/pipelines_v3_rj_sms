@@ -53,8 +53,7 @@ def cloudsql_to_bigquery_spike(
     start_instance(instance_name=instance_name)
 
     proxy_process_id = start_cloudsql_proxy(
-      instance_connection_name=cloudsql_instance_connection_name,
-      port=sqlserver_port,
+      instance_connection_name=cloudsql_instance_connection_name, port=sqlserver_port
     )
 
     log("(cloudsql_to_bigquery_spike) testando conexão SQL Server via pyodbc")

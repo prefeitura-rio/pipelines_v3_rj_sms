@@ -97,8 +97,7 @@ def start_cloudsql_proxy(
     try:
       with socket.create_connection((LOCAL_CLOUDSQL_PROXY_HOST, port), timeout=1):
         log(
-          f"(start_cloudsql_proxy) proxy disponível em "
-          f"{LOCAL_CLOUDSQL_PROXY_HOST}:{port}"
+          f"(start_cloudsql_proxy) proxy disponível em {LOCAL_CLOUDSQL_PROXY_HOST}:{port}"
         )
         return process.pid
     except OSError:

@@ -40,7 +40,9 @@ def hide_password(connection_string: str) -> str:
   return ";".join(parts)
 
 
-def get_host_and_port_from_odbc_connection_string(connection_string: str) -> tuple[str, int]:
+def get_host_and_port_from_odbc_connection_string(
+  connection_string: str,
+) -> tuple[str, int]:
   match = re.search(r"(?:^|;)SERVER=([^,;]+),([0-9]+)", connection_string)
   if not match:
     raise ValueError("Connection string sem SERVER no formato esperado 'host,port'")
