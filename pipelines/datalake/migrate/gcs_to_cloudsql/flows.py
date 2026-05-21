@@ -1,72 +1,97 @@
 # -*- coding: utf-8 -*-
 from pipelines.constants import CIT
-from pipelines.utils.google import ensure_instance_running, ensure_instance_stopped
+from pipelines.utils.env import get_google_project_for_environment
+from pipelines.utils.google import build_bucket_name
 from pipelines.utils.logger import log
-from pipelines.utils.prefect import flow, flow_config
+from pipelines.utils.prefect import flow, flow_config, rename_flow_run
 from pipelines.utils.state_handlers import handle_flow_state_change
 
-from .tasks import restore_gcs_backup_to_cloudsql
+from .constants import LOG_DATASET_ID, LOG_TABLE_ID
+from .schedules import schedules
+from .tasks import (
+  list_backup_files,
+  prepare_restore_plan,
+  restore_backup,
+  start_instance,
+  stop_instance,
+  write_log,
+)
 
 
 @flow(
-  name="Migrate - GCS to Cloud SQL",
+  name="Migrate: GCS to Cloud SQL",
   state_handlers=[handle_flow_state_change],
   owners=[CIT.DANIEL_ID.value],
   description="Restaura backups do GCS para uma instância Cloud SQL",
 )
 def gcs_to_cloudsql(
-  items: list[dict] = [
-    {
-      "source_uri": "gs://bucket/path/file.bak",
-      "database_name": "example_database",
-      "metadata": {},
-    }
-  ],
-  instance_name: str = "vitacare",
+  backup_type: str,
+  bucket_name: str,
+  instance_name: str,
+  file_pattern: str,
+  table_id: str = LOG_TABLE_ID,
   environment: str = "dev",
-) -> list[dict]:
-  """
-  Processa backups do GCS e restaura cada item em uma instância Cloud SQL.
+):
+  rename_flow_run(new_name=f"{environment} - {backup_type}")
 
-  Args:
-          items (list[dict]): Itens a serem restaurados.
-          instance_name (str): Nome da instância Cloud SQL.
-          environment (str, optional): Ambiente de execução do flow.
-
-  Returns:
-          list[dict]: Lista com o resultado do processamento de cada item.
-  """
-
-  if not items:
-    log("(gcs_to_cloudsql) nenhum item para processar")
-    return []
+  resolved_bucket_name = build_bucket_name(
+    bucket_name=bucket_name, environment=environment
+  )
+  project_id = get_google_project_for_environment(environment=environment)
+  log_table_id = f"{project_id}.{LOG_DATASET_ID}.{table_id}"
 
   results = []
+  instance_started = False
 
   try:
-    ensure_instance_running(instance_name=instance_name)
+    files = list_backup_files(
+      bucket_name=resolved_bucket_name,
+      file_pattern=file_pattern,
+    )
+    restore_plan = prepare_restore_plan(
+      files=files,
+      bucket_name=resolved_bucket_name,
+      backup_type=backup_type,
+    )
 
-    for item in items:
-      results.append(
-        restore_gcs_backup_to_cloudsql(item=item, instance_name=instance_name)
+    if not restore_plan:
+      log("(gcs_to_cloudsql) nenhum backup para restaurar")
+      return
+
+    instance_started = True
+    start_instance(instance_name=instance_name)
+
+    for restore_item in restore_plan:
+      result = restore_backup(
+        restore_item=restore_item,
+        instance_name=instance_name,
       )
+      results.append(result)
 
   finally:
-    try:
-      ensure_instance_stopped(instance_name=instance_name)
-    except Exception as exc:
-      log(
-        f"(gcs_to_cloudsql) erro ao desligar instância '{instance_name}': {repr(exc)}",
-        level="error",
-      )
+    if instance_started:
+      try:
+        stop_instance(instance_name=instance_name)
+      except Exception as exc:  # pylint: disable=broad-except
+        log(
+          f"(gcs_to_cloudsql) erro ao desligar instância '{instance_name}': "
+          f"{repr(exc)}",
+          level="error",
+        )
+
+    if results:
+      write_log(log_items=results, log_table_id=log_table_id)
 
   total_success = sum(1 for result in results if result["status"] == "success")
   total_failed = sum(1 for result in results if result["status"] == "failed")
+
   log(
     f"(gcs_to_cloudsql) processamento finalizado: "
     f"{total_success} sucesso(s), {total_failed} falha(s)"
   )
-  return results
+
+  if total_failed > 0:
+    raise RuntimeError(f"{total_failed} restauração(ões) falharam")
 
 
-_flows = [flow_config(flow=gcs_to_cloudsql)]
+_flows = [flow_config(flow=gcs_to_cloudsql, schedules=schedules)]

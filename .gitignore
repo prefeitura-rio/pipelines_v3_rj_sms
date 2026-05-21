@@ -15,6 +15,8 @@ __pycache__/
 # Arquivos que você deve criar localmente
 .env
 localrun.selected.yaml
+.codex/
+AGENT.md
 
 # Arquivos criados ao executar alguns flows
 /data/

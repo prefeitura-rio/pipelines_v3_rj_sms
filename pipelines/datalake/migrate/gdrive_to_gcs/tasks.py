@@ -7,7 +7,7 @@ import zipfile
 from google.cloud import bigquery
 from prefect.context import FlowRunContext
 
-from pipelines.utils.datetime import now
+from pipelines.utils.datetime import now, parse_date_or_today
 from pipelines.utils.env import get_prefect_url
 from pipelines.utils.google import (
   download_google_drive_file,
@@ -153,7 +153,12 @@ def prepare_files_for_upload(downloaded_file: dict) -> list[dict]:
 @task
 def upload_file(prepared_file: dict, bucket_name: str) -> dict:
   if prepared_file["status"] == "failed":
+    timestamp = now().isoformat()
+    prepared_file["started_at"] = timestamp
+    prepared_file["finished_at"] = timestamp
     return prepared_file
+
+  prepared_file["started_at"] = now().isoformat()
 
   try:
     blob_prefix = posixpath.dirname(prepared_file["gcs_blob_path"]) or None
@@ -163,6 +168,7 @@ def upload_file(prepared_file: dict, bucket_name: str) -> dict:
 
     prepared_file["status"] = "success"
     prepared_file["gcs_uri"] = f"gs://{bucket_name}/{prepared_file['gcs_blob_path']}"
+    prepared_file["finished_at"] = now().isoformat()
     return prepared_file
 
   except Exception as exc:  # pylint: disable=broad-except
@@ -172,6 +178,7 @@ def upload_file(prepared_file: dict, bucket_name: str) -> dict:
     )
     prepared_file["status"] = "failed"
     prepared_file["error_message"] = str(exc)
+    prepared_file["finished_at"] = now().isoformat()
     return prepared_file
 
 
@@ -198,22 +205,23 @@ def write_log(log_items: list[dict], log_table_id: str) -> dict:
     flow_run_url = f"{get_prefect_url()}/runs/flow-run/{flow_run_id}"
 
   execution_datetime = now()
-  timestamp = execution_datetime.isoformat()
-  data_particao = execution_datetime.date().isoformat()
-  rows = [
-    {
-      "flow_run_id": flow_run_id,
-      "flow_run_url": flow_run_url,
-      "source_path": log_item["source_path"],
-      "source_file_name": log_item["source_file_name"],
-      "gcs_uri": log_item["gcs_uri"],
-      "status": log_item["status"],
-      "error_message": log_item["error_message"],
-      "timestamp": timestamp,
-      "data_particao": data_particao,
-    }
-    for log_item in log_items
-  ]
+  fallback_timestamp = execution_datetime.isoformat()
+  rows = []
+  for log_item in log_items:
+    timestamp = log_item.get("finished_at") or fallback_timestamp
+    rows.append(
+      {
+        "flow_run_id": flow_run_id,
+        "flow_run_url": flow_run_url,
+        "source_path": log_item["source_path"],
+        "source_file_name": log_item["source_file_name"],
+        "gcs_uri": log_item["gcs_uri"],
+        "status": log_item["status"],
+        "error_message": log_item["error_message"],
+        "timestamp": timestamp,
+        "data_particao": parse_date_or_today(timestamp).date().isoformat(),
+      }
+    )
 
   client = bigquery.Client()
   errors = client.insert_rows_json(log_table_id, rows)
