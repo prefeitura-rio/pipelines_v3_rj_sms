@@ -28,7 +28,7 @@ def sms_execute_dbt(
   flag: str | None = None,
   target: str | None = None,
   rename_flow: bool = False,
-  send_discord_report: bool = False,
+  send_discord_report: bool = True,
   environment: str = "dev",
 ):
   #######################################
