@@ -6,7 +6,6 @@ from prefect.schedules import Interval
 from pipelines.constants import constants
 from pipelines.utils.schedules import create_schedule
 
-
 daily_schedule = [
   create_schedule(
     parameters={

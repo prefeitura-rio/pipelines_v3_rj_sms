@@ -37,6 +37,11 @@ exclude-newer = "1 week"
 [tool.prefect]
 logging.level = "INFO"
 
+[tool.isort]
+profile = "black"
+line_length = 90
+indent = 2
+
 [tool.ruff]
 line-length = 90
 indent-width = 2
@@ -54,10 +59,5 @@ skip-magic-trailing-comma = true
 
 [tool.taskipy.tasks]
 isort = "isort ."
-lint = "ruff check --no-fix . && ruff format --check ."
-lint-autofix = "ruff check --fix . && ruff format ."
-
-[tool.isort]
-profile = "black"
-line_length = 90
-indent = 2
+lint = "echo 'isort'; isort . --check; echo '\nruff lint'; ruff check --no-fix .; echo '\nruff format'; ruff format --check ."
+lint-autofix = "echo 'isort'; isort .; echo '\nruff lint'; ruff check --fix .; echo '\nruff format'; ruff format ."

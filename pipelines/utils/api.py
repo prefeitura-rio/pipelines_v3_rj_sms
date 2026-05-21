@@ -10,16 +10,45 @@ from pipelines.utils.logger import log
 
 
 def GET(
-  url: str, headers: dict = None, retries: int = 2, retry_on: list[int] = None
+  url: str,
+  headers: dict = None,
+  retries: int = 2,
+  retry_on: list[int] = None,
+  backoff_factor: int = 1,
+  raise_on_error: bool = True,
 ) -> requests.Response | None:
-  """Faz requisição para uma API utilizando o método GET."""
+  """
+  Faz requisição para uma API utilizando o método GET.
+
+  Args:
+    url(str):
+      URL de destino para a requisição.
+    headers(dict?):
+      Cabeçalhos a serem enviados na requisição.
+    retries(int?):
+      Quantas vezes retentar a conexão em caso de erro; 2 por padrão.
+    retry_on(list[int]?):
+      Lista de status codes considerados falhas.
+    backoff_factor(int?):
+      A cada erro, a retentativa ocorre `backoff_factor * 2**n` segundos depois.
+      Por padrão, é 1.
+    raise_on_error(bool?):
+      Caso False, em caso de erro, retorna None.
+
+  Returns:
+    out(requests.Response | None): Resposta da requisição.
+  """
   session = requests.Session()
-  retry_config = Retry(total=retries, backoff_factor=1, status_forcelist=retry_on)
+  retry_config = Retry(
+    total=retries, backoff_factor=backoff_factor, status_forcelist=retry_on
+  )
   session.mount("https://", HTTPAdapter(max_retries=retry_config))
   try:
     response = session.get(url=url, headers=headers)
   except requests.exceptions.RequestException as e:
     log(e, level="error")
+    if raise_on_error:
+      raise e
     return None
   return response
 

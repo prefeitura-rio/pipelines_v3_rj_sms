@@ -2,12 +2,10 @@
 import re
 from typing import List, Optional
 
-import requests
 from bs4 import BeautifulSoup, NavigableString
 from google.cloud import bigquery
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
+from pipelines.utils.api import GET
 from pipelines.utils.datetime import now, parse_date_or_today
 from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.logger import log
@@ -45,13 +43,9 @@ def send_get_request(url: str, type: Optional[str]):
   else:
     log(f"Fazendo GET: {url}")
 
-  session = requests.Session()
-  retries = Retry(total=3, backoff_factor=15, status_forcelist=[500, 502, 503, 504])
-  session.mount("https://", HTTPAdapter(max_retries=retries))
-
   res = None
   try:
-    res = session.get(url=url)
+    res = GET(url=url, retries=3, backoff_factor=15, retry_on=[500, 502, 503, 504])
     res.raise_for_status()
   except Exception as exc:
     if res is not None:
