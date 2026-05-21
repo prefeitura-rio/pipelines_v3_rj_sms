@@ -47,23 +47,32 @@ def current_year() -> int:
 
 
 def from_relative_date(
-  relative_date: Optional[str] = None,
-) -> Optional[datetime.date | datetime.datetime]:
+  relative_date: Optional[str | datetime.date | datetime.datetime] = None,
+) -> Optional[str]:
   """
-  Converte uma data relativa para um objeto de data.
+  Converte uma data relativa para string no formato YYYY-MM-DD.
 
   Suporta os formatos:
     `D-N`: data atual menos `N` dias
     `M-N`: primeiro dia do mês atual menos `N` meses
     `Y-N`: primeiro dia do ano atual menos `N` anos
 
-  Caso o valor não seja uma data relativa, tenta convertê-lo
-  para `datetime` via `datetime.fromisoformat()`.
+  Caso o valor já seja uma data, datetime ou string ISO, retorna apenas a data.
   """
   if relative_date is None:
     log("Data relativa é `None`; retornando `None`")
     return None
 
+  if isinstance(relative_date, datetime.datetime):
+    result = relative_date.date()
+    log(f"Data relativa '{relative_date}' calculada como '{result}'")
+    return result.isoformat()
+
+  if isinstance(relative_date, datetime.date):
+    log(f"Data relativa '{relative_date}' calculada como '{relative_date}'")
+    return relative_date.isoformat()
+
+  relative_date = str(relative_date).strip()
   current_date = today()
 
   if relative_date.startswith(("D-", "M-", "Y-")):
@@ -81,13 +90,13 @@ def from_relative_date(
   else:
     log(
       f"O valor passado, '{relative_date}', não é uma data relativa; "
-      "tentando conversão para datetime",
+      "tentando conversão para data ISO",
       level="warning",
     )
-    result = datetime.datetime.fromisoformat(relative_date)
+    result = datetime.datetime.fromisoformat(relative_date).date()
 
   log(f"Data relativa '{relative_date}' calculada como '{result}'")
-  return result
+  return result.isoformat()
 
 
 def parse_date_or_today(
