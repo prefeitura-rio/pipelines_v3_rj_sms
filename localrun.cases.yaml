@@ -129,7 +129,7 @@ cases:
       # source_table_list: ...
       # destination_dataset_name: ...
       # dbt_select_exp: ...
-
+      
   # Extração de tabelas do Postgre do prontuaRio, via backup em blob storage 
   - case_slug: "prontuaRio_postgres"
     flow_path: "pipelines.datalake.extract_load.prontua_rio.flows"
@@ -155,6 +155,22 @@ cases:
       bucket_name: 'subhue_backups'
       dataset: 'brutos_prontuario_prontuaRio_continuo_staging'
       lines_per_chunk: 5000
+         
+  # Extração de dados do Vitai no banco da RioSaúde
+  - case_slug: "vitai-db-extraction"
+    flow_path: "pipelines.datalake.extract_load.vitai_db.flows"
+    flow_name: "vitai_db_extraction"
+    params:
+      environment: dev
+      table_name: boletim
+      schema_name: "basecentral"
+      datetime_column: 'created_at'
+      target_name: "basecentral__boletim_eventos"
+      partition_column: 'datalake_loaded_at'
+      batch_size: 10000
+      # interval_start: '2026-01-01'
+      # interval_end: '2026-01-02'
+      relative_date: 'D-7'
 
 
   ################################
