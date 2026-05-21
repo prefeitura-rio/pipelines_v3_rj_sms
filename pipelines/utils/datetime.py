@@ -26,14 +26,19 @@ def now(utc: bool = False) -> datetime.datetime:
   return datetime.datetime.now(tz=SAO_PAULO_TZ)
 
 
-def today_str() -> str:
-  """Retorna o dia atual (fuso BRT) como 'YYYY-MM-DD'"""
-  return now().date().isoformat()
-
-
 def now_str() -> str:
   """Retorna data/hora atual (fuso BRT) como 'YYYY-MM-DD HH:MM:SS'"""
   return now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def today() -> datetime.date:
+  """Retorna datetime.now().date(), em fuso BRT"""
+  return now().date()
+
+
+def today_str() -> str:
+  """Retorna o dia atual (fuso BRT) como 'YYYY-MM-DD'"""
+  return today().isoformat()
 
 
 def current_year() -> int:
@@ -56,11 +61,10 @@ def from_relative_date(
   para `datetime` via `datetime.fromisoformat()`.
   """
   if relative_date is None:
-    log("Relative date is None, returning None", level="info")
+    log("Data relativa é `None`; retornando `None`")
     return None
 
-  current_datetime = now()
-  current_date = current_datetime.date()
+  current_date = today()
 
   if relative_date.startswith(("D-", "M-", "Y-")):
     quantity = int(relative_date.split("-", maxsplit=1)[1])
@@ -75,10 +79,14 @@ def from_relative_date(
     else:
       result = datetime.date(current_date.year - quantity, 1, 1)
   else:
-    log("The input dated is not a relative date, converting to datetime", level="info")
+    log(
+      f"O valor passado, '{relative_date}', não é uma data relativa; "
+      "tentando conversão para datetime",
+      level="warning",
+    )
     result = datetime.datetime.fromisoformat(relative_date)
 
-  log(f"Relative date is {relative_date}, returning {result}", level="info")
+  log(f"Data relativa '{relative_date}' calculada como '{result}'")
   return result
 
 

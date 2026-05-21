@@ -16,6 +16,29 @@ from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
 
+def safe_df_to_parquet(df: pd.DataFrame, output_path: Optional[str]) -> str:
+  """
+  Cria um arquivo Parquet que é preenchido com os dados de um DataFrame,
+  convertidos para string.
+
+  Args:
+    df(pd.DataFrame): O DataFrame a ser exportado.
+    output_path(str?):
+      O caminho do arquivo a ser criado. Algo como `/tmp/file.parquet`.
+      Se não for passado, uma pasta temporária local será criada, e o
+      nome do arquivo será um UUID v4.
+  Returns:
+    O caminho do arquivo criado.
+  """
+  if not output_path:
+    root_folder = create_tmp_data_folder()
+    output_path = os.path.join(root_folder, f"{uuid.uuid4()}.parquet")
+
+  df = df.fillna("").astype(str)
+  df.to_parquet(output_path, index=False)
+  return output_path
+
+
 def upload_to_datalake(
   input_path: str,
   dataset_id: str,
@@ -251,9 +274,7 @@ def create_date_partitions(
     if file_format == "csv":
       dataframe.to_csv(file_folder, index=False, sep=csv_delimiter)
     elif file_format == "parquet":
-      # FIXME
-      # safe_export_df_to_parquet.run(df=dataframe, output_path=file_folder)
-      raise NotImplementedError("`safe_export_df_to_parquet` ainda não foi implementado")
+      safe_df_to_parquet(df=dataframe, output_path=file_folder)
 
   return root_folder
 
@@ -270,8 +291,8 @@ def upload_df_to_datalake(
   dataset_is_public: bool = False,
 ):
   """
-  Faz upload de um DataFrame como tabela no BigQuery, com opção de coluna de partição
-  por data
+  Faz upload de um DataFrame como tabela no BigQuery, com opção de
+  coluna de partição por data.
   Args:
     df(pd.DataFrame):
       O DataFrame com dados que virará uma tabela
@@ -328,9 +349,7 @@ def upload_df_to_datalake(
     if source_format == "csv":
       df.to_csv(file_path, index=False, sep=csv_delimiter)
     elif source_format == "parquet":
-      # FIXME
-      # safe_export_df_to_parquet.run(df=df, output_path=file_path)
-      raise NotImplementedError("`safe_export_df_to_parquet` ainda não foi implementado")
+      safe_df_to_parquet(df=df, output_path=file_path)
 
   log(f"Fazendo upload de dados em '{root_folder}'")
   upload_to_datalake(

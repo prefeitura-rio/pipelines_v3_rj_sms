@@ -61,6 +61,17 @@ cases:
       # lines_per_chunk: 100000
       # data_referencia: ...
 
+  # Extração TPC (Azure Blob) -> tabela staging
+  - case_slug: "datalake-extract-tpc-azure-blob"
+    flow_path: "pipelines.datalake.extract_load.tpc_azure_blob.flows"
+    flow_name: "sms_dump_tpc"
+    params:
+      environment: dev
+      blob_file: posicao
+      dataset_id: brutos_estoque_central_tpc
+      table_id: estoque_posicao
+      rename_flow: true
+
   # Extração SICLOM API
   - case_slug: "datalake-extract-siclom-api"
     flow_path: "pipelines.datalake.extract_load.siclom_api.flows"
@@ -88,6 +99,25 @@ cases:
       month: null
       year: null
 
+  # Extração de tabela (banco relacional) -> tabela (BigQuery)
+  - case_slug: "datalake-extract-relational-db"
+    flow_path: "pipelines.datalake.extract_load.relational_db.flows"
+    flow_name: "extract_load_relational_db"
+    params:
+      environment: dev
+      rename_flow: false
+      # db_url_infisical_key: ...
+      # db_url_infisical_path: ...
+      # target_dataset_id: ...
+      # target_table_id: ...
+      # source_schema_name: ...
+      # source_table_name: ...
+      ## Ou `source_datetime_column` + `relative_date`,
+      ## ou `extract_whole_table`
+      # source_datetime_column: ...
+      # relative_date: ...
+      # extract_whole_table: ...
+
   # Clona tabelas do BigQuery, de um projeto qualquer para a SMS
   - case_slug: "datalake-clone-bigquery-table"
     flow_path: "pipelines.datalake.extract_load.clone_bigquery.flows"
@@ -99,6 +129,48 @@ cases:
       # source_table_list: ...
       # destination_dataset_name: ...
       # dbt_select_exp: ...
+      
+  # Extração de tabelas do Postgre do prontuaRio, via backup em blob storage 
+  - case_slug: "prontuaRio_postgres"
+    flow_path: "pipelines.datalake.extract_load.prontua_rio.flows"
+    flow_name: "prontuario_postgres_operator"
+    params:
+      environment: dev
+      cnes: '2269945'
+      blob_path: '2026-05/hospubAF-mai-2269945-sql-07-05-2026-06h01m.tar.gz'
+      folder: '2026-05'
+      bucket_name: 'subhue_backups'
+      dataset: 'brutos_prontuario_prontuaRio_continuo_staging'
+      lines_per_chunk: 1000
+
+  # Extração de tabelas do OpenBase do prontuaRio, via backup em blob storage
+  - case_slug: "prontuaRio_openbase"
+    flow_path: "pipelines.datalake.extract_load.prontua_rio.flows"
+    flow_name: "prontuario_openbase_operator"
+    params:
+      environment: dev
+      cnes: '2269945'
+      blob_path: '2026-05/hospubAF-mai-2269945-openbase-07-05-2026-05h00m.tar.gz'
+      folder: '2026-05'
+      bucket_name: 'subhue_backups'
+      dataset: 'brutos_prontuario_prontuaRio_continuo_staging'
+      lines_per_chunk: 5000
+         
+  # Extração de dados do Vitai no banco da RioSaúde
+  - case_slug: "vitai-db-extraction"
+    flow_path: "pipelines.datalake.extract_load.vitai_db.flows"
+    flow_name: "vitai_db_extraction"
+    params:
+      environment: dev
+      table_name: boletim
+      schema_name: "basecentral"
+      datetime_column: 'created_at'
+      target_name: "basecentral__boletim_eventos"
+      partition_column: 'datalake_loaded_at'
+      batch_size: 10000
+      # interval_start: '2026-01-01'
+      # interval_end: '2026-01-02'
+      relative_date: 'D-7'
 
   # Extração do Diário Oficial -> tabela no BigQuery
   - case_slug: "extract_diario_oficial_rj"
