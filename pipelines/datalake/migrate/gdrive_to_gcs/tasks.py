@@ -23,9 +23,7 @@ def list_files(
   folder_id: str, start_date: str = None, end_date: str = None
 ) -> list[dict]:
   return list_google_drive_files(
-    folder_id=folder_id,
-    start_date=start_date,
-    end_date=end_date,
+    folder_id=folder_id, start_date=start_date, end_date=end_date
   )
 
 
@@ -35,8 +33,7 @@ def download_file(file: dict) -> dict:
     source_path = file.get("relative_path") or file.get("name")
     destination_path = os.path.join(create_tmp_data_folder(prefix="gdrive"), source_path)
     local_path = download_google_drive_file(
-      file_id=file["id"],
-      destination_path=destination_path,
+      file_id=file["id"], destination_path=destination_path
     )
     return {
       "file": file,
@@ -156,9 +153,7 @@ def upload_file(prepared_file: dict, bucket_name: str) -> dict:
   try:
     blob_prefix = posixpath.dirname(prepared_file["gcs_blob_path"]) or None
     upload_to_cloud_storage(
-      path=prepared_file["local_path"],
-      bucket_name=bucket_name,
-      blob_prefix=blob_prefix,
+      path=prepared_file["local_path"], bucket_name=bucket_name, blob_prefix=blob_prefix
     )
 
     prepared_file["status"] = "success"

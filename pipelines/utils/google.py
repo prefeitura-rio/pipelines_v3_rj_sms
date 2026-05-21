@@ -340,37 +340,32 @@ def get_google_drive_service():
   )
   return build("drive", "v3", credentials=credentials)
 
-def list_google_drive_files(
-  folder_id: str,
-  start_date: str,
-  end_date: str
-) -> list[dict]:
-  '''
+
+def list_google_drive_files(folder_id: str, start_date: str, end_date: str) -> list[dict]:
+  """
   Lista arquivos de uma pasta e subpastas do Google Drive.
 
   Args:
       folder_id (str): ID da pasta raiz no Google Drive.
       start_date (str): Data inicial (YYYY-MM-DD) de modificação do arquivo.
-      end_date (str): Data limite (YYYY-MM-DD) de modificação do arquivo. 
+      end_date (str): Data limite (YYYY-MM-DD) de modificação do arquivo.
 
   Returns:
       list[dict]: Lista de arquivos encontrados, contendo o ID, nome e caminho relativo.
-  '''
+  """
 
   service = get_google_drive_service()
 
   if not end_date:
     end_date = str(from_relative_date("D-0"))
   if start_date and start_date > end_date:
-    raise ValueError('start date precisa ser anterior a end_date')
-  
+    raise ValueError("start date precisa ser anterior a end_date")
+
   listed_files = []
-  
+
   folder_mime_type = "application/vnd.google-apps.folder"
   root_folder = (
-    service.files()
-    .get(fileId=folder_id, fields="name", supportsAllDrives=True)
-    .execute()
+    service.files().get(fileId=folder_id, fields="name", supportsAllDrives=True).execute()
   )
   root_folder_name = root_folder["name"]
 
@@ -413,11 +408,7 @@ def list_google_drive_files(
           continue
 
         listed_files.append(
-          {
-            "id": item["id"],
-            "name": item["name"],
-            "relative_path": relative_path,
-          }
+          {"id": item["id"], "name": item["name"], "relative_path": relative_path}
         )
 
       page_token = response.get("nextPageToken")
@@ -430,11 +421,8 @@ def list_google_drive_files(
   return listed_files
 
 
-def download_google_drive_file(
-  file_id: str, 
-  destination_path: str = None
-) -> str:
-  '''
+def download_google_drive_file(file_id: str, destination_path: str = None) -> str:
+  """
 
   Baixa um arquivo do Google Drive para um caminho local.
 
@@ -444,13 +432,11 @@ def download_google_drive_file(
 
   Returns:
     str: Caminho final do arquivo baixado.
-  '''
-  
+  """
+
   service = get_google_drive_service()
   file_metadata = (
-    service.files()
-    .get(fileId=file_id, fields="name", supportsAllDrives=True)
-    .execute()
+    service.files().get(fileId=file_id, fields="name", supportsAllDrives=True).execute()
   )
 
   file_name = f"{file_id}_{file_metadata['name']}"
@@ -458,9 +444,7 @@ def download_google_drive_file(
   if not destination_path:
     destination_path = os.path.join(create_tmp_data_folder(prefix="gdrive"), file_name)
   elif os.path.isdir(destination_path):
-    destination_path = os.path.join(
-      destination_path, file_name
-    )
+    destination_path = os.path.join(destination_path, file_name)
 
   destination_folder = os.path.dirname(destination_path)
   if destination_folder:
