@@ -6,12 +6,19 @@ from pipelines.utils.prefect import flow, flow_config, rename_flow_run
 from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .constants import (
+  DEFAULT_CLOUDSQL_INSTANCE_CONNECTION_NAME,
   DEFAULT_SAMPLE_QUERY,
   DEFAULT_SQLSERVER_DRIVER,
   DEFAULT_SQLSERVER_PORT,
+  LOCAL_CLOUDSQL_PROXY_HOST,
 )
 from .schedules import schedules
-from .tasks import extract_query_sample_to_parquet, test_sqlserver_connection
+from .tasks import (
+  extract_query_sample_to_parquet,
+  start_cloudsql_proxy,
+  stop_cloudsql_proxy,
+  test_sqlserver_connection,
+)
 
 
 @flow(
@@ -28,6 +35,7 @@ def cloudsql_to_bigquery_spike(
   password_secret_name: str,
   secret_path: str,
   port_secret_name: str = None,
+  cloudsql_instance_connection_name: str = DEFAULT_CLOUDSQL_INSTANCE_CONNECTION_NAME,
   sample_query: str = DEFAULT_SAMPLE_QUERY,
   sqlserver_port: int = DEFAULT_SQLSERVER_PORT,
   sqlserver_driver: str = DEFAULT_SQLSERVER_DRIVER,
@@ -39,9 +47,15 @@ def cloudsql_to_bigquery_spike(
     f"'{database_name}' na instância '{instance_name}'"
   )
 
+  proxy_process_id = None
   try:
     log(f"(cloudsql_to_bigquery_spike) ligando instância '{instance_name}'")
     start_instance(instance_name=instance_name)
+
+    proxy_process_id = start_cloudsql_proxy(
+      instance_connection_name=cloudsql_instance_connection_name,
+      port=sqlserver_port,
+    )
 
     log("(cloudsql_to_bigquery_spike) testando conexão SQL Server via pyodbc")
     test_sqlserver_connection(
@@ -54,6 +68,7 @@ def cloudsql_to_bigquery_spike(
       environment=environment,
       port=sqlserver_port,
       driver=sqlserver_driver,
+      host=LOCAL_CLOUDSQL_PROXY_HOST,
     )
 
     log("(cloudsql_to_bigquery_spike) extraindo amostra via DuckDB para Parquet")
@@ -68,10 +83,14 @@ def cloudsql_to_bigquery_spike(
       environment=environment,
       port=sqlserver_port,
       driver=sqlserver_driver,
+      host=LOCAL_CLOUDSQL_PROXY_HOST,
     )
     log("(cloudsql_to_bigquery_spike) spike finalizado com sucesso")
 
   finally:
+    if proxy_process_id:
+      stop_cloudsql_proxy(process_id=proxy_process_id)
+
     log(f"(cloudsql_to_bigquery_spike) desligando instância '{instance_name}'")
     stop_instance(instance_name=instance_name)
 

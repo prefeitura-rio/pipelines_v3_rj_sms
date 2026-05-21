@@ -30,3 +30,7 @@ RUN apt-get update && \
   rm -rf /var/lib/apt/lists/*
 
 RUN uv add 'duckdb>=1.4.0' 'pyodbc>=5.3.0'
+
+RUN curl -fsSL -o /usr/local/bin/cloud-sql-proxy \
+  https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.18.3/cloud-sql-proxy.linux.amd64 && \
+  chmod +x /usr/local/bin/cloud-sql-proxy
