@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import datetime
 import os
 import posixpath
 import zipfile
@@ -7,6 +6,7 @@ import zipfile
 from google.cloud import bigquery
 from prefect.context import FlowRunContext
 
+from pipelines.utils.datetime import now
 from pipelines.utils.env import get_prefect_url
 from pipelines.utils.google import (
   download_google_drive_file,
@@ -183,7 +183,9 @@ def write_log(log_items: list[dict], log_table_id: str) -> dict:
     flow_run_id = str(flow_run_context.flow_run.id)
     flow_run_url = f"{get_prefect_url()}/runs/flow-run/{flow_run_id}"
 
-  timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+  execution_datetime = now()
+  timestamp = execution_datetime.isoformat()
+  data_particao = execution_datetime.date().isoformat()
   rows = [
     {
       "flow_run_id": flow_run_id,
@@ -194,6 +196,7 @@ def write_log(log_items: list[dict], log_table_id: str) -> dict:
       "status": log_item["status"],
       "error_message": log_item["error_message"],
       "timestamp": timestamp,
+      "data_particao": data_particao,
     }
     for log_item in log_items
   ]
