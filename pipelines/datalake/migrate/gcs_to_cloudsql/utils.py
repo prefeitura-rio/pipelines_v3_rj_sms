@@ -7,10 +7,7 @@ def build_restore_plan_for_backup_type(
   files: list[str], bucket_name: str, backup_type: str
 ) -> list[dict]:
   if backup_type == "vitacare_historic":
-    return build_vitacare_historic_restore_plan(
-      files=files,
-      bucket_name=bucket_name,
-    )
+    return build_vitacare_historic_restore_plan(files=files, bucket_name=bucket_name)
 
   if backup_type == "rnds_vaccine":
     return build_rnds_vaccine_restore_plan(files=files, bucket_name=bucket_name)
@@ -82,18 +79,13 @@ def parse_vitacare_historic_filename(file: str) -> dict:
 def parse_rnds_vaccine_filename(file: str) -> dict:
   filename = posixpath.basename(file).lower()
   match = re.match(
-    r"^rnds_vaccine_historic_(?P<date>[0-9]{8})_(?P<time>[0-9]{6})\.bak$",
-    filename,
+    r"^rnds_vaccine_historic_(?P<date>[0-9]{8})_(?P<time>[0-9]{6})\.bak$", filename
   )
 
   if not match:
     raise ValueError(f"Arquivo fora do padrão rnds_vaccine: '{file}'")
 
-  return {
-    "file": file,
-    "date": match.group("date"),
-    "time": match.group("time"),
-  }
+  return {"file": file, "date": match.group("date"), "time": match.group("time")}
 
 
 def build_gcs_uri(bucket_name: str, blob_name: str) -> str:

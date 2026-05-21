@@ -44,14 +44,9 @@ def gcs_to_cloudsql(
   instance_started = False
 
   try:
-    files = list_backup_files(
-      bucket_name=resolved_bucket_name,
-      file_pattern=file_pattern,
-    )
+    files = list_backup_files(bucket_name=resolved_bucket_name, file_pattern=file_pattern)
     restore_plan = prepare_restore_plan(
-      files=files,
-      bucket_name=resolved_bucket_name,
-      backup_type=backup_type,
+      files=files, bucket_name=resolved_bucket_name, backup_type=backup_type
     )
 
     if not restore_plan:
@@ -62,10 +57,7 @@ def gcs_to_cloudsql(
     start_instance(instance_name=instance_name)
 
     for restore_item in restore_plan:
-      result = restore_backup(
-        restore_item=restore_item,
-        instance_name=instance_name,
-      )
+      result = restore_backup(restore_item=restore_item, instance_name=instance_name)
       results.append(result)
 
   finally:
@@ -74,8 +66,7 @@ def gcs_to_cloudsql(
         stop_instance(instance_name=instance_name)
       except Exception as exc:  # pylint: disable=broad-except
         log(
-          f"(gcs_to_cloudsql) erro ao desligar instância '{instance_name}': "
-          f"{repr(exc)}",
+          f"(gcs_to_cloudsql) erro ao desligar instância '{instance_name}': {repr(exc)}",
           level="error",
         )
 

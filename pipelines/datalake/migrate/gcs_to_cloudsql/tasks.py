@@ -26,9 +26,7 @@ def list_backup_files(bucket_name: str, file_pattern: str) -> list[str]:
   bucket = client.bucket(bucket_name)
 
   files = [
-    blob.name
-    for blob in bucket.list_blobs()
-    if fnmatch.fnmatch(blob.name, file_pattern)
+    blob.name for blob in bucket.list_blobs() if fnmatch.fnmatch(blob.name, file_pattern)
   ]
 
   log(f"(list_backup_files) encontrados {len(files)} arquivo(s)")
@@ -37,14 +35,10 @@ def list_backup_files(bucket_name: str, file_pattern: str) -> list[str]:
 
 @task
 def prepare_restore_plan(
-  files: list[str],
-  bucket_name: str,
-  backup_type: str,
+  files: list[str], bucket_name: str, backup_type: str
 ) -> list[dict]:
   plan = build_restore_plan_for_backup_type(
-    files=files,
-    bucket_name=bucket_name,
-    backup_type=backup_type,
+    files=files, bucket_name=bucket_name, backup_type=backup_type
   )
   plan = sorted(plan, key=lambda item: item["gcs_uri"])
   log(f"(prepare_restore_plan) plano com {len(plan)} restauração(ões)")
@@ -64,10 +58,7 @@ def stop_instance(instance_name: str) -> None:
 
 
 @task
-def restore_backup(
-  restore_item: dict,
-  instance_name: str,
-) -> dict:
+def restore_backup(restore_item: dict, instance_name: str) -> dict:
   started_at = now()
   gcs_uri = restore_item["gcs_uri"]
   database_name = restore_item["database_name"]
@@ -98,9 +89,7 @@ def restore_backup(
     wait_for_operations(instance_name=instance_name)
 
     import_backup_to_database(
-      instance_name=instance_name,
-      source_uri=gcs_uri,
-      database_name=database_name,
+      instance_name=instance_name, source_uri=gcs_uri, database_name=database_name
     )
     wait_for_operations(instance_name=instance_name)
 
