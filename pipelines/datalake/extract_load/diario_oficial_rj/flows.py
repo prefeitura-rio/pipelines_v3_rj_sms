@@ -16,7 +16,7 @@ from .tasks import (
 
 
 @flow(
-  name="DataLake - Extração e Carga de Dados - Diário Oficial Municipal",
+  name="Extração: DO-RJ (Diário Oficial Municipal)",
   state_handlers=[handle_flow_state_change],
   owners=[CIT.AVELLAR_ID.value],
   description="Extrai dados relevantes à SMS do Diário Oficial Municipal",
