@@ -6,6 +6,19 @@ from typing import List, Optional
 import pandas as pd
 
 
+def remove_accents(text: str) -> str:
+  """
+  Remove acentos e marcas (ex. Á -> A; Ç -> C) de um texto
+  """
+  return "".join(
+    [
+      char
+      for char in unicodedata.normalize("NFKD", text)
+      if not unicodedata.combining(char)
+    ]
+  )
+
+
 def cleanup_bigquery_name(name: str) -> str:
   """
   Limpa nome de colunas ou tabelas no BigQuery
@@ -15,7 +28,7 @@ def cleanup_bigquery_name(name: str) -> str:
   stripped = str(name).strip()
   if not name or len(stripped) <= 0:
     raise ValueError("Nome não pode ser nulo ou vazio!")
-  # Normaliza: Á -> A´ -> A
+  # Normaliza Á -> A´ -> A, remove caracteres não-ASCII
   normalized = (
     # Separa acentos das letras
     unicodedata.normalize("NFKD", stripped)
