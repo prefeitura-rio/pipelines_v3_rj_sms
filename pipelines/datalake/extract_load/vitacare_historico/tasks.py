@@ -195,7 +195,7 @@ def extract_table_to_bigquery(
     "destination_table": destination_table,
     "status": "success",
     "error_message": None,
-    "rows": 0,
+    "table_rows": 0,
     "started_at": started_at.isoformat(),
     "finished_at": None,
   }
@@ -218,11 +218,11 @@ def extract_table_to_bigquery(
       dataframe = cleanup_columns_for_bigquery(dataframe)
       dataframe["id_cnes"] = cnes
       dataframe["extracted_at"] = started_at
-      total_rows += len(dataframe)
+      dataframe_rows = len(dataframe)
 
       log(
-        f"(extract_table_to_bigquery) enviando chunk {current_chunk} "
-        f"com {len(dataframe)} linha(s)"
+        f"(extract_table_to_bigquery) enviando lote {current_chunk} "
+        f"com {dataframe_rows} linha(s)"
       )
       upload_df_to_datalake(
         df=dataframe,
@@ -232,29 +232,46 @@ def extract_table_to_bigquery(
         source_format="parquet",
         date_partition_column="extracted_at",
       )
+      total_rows += dataframe_rows
 
     if total_rows == 0:
       result["status"] = "empty"
+      result["error_message"] = f"Tabela '{table_name}' sem linhas para o CNES '{cnes}'."
       log(
         f"(extract_table_to_bigquery) tabela '{table_name}' do CNES '{cnes}' vazia",
         level="warning",
       )
 
   except Exception as exc:  # pylint: disable=broad-except
+    error_text = str(exc)
     result["status"] = "failed"
-    result["error_message"] = (
-      f"Erro no chunk {current_chunk}: {exc}" if current_chunk else str(exc)
-    )
-    log(
-      f"(extract_table_to_bigquery) erro extraindo tabela '{table_name}' "
-      f"do CNES '{cnes}': {repr(exc)}",
-      level="error",
-    )
+    if "Invalid object name" in error_text:
+      result["error_message"] = (
+        f"Tabela '{table_name}' não encontrada na database '{database_name}'."
+      )
+    elif "Cannot open database" in error_text or "requested by the login" in error_text:
+      result["error_message"] = (
+        f"Database '{database_name}' não encontrada ou sem acesso."
+      )
+    elif "Login failed" in error_text:
+      result["error_message"] = (
+        f"Falha de autenticação ao conectar na database '{database_name}'."
+      )
+    elif current_chunk:
+      result["error_message"] = (
+        f"Extração incompleta: falha ao processar o lote {current_chunk} "
+        f"após {total_rows} linha(s) enviada(s). Erro original: {error_text}"
+      )
+    else:
+      result["error_message"] = (
+        f"Falha inesperada antes de concluir a extração. Erro original: {error_text}"
+      )
+    log(f"(extract_table_to_bigquery) {result['error_message']}", level="error")
 
   finally:
     if engine:
       engine.dispose()
-    result["rows"] = total_rows
+    result["table_rows"] = total_rows
     result["finished_at"] = now().isoformat()
 
   log(f"(extract_table_to_bigquery) extração finalizada: {result}")
@@ -287,7 +304,7 @@ def write_log(log_items: list[dict], log_table_id: str) -> dict:
         "destination_table": log_item["destination_table"],
         "status": log_item["status"],
         "error_message": log_item["error_message"],
-        "rows": log_item["rows"],
+        "table_rows": log_item["table_rows"],
         "started_at": log_item["started_at"],
         "finished_at": log_item["finished_at"],
         "timestamp": timestamp,
