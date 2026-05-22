@@ -6,18 +6,55 @@ from time import sleep
 
 import pandas as pd
 from google.cloud import bigquery
+from prefect.context import FlowRunContext
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
 
+from pipelines.datalake.migrate.gcs_to_cloudsql.tasks import (
+  start_instance as start_instance_task,
+  stop_instance as stop_instance_task,
+)
 from pipelines.datalake.extract_load.vitacare_historico.constants import (
   vitacare_constants,
 )
 from pipelines.utils.cleanup import cleanup_columns_for_bigquery
 from pipelines.utils.datalake import upload_df_to_datalake
-from pipelines.utils.datetime import now
+from pipelines.utils.datetime import now, parse_date_or_today
+from pipelines.utils.env import environment_is_valid, get_prefect_url
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
+
+
+@task
+def start_cloudsql_instance() -> None:
+  log(
+    f"(start_cloudsql_instance) ligando instância "
+    f"'{vitacare_constants.INSTANCE_NAME.value}'"
+  )
+  start_instance_task.fn(instance_name=vitacare_constants.INSTANCE_NAME.value)
+
+
+@task
+def stop_cloudsql_instance() -> None:
+  log(
+    f"(stop_cloudsql_instance) desligando instância "
+    f"'{vitacare_constants.INSTANCE_NAME.value}'"
+  )
+  try:
+    stop_instance_task.fn(instance_name=vitacare_constants.INSTANCE_NAME.value)
+  except Exception as exc:  # pylint: disable=broad-except
+    log(
+      f"(stop_cloudsql_instance) erro ao desligar instância "
+      f"'{vitacare_constants.INSTANCE_NAME.value}': {repr(exc)}",
+      level="error",
+    )
+
+
+@task
+def validate_environment(environment: str) -> str:
+  environment_is_valid(environment=environment)
+  return environment
 
 
 @task
@@ -39,11 +76,11 @@ def get_cnes_from_bigquery() -> list:
 
     cnes_list = [str(row[cnes_column]) for row in rows]
 
-    log(f"{len(cnes_list)} cnes encontrados no bigquery.")
+    log(f"(get_cnes_from_bigquery) {len(cnes_list)} cnes encontrados no bigquery")
     return cnes_list
 
   except Exception as e:
-    log(f"Erro ao buscar cnes do bigquery: {e}", level="error")
+    log(f"(get_cnes_from_bigquery) erro ao buscar cnes do bigquery: {e}", level="error")
     raise
 
 
@@ -54,7 +91,9 @@ def get_database_tables(environment) -> list:
     path=vitacare_constants.INFISICAL_PATH.value,
     environment=environment,
   )
-  return json.loads(tables)
+  table_names = json.loads(tables)
+  log(f"(get_database_tables) {len(table_names)} tabela(s) encontradas")
+  return table_names
 
 
 @task
@@ -79,7 +118,7 @@ def start_cloudsql_proxy(environment: str) -> int:
     connection_name,
   ]
   log(
-    "Iniciando Cloud SQL Auth Proxy em "
+    "(start_cloudsql_proxy) iniciando Cloud SQL Auth Proxy em "
     f"{vitacare_constants.LOCAL_DATABASE_HOST.value}:{port}"
   )
   process = subprocess.Popen(command)
@@ -94,7 +133,7 @@ def stop_cloudsql_proxy(process_id: int):
   if not process_id:
     return
 
-  log(f"Encerrando Cloud SQL Auth Proxy: processo {process_id}")
+  log(f"(stop_cloudsql_proxy) encerrando Cloud SQL Auth Proxy: processo {process_id}")
   try:
     os.kill(process_id, signal.SIGTERM)
   except ProcessLookupError:
@@ -118,6 +157,7 @@ def get_database_engine(database_name: str, environment: str):
     path=vitacare_constants.INFISICAL_PATH.value,
     environment=environment,
   )
+  log(f"(get_database_engine) criando engine para database '{database_name}'")
 
   # A engine conecta no proxy local. O proxy encaminha para a instância Cloud SQL.
   # Ref: https://cloud.google.com/sql/docs/sqlserver/samples/cloud-sql-sqlserver-sqlalchemy-connect-tcp
@@ -140,42 +180,123 @@ def extract_table_to_bigquery(
   table_name: str,
   chunk_size: int = 500_000,
 ) -> dict:
-  engine = get_database_engine.fn(database_name=database_name, environment=environment)
+  started_at = now()
   destination_table = table_name.lower()
   query = f"select * from [dbo].[{table_name}]"
-  extracted_at = now()
   total_rows = 0
-
-  log(
-    f"Extraindo tabela '{table_name}' do CNES '{cnes}' "
-    f"para {vitacare_constants.DESTINATION_DATASET.value}.{destination_table}"
-  )
-
-  chunks = pd.read_sql_query(query, engine, chunksize=chunk_size)
-  for chunk_index, dataframe in enumerate(chunks):
-    if dataframe.empty:
-      continue
-
-    dataframe = cleanup_columns_for_bigquery(dataframe)
-    dataframe["id_cnes"] = cnes
-    dataframe["extracted_at"] = extracted_at
-    total_rows += len(dataframe)
-
-    upload_df_to_datalake(
-      df=dataframe,
-      dataset_id=vitacare_constants.DESTINATION_DATASET.value,
-      table_id=destination_table,
-      dump_mode="replace" if chunk_index == 0 else "append",
-      source_format="parquet",
-      date_partition_column="extracted_at",
-    )
 
   result = {
     "cnes": cnes,
+    "database_name": database_name,
     "source_table": table_name,
+    "destination_dataset": vitacare_constants.DESTINATION_DATASET.value,
     "destination_table": destination_table,
-    "rows": total_rows,
-    "extracted_at": extracted_at,
+    "status": "success",
+    "error_message": None,
+    "rows": 0,
+    "started_at": started_at.isoformat(),
+    "finished_at": None,
   }
-  log(f"Extração finalizada: {result}")
+
+  log(
+    f"(extract_table_to_bigquery) extraindo tabela '{table_name}' do CNES '{cnes}' "
+    f"para {vitacare_constants.DESTINATION_DATASET.value}.{destination_table}"
+  )
+
+  engine = None
+  current_chunk = None
+  try:
+    engine = get_database_engine.fn(database_name=database_name, environment=environment)
+    chunks = pd.read_sql_query(query, engine, chunksize=chunk_size)
+    for chunk_index, dataframe in enumerate(chunks):
+      current_chunk = chunk_index + 1
+      if dataframe.empty:
+        continue
+
+      dataframe = cleanup_columns_for_bigquery(dataframe)
+      dataframe["id_cnes"] = cnes
+      dataframe["extracted_at"] = started_at
+      total_rows += len(dataframe)
+
+      log(
+        f"(extract_table_to_bigquery) enviando chunk {current_chunk} "
+        f"com {len(dataframe)} linha(s)"
+      )
+      upload_df_to_datalake(
+        df=dataframe,
+        dataset_id=vitacare_constants.DESTINATION_DATASET.value,
+        table_id=destination_table,
+        dump_mode="append",
+        source_format="parquet",
+        date_partition_column="extracted_at",
+      )
+
+    if total_rows == 0:
+      result["status"] = "empty"
+      log(
+        f"(extract_table_to_bigquery) tabela '{table_name}' do CNES '{cnes}' vazia",
+        level="warning",
+      )
+
+  except Exception as exc:  # pylint: disable=broad-except
+    result["status"] = "failed"
+    result["error_message"] = (
+      f"Erro no chunk {current_chunk}: {exc}" if current_chunk else str(exc)
+    )
+    log(
+      f"(extract_table_to_bigquery) erro extraindo tabela '{table_name}' "
+      f"do CNES '{cnes}': {repr(exc)}",
+      level="error",
+    )
+
+  finally:
+    if engine:
+      engine.dispose()
+    result["rows"] = total_rows
+    result["finished_at"] = now().isoformat()
+
+  log(f"(extract_table_to_bigquery) extração finalizada: {result}")
   return result
+
+
+@task
+def write_log(log_items: list[dict], log_table_id: str) -> dict:
+  if not log_items:
+    return {"inserted_rows": 0}
+
+  flow_run_id = None
+  flow_run_url = None
+  flow_run_context = FlowRunContext.get()
+  if flow_run_context:
+    flow_run_id = str(flow_run_context.flow_run.id)
+    flow_run_url = f"{get_prefect_url()}/runs/flow-run/{flow_run_id}"
+
+  rows = []
+  for log_item in log_items:
+    timestamp = log_item["finished_at"] or now().isoformat()
+    rows.append(
+      {
+        "flow_run_id": flow_run_id,
+        "flow_run_url": flow_run_url,
+        "cnes": log_item["cnes"],
+        "database_name": log_item["database_name"],
+        "source_table": log_item["source_table"],
+        "destination_dataset": log_item["destination_dataset"],
+        "destination_table": log_item["destination_table"],
+        "status": log_item["status"],
+        "error_message": log_item["error_message"],
+        "rows": log_item["rows"],
+        "started_at": log_item["started_at"],
+        "finished_at": log_item["finished_at"],
+        "timestamp": timestamp,
+        "data_particao": parse_date_or_today(timestamp).date().isoformat(),
+      }
+    )
+
+  client = bigquery.Client()
+  errors = client.insert_rows_json(log_table_id, rows)
+  if errors:
+    raise RuntimeError(f"Erro inserindo logs no BigQuery: {errors}")
+
+  log(f"(write_log) {len(rows)} linha(s) inserida(s) em '{log_table_id}'")
+  return {"inserted_rows": len(rows)}

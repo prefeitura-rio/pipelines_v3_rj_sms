@@ -121,7 +121,7 @@ cases:
   # Extração Vitacare Histórico (Cloud SQL) -> BigQuery
   - case_slug: "datalake-extract-vitacare-historico"
     flow_path: "pipelines.datalake.extract_load.vitacare_historico.flows"
-    flow_name: "extract_load_vitacare_historico"
+    flow_name: "vitacare_historico"
     params:
       environment: dev
       # cnes: "2280310"

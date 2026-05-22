@@ -7,6 +7,6 @@ schedules = [
   *create_schedule_list(
     parameters_list=flow_parameters,
     interval="monthly",
-    config={"day": 8, "hour": 6, "minute": 0},
+    config={"day": 8, "hour": 21, "minute": 0},
   )
 ]

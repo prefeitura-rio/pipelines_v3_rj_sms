@@ -11,4 +11,7 @@ class vitacare_constants(Enum):
   INFISICAL_TABLES = "DATABASE_HISTORICO_TABLES"
 
   LOCAL_DATABASE_HOST = "127.0.0.1"
+  INSTANCE_NAME = "vitacare"
   DESTINATION_DATASET = "brutos_prontuario_vitacare_historico"
+  LOG_DATASET = "controle_pipelines"
+  LOG_TABLE = "log_vitacare_historico"
