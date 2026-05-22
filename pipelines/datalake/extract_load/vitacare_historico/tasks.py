@@ -134,10 +134,15 @@ def get_database_engine(database_name: str, environment: str):
 
 @task
 def extract_table_to_bigquery(
-  engine, cnes: str, table_name: str, chunk_size: int = 500_000
+  database_name: str,
+  environment: str,
+  cnes: str,
+  table_name: str,
+  chunk_size: int = 500_000,
 ) -> dict:
+  engine = get_database_engine.fn(database_name=database_name, environment=environment)
   destination_table = table_name.lower()
-  query = f"select * from dbo.{table_name}"
+  query = f"select * from [dbo].[{table_name}]"
   extracted_at = now()
   total_rows = 0
 

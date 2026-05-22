@@ -8,7 +8,6 @@ from .schedules import schedules
 from .tasks import (
   extract_table_to_bigquery,
   get_cnes_from_bigquery,
-  get_database_engine,
   get_database_tables,
   start_cloudsql_proxy,
   stop_cloudsql_proxy,
@@ -40,13 +39,12 @@ def extract_load_vitacare_historico(
       database_name = f"vitacare_historic_{cnes}"
       log(f"Extraindo database '{database_name}'")
 
-      engine = get_database_engine.fn(
-        database_name=database_name, environment=environment
-      )
-
       for table_name in table_names:
         result = extract_table_to_bigquery(
-          engine=engine, cnes=cnes, table_name=table_name
+          database_name=database_name,
+          environment=environment,
+          cnes=cnes,
+          table_name=table_name,
         )
         results.append(result)
 
