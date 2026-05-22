@@ -61,7 +61,9 @@ def get_siclom_period_data(
 
   headers = {"Accept": "application/json", "X-API-KEY": api_key}
   url = f"{base_url}{endpoint}{period}"
-  response = GET(url=url, headers=headers, retry_on=[104, 502, 503, 504])
+  response = GET(
+    url=url, headers=headers, retry_on=[104, 502, 503, 504], raise_on_error=False
+  )
   # TODO: esse é o comportamento esperado para erros na API? Ou raise RuntimeError()?
   if not response:
     log(f"Erro ao requisitar URL '{url}'", level="error")
@@ -92,7 +94,9 @@ def get_siclom_prep_data(
 
   url = f"{base_url}{endpoint}{period}?page=1&numItemsPerPage=50"
   extracted_data = []
-  response = GET(url=url, headers=headers, retry_on=[104, 502, 503, 504])
+  response = GET(
+    url=url, headers=headers, retry_on=[104, 502, 503, 504], raise_on_error=False
+  )
 
   if not response:
     return DataFrame()
@@ -109,7 +113,9 @@ def get_siclom_prep_data(
   while next:
     log(f"Extraindo página {page['current']}/{page['pageCount']}...")
     url = f"{base_url}{endpoint}{period}?page={next}&numItemsPerPage=50"
-    response = GET(url=url, headers=headers, retry_on=[104, 502, 503, 504])
+    response = GET(
+      url=url, headers=headers, retry_on=[104, 502, 503, 504], raise_on_error=False
+    )
     if not response or response.status_code != 200:
       break
     payload = response.json()
@@ -138,11 +144,15 @@ def get_siclom_cadastro_data(
 
   headers = {"Accept": "application/json", "X-API-KEY": api_key}
   url = f"{base_url}{endpoint}{period}?page=1&numItemsPerPage=50"
-  response = GET(url=url, headers=headers, retry_on=[104, 502, 503, 504])
+  response = GET(
+    url=url, headers=headers, retry_on=[104, 502, 503, 504], raise_on_error=False
+  )
 
   if not response:
     url = f"{base_url}{endpoint}{period}"
-    response = GET(url=url, headers=headers, retry_on=[104, 502, 503, 504])
+    response = GET(
+      url=url, headers=headers, retry_on=[104, 502, 503, 504], raise_on_error=False
+    )
 
   if not response:
     log(f"Erro ao requisitar URL '{url}'", level="error")

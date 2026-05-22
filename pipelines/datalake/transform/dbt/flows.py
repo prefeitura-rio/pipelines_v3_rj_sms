@@ -12,7 +12,6 @@ from .tasks import (
   estimate_dbt_costs,
   execute_dbt,
   get_dbt_target_from_environment,
-  should_upload_artifacts,
   upload_dbt_artifacts_to_gcs,
 )
 
@@ -29,7 +28,7 @@ def sms_execute_dbt(
   flag: str | None = None,
   target: str | None = None,
   rename_flow: bool = False,
-  send_discord_report: bool = False,
+  send_discord_report: bool = True,
   environment: str = "dev",
 ):
   #######################################
@@ -89,8 +88,7 @@ def sms_execute_dbt(
   #######################################
   ##  3) Faz upload para GCS
   #######################################
-  should_upload = should_upload_artifacts(command=command)
-  if should_upload:
+  if command in ("build", "source freshness"):
     upload_dbt_artifacts_to_gcs(
       dbt_path=repo_path, environment=environment, wait_for=[execution_info]
     )
