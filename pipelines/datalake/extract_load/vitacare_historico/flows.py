@@ -10,10 +10,10 @@ from .tasks import (
   extract_table_to_bigquery,
   get_cnes_from_bigquery,
   get_database_tables,
-  start_cloudsql_proxy,
   start_cloudsql_instance,
-  stop_cloudsql_proxy,
+  start_cloudsql_proxy,
   stop_cloudsql_instance,
+  stop_cloudsql_proxy,
   validate_environment,
   write_log,
 )
