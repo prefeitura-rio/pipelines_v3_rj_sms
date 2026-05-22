@@ -34,7 +34,7 @@ def get_recent_bigquery_jobs(
   results = query_job.result().to_dataframe()
 
   ontem = from_relative_date("D-1").strftime("%m-%d-%Y")
-  
+
   response = requests.get(
     url=f"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarDia(dataCotacao=@dataCotacao)?@dataCotacao='{ontem}'&$format=json"  # noqa: E501
   )
