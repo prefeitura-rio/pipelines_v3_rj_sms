@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import re
+import time
 import unicodedata
 from typing import Any, Callable, List, Literal, Optional, Union
 
 from prefect import Task, get_client
+from prefect.client.schemas.objects import FlowRun
 from prefect.context import FlowRunContext
 from prefect.deployments.flow_runs import run_deployment
 from prefect.flows import Flow as OriginalFlow
@@ -119,20 +121,21 @@ def authenticated_task(
 
 
 def create_flow_run(
-  flow_, parameters: dict = None, wait: bool = False, environment: str = "dev"
+  flow_: Flow, parameters: dict = None, wait: bool = False, environment: str = "dev"
 ):
   """
   Cria uma nova flow run de um determinado flow.
-  Args
+  Args:
     flow_(Flow):
       O flow a ser executada.
-    parameters(dict):
+    parameters(dict?):
       Parâmetros do flow.
-    wait(bool):
+    wait(bool?):
       Se deve esperar o flow terminar, ou retornar imediatamente.
-    environment(str):
-      Ambiente de execução; se "prod", executa o deployment em
-      produção; se "dev", executa o deployment em staging.
+      Por padrão, não espera.
+    environment(str?):
+      Ambiente de execução; se "prod", executa o deployment de
+      produção; se "dev", executa o deployment de staging.
   """
   deployment_name = f"{flow_.name}/{flow_.name}" + (
     "" if environment == "prod" else " (stg)"
@@ -148,14 +151,62 @@ def create_flow_run(
   log(
     f"[create_flow_run] Flow run criada; confira em: {base_url}/runs/flow-run/{flow_run.id}"
   )
+  return flow_run
 
 
 @authenticated_task
-def wait_for_flow_run(**kwargs):
+def create_flow_run_task(
+  flow_: Flow, parameters: dict = None, wait: bool = False, environment: str = "dev"
+):
+  return create_flow_run(
+    flow_=flow_, parameters=parameters, wait=wait, environment=environment
+  )
+
+
+@authenticated_task
+def wait_for_flow_run(
+  flow_run: FlowRun, timeout_seconds: int | None = None, raise_if_timeout: bool = True
+):
   """
-  Aguarda uma execução de flow terminar
+  Aguarda uma execução de flow terminar, seja com sucesso ou erro.
+
+  Args:
+    flow_run(FlowRun): A instância de FlowRun a ser esperada.
+    timeout_seconds(int?):
+      Tempo máximo a esperar o fim da FlowRun, em segundos.
+    raise_if_timeout(bool?):
+      Flag indicando se deve disparar erro caso o tempo
+      máximo expire.
+  Returns:
+    out(bool):
+      Retorna True quando a FlowRun termina. Em caso de
+      timeout_seconds definido e raise_if_timeout=False,
+      retorna False caso o tempo máximo expire.
   """
-  raise NotImplementedError()  # TODO
+  with get_client(sync_client=True) as client:
+    start_time = time.monotonic()
+    # Desculpa eu sei que é feio mas é literalmente a implementação
+    # do próprio Prefect, quase copiada e colada
+    while True:
+      # Confere o status atual da flow run
+      updated_flow_run = client.read_flow_run(flow_run.id)
+      flow_state = updated_flow_run.state
+      # Se terminou, sucesso
+      if flow_state and flow_state.is_final():
+        return True
+      # Se tivemos timeout
+      if (
+        timeout_seconds is not None and (time.monotonic() - start_time) >= timeout_seconds
+      ):
+        if raise_if_timeout:
+          raise TimeoutError(
+            "Tempo máximo de espera por flow run excedido! "
+            f"flow_run.id='{flow_run.id}', "
+            f"flow_run.state='{updated_flow_run.state}'"
+          )
+        return False
+      time.sleep(30)  # Espera 30s entre conferências de status
+  # :)
 
 
 @authenticated_task
