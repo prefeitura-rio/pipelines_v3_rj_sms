@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from prefect.futures import wait
+from prefect.task_runners import ThreadPoolTaskRunner
 
 from pipelines.constants import CIT
 from pipelines.utils.datetime import now_str
@@ -26,6 +27,9 @@ from .tasks import (
   name="Extração: Vitacare Histórico",
   state_handlers=[handle_flow_state_change],
   owners=[CIT.DANIEL_ID.value],
+  task_runner=ThreadPoolTaskRunner(
+    max_workers=vitacare_constants.CNES_CONCURRENCY_LIMIT.value
+  ),
 )
 def vitacare_historico(
   environment: str = "dev", cnes: str = None, table_name: str = None
@@ -53,19 +57,16 @@ def vitacare_historico(
     instance_started = True
     proxy_process_id = start_cloudsql_proxy(environment=database_environment)
 
-    concurrency_limit = vitacare_constants.CNES_CONCURRENCY_LIMIT.value
-    for index in range(0, len(cnes_list), concurrency_limit):
-      cnes_batch = cnes_list[index : index + concurrency_limit]
-      cnes_futures = [
-        extract_cnes_tables.submit(
-          environment=database_environment, cnes=cnes_item, table_names=table_names
-        )
-        for cnes_item in cnes_batch
-      ]
+    cnes_futures = [
+      extract_cnes_tables.submit(
+        environment=database_environment, cnes=cnes_item, table_names=table_names
+      )
+      for cnes_item in cnes_list
+    ]
 
-      wait(cnes_futures)
-      for future in cnes_futures:
-        results.extend(future.result())
+    wait(cnes_futures)
+    for future in cnes_futures:
+      results.extend(future.result())
 
   finally:
     if proxy_process_id:

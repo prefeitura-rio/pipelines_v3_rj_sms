@@ -171,10 +171,10 @@ def get_database_engine(database_name: str, environment: str):
     database=database_name,
     host=vitacare_constants.LOCAL_DATABASE_HOST.value,
   )
-  return create_engine(database_url, pool_size=1, max_overflow=0)
+  return create_engine(database_url)
 
 
-@task
+@task(task_run_name="{cnes} - {table_name}")
 def extract_table_to_bigquery(
   database_name: str,
   environment: str,
@@ -278,7 +278,7 @@ def extract_table_to_bigquery(
   return result
 
 
-@task
+@task(task_run_name="CNES {cnes}")
 def extract_cnes_tables(
   environment: str, cnes: str, table_names: list[str]
 ) -> list[dict]:
@@ -292,7 +292,7 @@ def extract_cnes_tables(
 
   for table_name in table_names:
     results.append(
-      extract_table_to_bigquery.fn(
+      extract_table_to_bigquery(
         database_name=database_name,
         environment=environment,
         cnes=cnes,
