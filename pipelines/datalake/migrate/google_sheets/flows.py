@@ -10,11 +10,11 @@ from .schedules import schedules
 
 
 @flow(
-  name="DataLake - Extração e Carga de Dados - Google Sheets",
+  name="Migração: Google Sheets → BigQuery",
   state_handlers=[handle_flow_state_change],
   owners=[CIT.CIT_ID.value],
 )
-def sms_dump_url(
+def migrate_google_sheets(
   # URL da planilha
   url: str,
   # Nome da aba na planilha; por padrão "Sheet1"
@@ -64,4 +64,4 @@ def sms_dump_url(
   )
 
 
-_flows = [flow_config(flow=sms_dump_url, schedules=schedules)]
+_flows = [flow_config(flow=migrate_google_sheets, schedules=schedules)]

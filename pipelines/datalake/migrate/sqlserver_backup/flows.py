@@ -9,12 +9,15 @@ from .tasks import restore_gcs_backup_to_cloudsql
 
 
 @flow(
-  name="Migrate - GCS to Cloud SQL",
+  name="Migração: Backup SQL Server → Cloud SQL",
+  description=(
+    "Restaura backups de SQL Server (.BAK), guardados em um bucket do GCS, "
+    "para uma instância Cloud SQL"
+  ),
   state_handlers=[handle_flow_state_change],
   owners=[CIT.DANIEL_ID.value],
-  description="Restaura backups do GCS para uma instância Cloud SQL",
 )
-def gcs_to_cloudsql(
+def sqlserver_backup(
   items: list[dict] = [
     {
       "source_uri": "gs://bucket/path/file.bak",
@@ -29,16 +32,16 @@ def gcs_to_cloudsql(
   Processa backups do GCS e restaura cada item em uma instância Cloud SQL.
 
   Args:
-          items (list[dict]): Itens a serem restaurados.
-          instance_name (str): Nome da instância Cloud SQL.
-          environment (str, optional): Ambiente de execução do flow.
+    items (list[dict]): Itens a serem restaurados.
+    instance_name (str): Nome da instância Cloud SQL.
+    environment (str, optional): Ambiente de execução do flow.
 
   Returns:
-          list[dict]: Lista com o resultado do processamento de cada item.
+    list[dict]: Lista com o resultado do processamento de cada item.
   """
 
   if not items:
-    log("(gcs_to_cloudsql) nenhum item para processar")
+    log("(sqlserver_backup) nenhum item para processar")
     return []
 
   results = []
@@ -56,17 +59,17 @@ def gcs_to_cloudsql(
       ensure_instance_stopped(instance_name=instance_name)
     except Exception as exc:
       log(
-        f"(gcs_to_cloudsql) erro ao desligar instância '{instance_name}': {repr(exc)}",
+        f"(sqlserver_backup) erro ao desligar instância '{instance_name}': {repr(exc)}",
         level="error",
       )
 
   total_success = sum(1 for result in results if result["status"] == "success")
   total_failed = sum(1 for result in results if result["status"] == "failed")
   log(
-    f"(gcs_to_cloudsql) processamento finalizado: "
+    f"(gcs_to_closqlserver_backupudsql) processamento finalizado: "
     f"{total_success} sucesso(s), {total_failed} falha(s)"
   )
   return results
 
 
-_flows = [flow_config(flow=gcs_to_cloudsql)]
+_flows = [flow_config(flow=sqlserver_backup)]

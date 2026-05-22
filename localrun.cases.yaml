@@ -1,46 +1,8 @@
 cases:
 
   ################################
-  #  REPORTS                     #
-  ################################
-
-  # [teste] Previsão do tempo
-  - case_slug: "test-weather-report"
-    flow_path: "pipelines.reports.weather.flows"
-    flow_name: "weather_report"
-    params:
-      environment: "dev"
-      lat: -22.9519
-      lon: -43.2105
-
-  # Informes de Segurança / Comunicação de CIDs
-  - case_slug: "report-informes-seguranca"
-    flow_path: "pipelines.reports.informes_seguranca.flows"
-    flow_name: "report_informes_seguranca"
-    params:
-      environment: dev
-      ## Quando date é nula, usa dia de ontem
-      date: null
-      # override_recipients: ...
-      ## Desenvolvendo local, não queremos enviar nada
-      skip_email: true
-
-
-  ################################
   #  EXTRACT/LOAD                #
   ################################
-
-  # Extração Google Sheets (URL) -> tabela staging
-  - case_slug: "datalake-extract-google-sheets"
-    flow_path: "pipelines.datalake.extract_load.google_sheets.flows"
-    flow_name: "sms_dump_url"
-    params:
-      environment: dev
-      # url: https://docs.google.com/spreadsheets/d/...
-      # gsheets_sheet_name: ...
-      dataset_id: brutos_sheets
-      # table_id: ...
-      rename_flow: true
 
   # Extração de DBC/DBF (GCS) -> CSV (GCS)
   - case_slug: "datalake-extract-dbc"
@@ -98,37 +60,6 @@ cases:
       annual: false
       month: null
       year: null
-
-  # Extração de tabela (banco relacional) -> tabela (BigQuery)
-  - case_slug: "datalake-extract-relational-db"
-    flow_path: "pipelines.datalake.extract_load.relational_db.flows"
-    flow_name: "extract_load_relational_db"
-    params:
-      environment: dev
-      rename_flow: false
-      # db_url_infisical_key: ...
-      # db_url_infisical_path: ...
-      # target_dataset_id: ...
-      # target_table_id: ...
-      # source_schema_name: ...
-      # source_table_name: ...
-      ## Ou `source_datetime_column` + `relative_date`,
-      ## ou `extract_whole_table`
-      # source_datetime_column: ...
-      # relative_date: ...
-      # extract_whole_table: ...
-
-  # Clona tabelas do BigQuery, de um projeto qualquer para a SMS
-  - case_slug: "datalake-clone-bigquery-table"
-    flow_path: "pipelines.datalake.extract_load.clone_bigquery.flows"
-    flow_name: "clone_bigquery"
-    params:
-      environment: dev
-      # source_project_name: ... # ex. "rj-smfp"
-      # source_dataset_name: ...
-      # source_table_list: ...
-      # destination_dataset_name: ...
-      # dbt_select_exp: ...
       
   # Extração de tabelas do Postgre do prontuaRio, via backup em blob storage 
   - case_slug: "prontuaRio_postgres"
@@ -205,6 +136,58 @@ cases:
       bucket_name: "vitacare_backups_gdrive"
       last_modified_date: 'M-0'
 
+  # Migração SQL Server (.BAK) -> Cloud SQL
+  - case_slug: "sqlserver_backup"
+    flow_path: "pipelines.migrate.sqlserver_backup.flows"
+    flow_name: "sqlserver_backup"
+    params:
+      environment: dev
+      # items: ...
+      # instance_name: ...
+
+  # Migração Google Sheets (URL) -> BigQuery (staging)
+  - case_slug: "migrate-google-sheets"
+    flow_path: "pipelines.datalake.migrate.google_sheets.flows"
+    flow_name: "migrate_google_sheets"
+    params:
+      environment: dev
+      rename_flow: false
+      # url: https://docs.google.com/spreadsheets/d/...
+      # gsheets_sheet_name: ...
+      dataset_id: brutos_sheets
+      # table_id: ...
+
+  # Migração tabela (banco relacional) -> tabela (BigQuery)
+  - case_slug: "migrate-relational-db"
+    flow_path: "pipelines.datalake.migrate.relational_db.flows"
+    flow_name: "relational_db"
+    params:
+      environment: dev
+      rename_flow: false
+      # db_url_infisical_key: ...
+      # db_url_infisical_path: ...
+      # target_dataset_id: ...
+      # target_table_id: ...
+      # source_schema_name: ...
+      # source_table_name: ...
+      ## Ou `source_datetime_column` + `relative_date`,
+      ## ou `extract_whole_table`
+      # source_datetime_column: ...
+      # relative_date: ...
+      # extract_whole_table: ...
+
+  # Clona tabelas do BigQuery, de um projeto qualquer para a SMS
+  - case_slug: "clone-bigquery-table"
+    flow_path: "pipelines.datalake.migrate.clone_bigquery.flows"
+    flow_name: "clone_bigquery"
+    params:
+      environment: dev
+      # source_project_name: ... # ex. "rj-smfp"
+      # source_dataset_name: ...
+      # source_table_list: ...
+      # destination_dataset_name: ...
+      # dbt_select_exp: ...
+
 
   ################################
   #  TRANSFORM                   #
@@ -223,3 +206,29 @@ cases:
       target: null
       rename_flow: false
       send_discord_report: false
+
+
+  ################################
+  #  REPORTS                     #
+  ################################
+
+  # [teste] Previsão do tempo
+  - case_slug: "test-weather-report"
+    flow_path: "pipelines.reports.weather.flows"
+    flow_name: "weather_report"
+    params:
+      environment: "dev"
+      lat: -22.9519
+      lon: -43.2105
+
+  # Informes de Segurança / Comunicação de CIDs
+  - case_slug: "report-informes-seguranca"
+    flow_path: "pipelines.reports.informes_seguranca.flows"
+    flow_name: "report_informes_seguranca"
+    params:
+      environment: dev
+      ## Quando date é nula, usa dia de ontem
+      date: null
+      # override_recipients: ...
+      ## Desenvolvendo local, não queremos enviar nada
+      skip_email: true

@@ -12,11 +12,11 @@ from .tasks import download_from_db
 
 
 @flow(
-  name="DataLake - Extração e Carga de Dados - Banco de Dados Relacional",
+  name="Migração: BD Relacional → BigQuery",
   state_handlers=[handle_flow_state_change],
   owners=[CIT.PEDRO_ID.value],
 )
-def extract_load_relational_db(
+def relational_db(
   # Parâmetros para o secret com o URL do banco de dados
   db_url_infisical_key: str,
   db_url_infisical_path: str,
@@ -65,4 +65,4 @@ def extract_load_relational_db(
 
 
 # memory_limit="8Gi", num_workers=2
-_flows = [flow_config(flow=extract_load_relational_db, schedules=schedules)]
+_flows = [flow_config(flow=relational_db, schedules=schedules)]

@@ -17,7 +17,7 @@ from .tasks import (
 
 
 @flow(
-  name="DataLake - Transformação - DBT",
+  name="Transformação: DBT",
   state_handlers=[handle_flow_state_change],
   owners=[CIT.CIT_ID.value],
 )

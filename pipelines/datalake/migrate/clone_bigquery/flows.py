@@ -9,7 +9,7 @@ from .tasks import clone_bigquery_table
 
 
 @flow(
-  name="DataLake - Extração e Carga de Dados - Clonagem de BigQuery",
+  name="Migração: Clonagem de BigQuery",
   description="Clona dataset de projeto externo no BigQuery para o nosso datalake",
   state_handlers=[handle_flow_state_change],
   owners=[CIT.CIT_ID.value],
