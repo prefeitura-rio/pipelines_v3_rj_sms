@@ -239,13 +239,11 @@ def upload_results(main_result: dict, latest_vote: str, dataset: str):
     f"Fazendo upload de DataFrame: {len(main_df)} linha(s); coluna(s) {list(main_df.columns)}"
   )
   # Chama a task de upload
-  upload_df_to_datalake.run(
+  upload_df_to_datalake(
     df=main_df,
     dataset_id=dataset,
     table_id="processos_tcm",
-    partition_column="_extracted_at",
-    if_exists="append",
-    if_storage_data_exists="append",
+    date_partition_column="_extracted_at",
     source_format="csv",
     csv_delimiter=",",
   )
