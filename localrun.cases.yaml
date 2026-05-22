@@ -118,6 +118,15 @@ cases:
       # relative_date: ...
       # extract_whole_table: ...
 
+  # Extração Vitacare Histórico (Cloud SQL) -> BigQuery
+  - case_slug: "datalake-extract-vitacare-historico"
+    flow_path: "pipelines.datalake.extract_load.vitacare_historico.flows"
+    flow_name: "extract_load_vitacare_historico"
+    params:
+      environment: dev
+      # cnes: "2280310"
+      # table_name: "ATENDIMENTOS"
+
   # Clona tabelas do BigQuery, de um projeto qualquer para a SMS
   - case_slug: "datalake-clone-bigquery-table"
     flow_path: "pipelines.datalake.extract_load.clone_bigquery.flows"
