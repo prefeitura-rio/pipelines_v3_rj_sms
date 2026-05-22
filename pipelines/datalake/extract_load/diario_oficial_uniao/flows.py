@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=C0103
-
 from pipelines.constants import CIT
 from pipelines.datalake.extract_load.diario_oficial_uniao.constants import (
   constants as flow_constants,
