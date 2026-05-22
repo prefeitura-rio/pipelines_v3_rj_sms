@@ -5,7 +5,6 @@ import shutil
 import zipfile
 
 import pandas as pd
-import pytz
 import requests
 from bs4 import BeautifulSoup
 from google.cloud import bigquery
@@ -17,7 +16,7 @@ from pipelines.datalake.extract_load.diario_oficial_uniao.constants import (
   constants as flow_constants,
 )
 from pipelines.utils.datalake import upload_df_to_datalake
-from pipelines.utils.datetime import parse_date_or_today
+from pipelines.utils.datetime import now, now_str, parse_date_or_today
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.io import create_tmp_data_folder
 from pipelines.utils.logger import log
@@ -225,11 +224,9 @@ def get_xml_files(xml_dir: str, output_dir: str = None) -> str:
           log(f"⚠️ Erro ao processar o arquivo {file}: {e}")
 
     df = pd.DataFrame(acts)
-    df["extracted_at"] = datetime.datetime.now(
-      pytz.timezone("America/Sao_Paulo")
-    ).strftime("%Y-%m-%d %H:%M:%S")
+    df["extracted_at"] = now_str()
 
-    file_name = f"dou-extraction-{datetime.datetime.now().isoformat(sep='-')}.parquet"
+    file_name = f"dou-extraction-{now_str()}.parquet"
     if output_dir is None:
       output_dir = xml_dir
     file_path = os.path.join(output_dir, file_name)
@@ -293,9 +290,7 @@ def report_extraction_status(status: bool, date: str, environment: str = "dev"):
   date = parse_date_or_today(date).strftime("%Y-%m-%d")
 
   success = "true" if status else "false"
-  current_datetime = datetime.datetime.now(tz=pytz.timezone("America/Sao_Paulo")).replace(
-    tzinfo=None
-  )
+  current_datetime = now()
   tipo_diario = "dou-api"
 
   if environment is None:
