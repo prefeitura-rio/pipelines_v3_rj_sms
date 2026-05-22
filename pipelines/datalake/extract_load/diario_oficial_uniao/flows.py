@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 from pipelines.constants import CIT
-from pipelines.datalake.extract_load.diario_oficial_uniao.constants import (
-  constants as flow_constants,
-)
 from pipelines.datalake.extract_load.diario_oficial_uniao.tasks import (
   create_dirs,
   delete_dirs,
@@ -21,7 +18,7 @@ from .schedules import schedules
 
 
 @flow(
-  name="DataLake - Extração e Carga de Dados - Diário Oficial da União (API)",
+  name="Extração: Diário Oficial da União",
   state_handlers=[handle_flow_state_change],
   owners=[CIT.HERIAN_ID.value],
 )
@@ -35,7 +32,7 @@ def dou_extraction(
   Fluxo de extração e carga de atos oficiais do Diário Oficial da União (DOU).
   """
 
-  create_dirs()
+  dirs = create_dirs()
 
   parsed_date = parse_date(date=date)
 
@@ -43,16 +40,21 @@ def dou_extraction(
   session = login(enviroment=environment)
 
   # Faz o download dos arquivos .zip com os atos oficiais de cada seção
-  zip_files = download_files(session=session, sections=dou_section, date=parsed_date)
+  zip_files = download_files(
+    session=session,
+    sections=dou_section,
+    date=parsed_date,
+    download_dir=dirs["download_dir"],
+  )
 
   # Descompacta os arquivos .zip (Se não houver atos oficiais para descompactar, retorna False)
   # unpack_zip was returning boolean instead of None if it didn't extract.
   # The original flow assigned the result to extraction_status.
-  unpack_zip(zip_files=zip_files, output_path=flow_constants.OUTPUT_DIR.value)
+  unpack_zip(zip_files=zip_files, output_path=dirs["output_dir"])
 
   # Pega as informações dos xml de cada ato oficial
   parquet_file = get_xml_files(
-    xml_dir=flow_constants.OUTPUT_DIR.value, wait_for=unpack_zip
+    xml_dir=dirs["output_dir"], output_dir=dirs["output_dir"], wait_for=unpack_zip
   )
 
   # Faz o upload para o bigquery
@@ -66,7 +68,11 @@ def dou_extraction(
   )
 
   # Deleta os diretórios temporários
-  delete_dirs(wait_for=report_status)
+  delete_dirs(
+    download_dir=dirs["download_dir"],
+    output_dir=dirs["output_dir"],
+    wait_for=report_status,
+  )
 
 
 _flows = [flow_config(flow=dou_extraction, schedules=schedules)]

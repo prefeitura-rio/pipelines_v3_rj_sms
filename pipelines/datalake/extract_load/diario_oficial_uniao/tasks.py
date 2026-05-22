@@ -19,16 +19,16 @@ from pipelines.datalake.extract_load.diario_oficial_uniao.constants import (
 from pipelines.utils.datalake import upload_df_to_datalake
 from pipelines.utils.datetime import parse_date_or_today
 from pipelines.utils.infisical import get_secret
+from pipelines.utils.io import create_tmp_data_folder
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
 
 @task
-def create_dirs():
-  if not os.path.exists(flow_constants.DOWNLOAD_DIR.value):
-    os.makedirs(flow_constants.DOWNLOAD_DIR.value)
-  if not os.path.exists(flow_constants.OUTPUT_DIR.value):
-    os.makedirs(flow_constants.OUTPUT_DIR.value)
+def create_dirs() -> dict[str, str]:
+  download_dir = create_tmp_data_folder(prefix="download")
+  output_dir = create_tmp_data_folder(prefix="output")
+  return {"download_dir": download_dir, "output_dir": output_dir}
 
 
 @task
@@ -90,7 +90,10 @@ def login(enviroment: str = "dev"):
 
 @task(retries=3, retry_delay_seconds=600)
 def download_files(
-  session: requests.Session, sections: str, date: datetime.datetime
+  session: requests.Session,
+  sections: str,
+  date: datetime.datetime,
+  download_dir: str = None,
 ) -> list | None:
   """Faz o download dos arquivos .zip com os atos oficiais de cada seção para um dia específico.
 
@@ -128,7 +131,9 @@ def download_files(
 
     if response.status_code == 200:
       file_name = date_to_extract + "-" + dou_section + ".zip"
-      file_path = os.path.join(flow_constants.DOWNLOAD_DIR.value, file_name)
+      if download_dir is None:
+        download_dir = flow_constants.DOWNLOAD_DIR.value
+      file_path = os.path.join(download_dir, file_name)
       with open(file_path, "wb") as file:
         file.write(response.content)
         files.append(file_path)
@@ -165,7 +170,7 @@ def unpack_zip(zip_files: list, output_path: str) -> None:
 
 
 @task
-def get_xml_files(xml_dir: str) -> str:
+def get_xml_files(xml_dir: str, output_dir: str = None) -> str:
   """Pega as informações dos xml de cada ato oficial.
 
   Args:
@@ -225,7 +230,9 @@ def get_xml_files(xml_dir: str) -> str:
     ).strftime("%Y-%m-%d %H:%M:%S")
 
     file_name = f"dou-extraction-{datetime.datetime.now().isoformat(sep='-')}.parquet"
-    file_path = os.path.join(flow_constants.OUTPUT_DIR.value, file_name)
+    if output_dir is None:
+      output_dir = xml_dir
+    file_path = os.path.join(output_dir, file_name)
 
     if df.empty:
       return ""
@@ -320,13 +327,18 @@ def report_extraction_status(status: bool, date: str, environment: str = "dev"):
 
 
 @task
-def delete_dirs():
+def delete_dirs(download_dir: str = None, output_dir: str = None):
   """
   Deleta os diretórios temporários.
   """
   log("🗑️ Deletando diretórios temporários...")
-  if os.path.exists(flow_constants.DOWNLOAD_DIR.value):
-    shutil.rmtree(flow_constants.DOWNLOAD_DIR.value)
-  if os.path.exists(flow_constants.OUTPUT_DIR.value):
-    shutil.rmtree(flow_constants.OUTPUT_DIR.value)
+  if download_dir is None:
+    download_dir = flow_constants.DOWNLOAD_DIR.value
+  if output_dir is None:
+    output_dir = flow_constants.OUTPUT_DIR.value
+
+  if os.path.exists(download_dir):
+    shutil.rmtree(download_dir)
+  if os.path.exists(output_dir):
+    shutil.rmtree(output_dir)
   log("✅ Diretórios temporários deletados.")
