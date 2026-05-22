@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime, timedelta
-
 import pandas as pd
 import requests
 from google.cloud import bigquery
 
+from pipelines.utils.datetime import parse_date_or_today
 from pipelines.utils.monitor import send_discord_message
 from pipelines.utils.prefect import authenticated_task as task
 
@@ -34,7 +33,7 @@ def get_recent_bigquery_jobs(
   query_job = client.query(query)
   results = query_job.result().to_dataframe()
 
-  ontem = (datetime.now() - timedelta(days=1)).strftime("%m-%d-%Y")
+  ontem = parse_date_or_today(None, subtract_days_from_today=1).strftime("%m-%d-%Y")
   response = requests.get(
     url=f"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarDia(dataCotacao=@dataCotacao)?@dataCotacao='{ontem}'&$format=json"  # noqa: E501
   )
