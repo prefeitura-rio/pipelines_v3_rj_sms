@@ -1,4 +1,6 @@
 import json
+import os
+import signal
 import subprocess
 from time import sleep
 
@@ -93,7 +95,10 @@ def stop_cloudsql_proxy(process_id: int):
     return
 
   log(f"Encerrando Cloud SQL Auth Proxy: processo {process_id}")
-  subprocess.run(["kill", str(process_id)], check=False)
+  try:
+    os.kill(process_id, signal.SIGTERM)
+  except ProcessLookupError:
+    return
 
 
 @task

@@ -14,7 +14,7 @@ COPY ./pipelines /opt/prefect/pipelines_v3_rj_sms/pipelines
 #####################
 ## SQL Server
 #####################
-RUN uv add 'python-tds>=1.17.0'
+RUN uv add 'python-tds>=1.17.0' 'sqlalchemy-pytds>=1.0.2'
 
 # O Cloud SQL Auth Proxy abre uma porta local no container e encaminha
 # a conexão para a instância Cloud SQL configurada em DATABASE_CONNECTION_NAME.
