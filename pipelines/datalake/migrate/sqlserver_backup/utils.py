@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+
 def validate_restore_input(item: dict) -> None:
   """
   Valida os campos mínimos necessários para restauração no Cloud SQL.
