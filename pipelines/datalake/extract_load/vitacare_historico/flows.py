@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
+from prefect.futures import wait
+
 from pipelines.constants import CIT
+from pipelines.utils.datetime import now_str
 from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
 from pipelines.utils.state_handlers import handle_flow_state_change
@@ -7,7 +10,7 @@ from pipelines.utils.state_handlers import handle_flow_state_change
 from .constants import vitacare_constants
 from .schedules import schedules
 from .tasks import (
-  extract_table_to_bigquery,
+  extract_cnes_tables,
   get_cnes_from_bigquery,
   get_database_tables,
   start_cloudsql_instance,
@@ -28,7 +31,7 @@ def vitacare_historico(
   environment: str = "dev", cnes: str = None, table_name: str = None
 ):
   environment = validate_environment(environment=environment)
-  rename_flow_run(new_name=f"{environment} - vitacare_historico")
+  rename_flow_run(new_name=f"{environment} - {now_str()}")
   database_environment = "dev"
 
   cnes_list = [cnes] if cnes else get_cnes_from_bigquery()
@@ -50,17 +53,19 @@ def vitacare_historico(
     instance_started = True
     proxy_process_id = start_cloudsql_proxy(environment=database_environment)
 
-    for cnes in cnes_list:
-      database_name = f"vitacare_historic_{cnes}"
-
-      for table_name in table_names:
-        result = extract_table_to_bigquery(
-          database_name=database_name,
-          environment=database_environment,
-          cnes=cnes,
-          table_name=table_name,
+    concurrency_limit = vitacare_constants.CNES_CONCURRENCY_LIMIT.value
+    for index in range(0, len(cnes_list), concurrency_limit):
+      cnes_batch = cnes_list[index : index + concurrency_limit]
+      cnes_futures = [
+        extract_cnes_tables.submit(
+          environment=database_environment, cnes=cnes_item, table_names=table_names
         )
-        results.append(result)
+        for cnes_item in cnes_batch
+      ]
+
+      wait(cnes_futures)
+      for future in cnes_futures:
+        results.extend(future.result())
 
   finally:
     if proxy_process_id:

@@ -171,7 +171,7 @@ def get_database_engine(database_name: str, environment: str):
     database=database_name,
     host=vitacare_constants.LOCAL_DATABASE_HOST.value,
   )
-  return create_engine(database_url)
+  return create_engine(database_url, pool_size=1, max_overflow=0)
 
 
 @task
@@ -276,6 +276,32 @@ def extract_table_to_bigquery(
 
   log(f"(extract_table_to_bigquery) extração finalizada: {result}")
   return result
+
+
+@task
+def extract_cnes_tables(
+  environment: str, cnes: str, table_names: list[str]
+) -> list[dict]:
+  database_name = f"vitacare_historic_{cnes}"
+  results = []
+
+  log(
+    f"(extract_cnes_tables) iniciando extração sequencial de "
+    f"{len(table_names)} tabela(s) do CNES '{cnes}'"
+  )
+
+  for table_name in table_names:
+    results.append(
+      extract_table_to_bigquery.fn(
+        database_name=database_name,
+        environment=environment,
+        cnes=cnes,
+        table_name=table_name,
+      )
+    )
+
+  log(f"(extract_cnes_tables) extração do CNES '{cnes}' finalizada")
+  return results
 
 
 @task

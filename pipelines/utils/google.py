@@ -333,7 +333,7 @@ def get_google_drive_service():
   Cria um cliente autenticado da API do Google Drive.
 
   Returns:
-          Resource: Cliente autenticado do Google Drive.
+    Resource: Cliente autenticado do Google Drive.
   """
   credentials = get_credentials_from_env(
     scopes=["https://www.googleapis.com/auth/drive.readonly"]
@@ -346,12 +346,12 @@ def list_google_drive_files(folder_id: str, start_date: str, end_date: str) -> l
   Lista arquivos de uma pasta e subpastas do Google Drive.
 
   Args:
-      folder_id (str): ID da pasta raiz no Google Drive.
-      start_date (str): Data inicial (YYYY-MM-DD) de modificação do arquivo.
-      end_date (str): Data limite (YYYY-MM-DD) de modificação do arquivo.
+    folder_id (str): ID da pasta raiz no Google Drive.
+    start_date (str): Data inicial (YYYY-MM-DD) de modificação do arquivo.
+    end_date (str): Data limite (YYYY-MM-DD) de modificação do arquivo.
 
   Returns:
-      list[dict]: Lista de arquivos encontrados, contendo o ID, nome e caminho relativo.
+    list[dict]: Lista de arquivos encontrados, contendo o ID, nome e caminho relativo.
   """
 
   service = get_google_drive_service()
