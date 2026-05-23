@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-from prefect.futures import wait
+from collections import deque
+
+from prefect.futures import as_completed
 from prefect.task_runners import ThreadPoolTaskRunner
 
 from pipelines.constants import CIT
@@ -11,7 +13,7 @@ from pipelines.utils.state_handlers import handle_flow_state_change
 from .constants import vitacare_constants
 from .schedules import schedules
 from .tasks import (
-  extract_cnes_tables,
+  extract_table_to_bigquery,
   get_cnes_from_bigquery,
   get_database_tables,
   start_cloudsql_instance,
@@ -57,16 +59,37 @@ def vitacare_historico(
     instance_started = True
     proxy_process_id = start_cloudsql_proxy(environment=database_environment)
 
-    cnes_futures = [
-      extract_cnes_tables.submit(
-        environment=database_environment, cnes=cnes_item, table_names=table_names
-      )
-      for cnes_item in cnes_list
-    ]
+    if table_names:
+      pending_cnes = deque(cnes_list)
+      active_futures = {}
 
-    wait(cnes_futures)
-    for future in cnes_futures:
-      results.extend(future.result())
+      def submit_table(cnes_item: str, table_index: int) -> None:
+        table_name = table_names[table_index]
+        future = extract_table_to_bigquery.submit(
+          database_name=f"vitacare_historic_{cnes_item}",
+          environment=database_environment,
+          cnes=cnes_item,
+          table_name=table_name,
+        )
+        active_futures[future] = (cnes_item, table_index)
+
+      while (
+        pending_cnes
+        and len(active_futures) < vitacare_constants.CNES_CONCURRENCY_LIMIT.value
+      ):
+        submit_table(cnes_item=pending_cnes.popleft(), table_index=0)
+
+      while active_futures:
+        for future in as_completed(list(active_futures)):
+          cnes_item, table_index = active_futures.pop(future)
+          results.append(future.result())
+
+          next_table_index = table_index + 1
+          if next_table_index < len(table_names):
+            submit_table(cnes_item=cnes_item, table_index=next_table_index)
+          elif pending_cnes:
+            submit_table(cnes_item=pending_cnes.popleft(), table_index=0)
+          break
 
   finally:
     if proxy_process_id:
