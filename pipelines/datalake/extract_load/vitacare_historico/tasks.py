@@ -5,9 +5,9 @@ import subprocess
 from time import sleep
 
 import pandas as pd
+from google.cloud import bigquery
 from prefect import get_client
 from prefect.concurrency.sync import concurrency
-from google.cloud import bigquery
 from prefect.context import FlowRunContext
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
