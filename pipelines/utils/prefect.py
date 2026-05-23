@@ -53,12 +53,8 @@ class FlowDecorator(OriginalFlowDecorator):
     self.state_handlers = state_handlers or []
     self.owners = owners or []
     self.log_prints = log_prints
-    self.flow_kwargs = kwargs
 
   def __call__(self, *args, **kwargs):
-    flow_kwargs = {**self.flow_kwargs, **kwargs}
-    flow_kwargs.setdefault("validate_parameters", False)
-
     return Flow(
       *args,
       name=self.name,
@@ -70,7 +66,8 @@ class FlowDecorator(OriginalFlowDecorator):
       on_cancellation=[*self.state_handlers],
       on_crashed=[*self.state_handlers],
       on_running=[*self.state_handlers],
-      **flow_kwargs,
+      validate_parameters=False,
+      **kwargs,
     )
 
 
