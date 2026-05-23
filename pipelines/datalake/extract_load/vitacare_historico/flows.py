@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from prefect.futures import wait
 
 from pipelines.constants import CIT
-from pipelines.utils.datetime import now_str
 from pipelines.utils.env import get_google_project_for_environment
-from pipelines.utils.logger import log
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
 from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .constants import vitacare_constants
 from .schedules import schedules
 from .tasks import (
-  extract_table_to_bigquery,
+  ensure_cnes_concurrency_limit,
+  extract_cnes_tables,
   get_cnes_from_bigquery,
   get_database_tables,
   start_cloudsql_instance,
@@ -32,7 +31,7 @@ def vitacare_historico(
   environment: str = "dev", cnes: str = None, table_name: str = None
 ):
   environment = validate_environment(environment=environment)
-  rename_flow_run(new_name=f"{environment} - {now_str()}")
+  rename_flow_run(new_name=f"{environment} - vitacare_historico")
   database_environment = "dev"
 
   cnes_list = [cnes] if cnes else get_cnes_from_bigquery()
@@ -50,51 +49,21 @@ def vitacare_historico(
   results = []
 
   try:
+    ensure_cnes_concurrency_limit()
     start_cloudsql_instance()
     instance_started = True
     proxy_process_id = start_cloudsql_proxy(environment=database_environment)
 
-    def extract_cnes_tables(cnes_item: str) -> list[dict]:
-      cnes_results = []
-      log(
-        f"(vitacare_historico) iniciando CNES '{cnes_item}' com "
-        f"{len(table_names)} tabela(s)"
+    cnes_futures = [
+      extract_cnes_tables.submit(
+        environment=database_environment, cnes=cnes, table_names=table_names
       )
-      for table_name in table_names:
-        cnes_results.append(
-          extract_table_to_bigquery.fn(
-            database_name=f"vitacare_historic_{cnes_item}",
-            environment=database_environment,
-            cnes=cnes_item,
-            table_name=table_name,
-          )
-        )
-      log(f"(vitacare_historico) CNES '{cnes_item}' finalizado")
-      return cnes_results
+      for cnes in cnes_list
+    ]
 
-    with ThreadPoolExecutor(
-      max_workers=vitacare_constants.CNES_CONCURRENCY_LIMIT.value
-    ) as executor:
-      future_to_cnes = {
-        executor.submit(extract_cnes_tables, cnes_item): cnes_item
-        for cnes_item in cnes_list
-      }
-      log(
-        f"(vitacare_historico) {len(future_to_cnes)} CNES submetido(s), "
-        f"limite de concorrência {vitacare_constants.CNES_CONCURRENCY_LIMIT.value}"
-      )
-
-      for future in as_completed(future_to_cnes):
-        cnes_item = future_to_cnes[future]
-        try:
-          results.extend(future.result())
-        except Exception as exc:  # pylint: disable=broad-except
-          log(
-            f"(vitacare_historico) erro inesperado processando CNES "
-            f"'{cnes_item}': {repr(exc)}",
-            level="error",
-          )
-          raise
+    wait(cnes_futures)
+    for future in cnes_futures:
+      results.extend(future.result())
 
   finally:
     if proxy_process_id:
