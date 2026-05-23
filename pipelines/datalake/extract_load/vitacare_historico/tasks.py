@@ -197,20 +197,31 @@ def extract_cnes_tables(
   results = []
   limit_name = vitacare_constants.CNES_CONCURRENCY_LIMIT_NAME.value
 
+  log(
+    f"(extract_cnes_tables) CNES '{cnes}' aguardando slot de concorrência '{limit_name}'"
+  )
   with concurrency(limit_name, occupy=1, strict=True):
     log(
-      f"(extract_cnes_tables) iniciando extração sequencial de "
+      f"(extract_cnes_tables) CNES '{cnes}' adquiriu slot; iniciando "
       f"{len(table_names)} tabela(s) do CNES '{cnes}'"
     )
 
-    for table_name in table_names:
-      results.append(
-        extract_table_to_bigquery.fn(
-          database_name=database_name,
-          environment=environment,
-          cnes=cnes,
-          table_name=table_name,
-        )
+    for table_index, table_name in enumerate(table_names, start=1):
+      log(
+        f"(extract_cnes_tables) CNES '{cnes}' iniciando tabela "
+        f"'{table_name}' ({table_index}/{len(table_names)})"
+      )
+      result = extract_table_to_bigquery.fn(
+        database_name=database_name,
+        environment=environment,
+        cnes=cnes,
+        table_name=table_name,
+      )
+      results.append(result)
+      log(
+        f"(extract_cnes_tables) CNES '{cnes}' finalizou tabela "
+        f"'{table_name}' com status '{result['status']}' "
+        f"({table_index}/{len(table_names)})"
       )
 
     log(f"(extract_cnes_tables) extração do CNES '{cnes}' finalizada")

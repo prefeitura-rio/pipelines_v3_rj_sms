@@ -3,6 +3,7 @@ from prefect.futures import wait
 
 from pipelines.constants import CIT
 from pipelines.utils.env import get_google_project_for_environment
+from pipelines.utils.logger import log
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
 from pipelines.utils.state_handlers import handle_flow_state_change
 
@@ -47,25 +48,73 @@ def vitacare_historico(
   proxy_process_id = None
   instance_started = False
   results = []
+  cnes_futures = []
+  flow_stage = "before_cloudsql"
 
   try:
+    log(
+      f"(vitacare_historico) preparando extração de {len(cnes_list)} CNES "
+      f"e {len(table_names)} tabela(s)"
+    )
     ensure_cnes_concurrency_limit()
+    flow_stage = "starting_cloudsql"
     start_cloudsql_instance()
     instance_started = True
     proxy_process_id = start_cloudsql_proxy(environment=database_environment)
 
-    cnes_futures = [
-      extract_cnes_tables.submit(
-        environment=database_environment, cnes=cnes, table_names=table_names
-      )
-      for cnes in cnes_list
-    ]
+    flow_stage = "submitting_cnes"
+    for index, cnes in enumerate(cnes_list, start=1):
+      try:
+        future = extract_cnes_tables.submit(
+          environment=database_environment, cnes=cnes, table_names=table_names
+        )
+        cnes_futures.append(future)
+        log(
+          f"(vitacare_historico) CNES '{cnes}' submetido "
+          f"({index}/{len(cnes_list)}), task_run_id={future.task_run_id}"
+        )
+      except Exception as exc:
+        log(
+          f"(vitacare_historico) erro ao submeter CNES '{cnes}' "
+          f"({index}/{len(cnes_list)}); {len(cnes_futures)} future(s) "
+          f"já submetido(s). Erro original: {repr(exc)}",
+          level="error",
+        )
+        raise
 
-    wait(cnes_futures)
+    flow_stage = "waiting_cnes"
+    log(f"(vitacare_historico) aguardando {len(cnes_futures)} future(s) de CNES")
+    pending_futures = list(cnes_futures)
+    while pending_futures:
+      done_futures, not_done_futures = wait(pending_futures, timeout=60)
+      log(
+        f"(vitacare_historico) wait parcial: {len(done_futures)} concluído(s), "
+        f"{len(not_done_futures)} pendente(s)"
+      )
+
+      if not done_futures and not_done_futures:
+        pending_ids = [str(future.task_run_id) for future in list(not_done_futures)[:10]]
+        log(
+          f"(vitacare_historico) futures ainda pendentes "
+          f"(primeiros 10 task_run_id): {pending_ids}",
+          level="warning",
+        )
+
+      pending_futures = list(not_done_futures)
+
+    flow_stage = "collecting_results"
     for future in cnes_futures:
+      log(
+        f"(vitacare_historico) coletando resultado do future "
+        f"task_run_id={future.task_run_id}"
+      )
       results.extend(future.result())
 
   finally:
+    log(
+      f"(vitacare_historico) entrando no cleanup; etapa='{flow_stage}', "
+      f"future(s) submetido(s)={len(cnes_futures)}, resultado(s)={len(results)}"
+    )
     if proxy_process_id:
       stop_cloudsql_proxy(process_id=proxy_process_id)
     if instance_started:
