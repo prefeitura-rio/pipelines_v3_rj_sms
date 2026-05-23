@@ -6,8 +6,6 @@ from time import sleep
 
 import pandas as pd
 from google.cloud import bigquery
-from prefect import get_client
-from prefect.concurrency.sync import concurrency
 from prefect.context import FlowRunContext
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
@@ -37,19 +35,6 @@ def start_cloudsql_instance() -> None:
     f"'{vitacare_constants.INSTANCE_NAME.value}'"
   )
   start_instance_task.fn(instance_name=vitacare_constants.INSTANCE_NAME.value)
-
-
-@task
-def ensure_cnes_concurrency_limit() -> None:
-  limit_name = vitacare_constants.CNES_CONCURRENCY_LIMIT_NAME.value
-  limit = vitacare_constants.CNES_CONCURRENCY_LIMIT.value
-
-  log(
-    f"(ensure_cnes_concurrency_limit) garantindo limite de concorrência "
-    f"'{limit_name}' com {limit} slot(s)"
-  )
-  with get_client(sync_client=True) as client:
-    client.upsert_global_concurrency_limit_by_name(name=limit_name, limit=limit)
 
 
 @task
@@ -187,46 +172,6 @@ def get_database_engine(database_name: str, environment: str):
     host=vitacare_constants.LOCAL_DATABASE_HOST.value,
   )
   return create_engine(database_url)
-
-
-@task(task_run_name="CNES {cnes}")
-def extract_cnes_tables(
-  environment: str, cnes: str, table_names: list[str]
-) -> list[dict]:
-  database_name = f"vitacare_historic_{cnes}"
-  results = []
-  limit_name = vitacare_constants.CNES_CONCURRENCY_LIMIT_NAME.value
-
-  log(
-    f"(extract_cnes_tables) CNES '{cnes}' aguardando slot de concorrência '{limit_name}'"
-  )
-  with concurrency(limit_name, occupy=1, strict=True):
-    log(
-      f"(extract_cnes_tables) CNES '{cnes}' adquiriu slot; iniciando "
-      f"{len(table_names)} tabela(s) do CNES '{cnes}'"
-    )
-
-    for table_index, table_name in enumerate(table_names, start=1):
-      log(
-        f"(extract_cnes_tables) CNES '{cnes}' iniciando tabela "
-        f"'{table_name}' ({table_index}/{len(table_names)})"
-      )
-      result = extract_table_to_bigquery.fn(
-        database_name=database_name,
-        environment=environment,
-        cnes=cnes,
-        table_name=table_name,
-      )
-      results.append(result)
-      log(
-        f"(extract_cnes_tables) CNES '{cnes}' finalizou tabela "
-        f"'{table_name}' com status '{result['status']}' "
-        f"({table_index}/{len(table_names)})"
-      )
-
-    log(f"(extract_cnes_tables) extração do CNES '{cnes}' finalizada")
-
-  return results
 
 
 @task

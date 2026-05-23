@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
-from prefect.futures import wait
+from time import sleep
+
+from prefect import get_client
+from prefect.deployments.flow_runs import run_deployment
 
 from pipelines.constants import CIT
 from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.logger import log
-from pipelines.utils.prefect import flow, flow_config, rename_flow_run
+from pipelines.utils.prefect import flow, flow_config, get_prefect_url, rename_flow_run
 from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .constants import vitacare_constants
 from .schedules import schedules
 from .tasks import (
-  ensure_cnes_concurrency_limit,
-  extract_cnes_tables,
+  extract_table_to_bigquery,
   get_cnes_from_bigquery,
   get_database_tables,
   start_cloudsql_instance,
@@ -21,6 +23,62 @@ from .tasks import (
   validate_environment,
   write_log,
 )
+
+
+def _deployment_name(flow_, environment: str) -> str:
+  return f"{flow_.name}/{flow_.name}" + ("" if environment == "prod" else " (stg)")
+
+
+@flow(
+  name="Extração: Vitacare Histórico - CNES",
+  state_handlers=[handle_flow_state_change],
+  owners=[CIT.DANIEL_ID.value],
+)
+def vitacare_historico_cnes(
+  environment: str = "dev",
+  cnes: str = None,
+  table_names: list[str] = None,
+  log_table_id: str = None,
+):
+  environment = validate_environment(environment=environment)
+  rename_flow_run(new_name=f"{environment} - vitacare_historico - {cnes}")
+  database_environment = "dev"
+
+  if not table_names:
+    table_names = get_database_tables(environment=environment)
+  if not log_table_id:
+    project_id = get_google_project_for_environment(environment=environment)
+    log_table_id = (
+      f"{project_id}.{vitacare_constants.LOG_DATASET.value}."
+      f"{vitacare_constants.LOG_TABLE.value}"
+    )
+
+  proxy_process_id = None
+  results = []
+
+  try:
+    proxy_process_id = start_cloudsql_proxy(environment=database_environment)
+    database_name = f"vitacare_historic_{cnes}"
+
+    for table_name in table_names:
+      result = extract_table_to_bigquery(
+        database_name=database_name,
+        environment=database_environment,
+        cnes=cnes,
+        table_name=table_name,
+      )
+      results.append(result)
+
+  finally:
+    if proxy_process_id:
+      stop_cloudsql_proxy(process_id=proxy_process_id)
+    if results:
+      write_log(log_items=results, log_table_id=log_table_id)
+
+  total_failed = sum(1 for result in results if result["status"] == "failed")
+
+  if total_failed > 0:
+    raise RuntimeError(f"{total_failed} extração(ões) falharam no CNES '{cnes}'")
 
 
 @flow(
@@ -33,7 +91,6 @@ def vitacare_historico(
 ):
   environment = validate_environment(environment=environment)
   rename_flow_run(new_name=f"{environment} - vitacare_historico")
-  database_environment = "dev"
 
   cnes_list = [cnes] if cnes else get_cnes_from_bigquery()
   table_names = (
@@ -45,94 +102,97 @@ def vitacare_historico(
     f"{vitacare_constants.LOG_TABLE.value}"
   )
 
-  proxy_process_id = None
   instance_started = False
-  results = []
-  cnes_futures = []
-  flow_stage = "before_cloudsql"
+  active_flow_runs = {}
+  failed_flow_runs = []
 
   try:
     log(
       f"(vitacare_historico) preparando extração de {len(cnes_list)} CNES "
       f"e {len(table_names)} tabela(s)"
     )
-    ensure_cnes_concurrency_limit()
-    flow_stage = "starting_cloudsql"
     start_cloudsql_instance()
     instance_started = True
-    proxy_process_id = start_cloudsql_proxy(environment=database_environment)
 
-    flow_stage = "submitting_cnes"
-    for index, cnes in enumerate(cnes_list, start=1):
-      try:
-        future = extract_cnes_tables.submit(
-          environment=database_environment, cnes=cnes, table_names=table_names
-        )
-        cnes_futures.append(future)
-        log(
-          f"(vitacare_historico) CNES '{cnes}' submetido "
-          f"({index}/{len(cnes_list)}), task_run_id={future.task_run_id}"
-        )
-      except Exception as exc:
-        log(
-          f"(vitacare_historico) erro ao submeter CNES '{cnes}' "
-          f"({index}/{len(cnes_list)}); {len(cnes_futures)} future(s) "
-          f"já submetido(s). Erro original: {repr(exc)}",
-          level="error",
-        )
-        raise
+    pending_cnes = list(reversed(cnes_list))
 
-    flow_stage = "waiting_cnes"
-    log(f"(vitacare_historico) aguardando {len(cnes_futures)} future(s) de CNES")
-    pending_futures = list(cnes_futures)
-    while pending_futures:
-      done_futures, not_done_futures = wait(pending_futures, timeout=60)
+    def submit_next_cnes() -> None:
+      if not pending_cnes:
+        return
+
+      cnes_item = pending_cnes.pop()
+      flow_run = run_deployment(
+        name=_deployment_name(vitacare_historico_cnes, environment),
+        flow_run_name=f"{environment} - vitacare_historico - {cnes_item}",
+        parameters={
+          "environment": environment,
+          "cnes": cnes_item,
+          "table_names": table_names,
+          "log_table_id": log_table_id,
+        },
+        timeout=0,
+        as_subflow=False,
+      )
+      active_flow_runs[flow_run.id] = cnes_item
       log(
-        f"(vitacare_historico) wait parcial: {len(done_futures)} concluído(s), "
-        f"{len(not_done_futures)} pendente(s)"
+        f"(vitacare_historico) flow run criada para CNES '{cnes_item}': "
+        f"{get_prefect_url()}/runs/flow-run/{flow_run.id}"
       )
 
-      if not done_futures and not_done_futures:
-        pending_ids = [str(future.task_run_id) for future in list(not_done_futures)[:10]]
-        log(
-          f"(vitacare_historico) futures ainda pendentes "
-          f"(primeiros 10 task_run_id): {pending_ids}",
-          level="warning",
-        )
+    while (
+      pending_cnes
+      and len(active_flow_runs) < vitacare_constants.CNES_CONCURRENCY_LIMIT.value
+    ):
+      submit_next_cnes()
 
-      pending_futures = list(not_done_futures)
+    with get_client(sync_client=True) as client:
+      while active_flow_runs:
+        finished_flow_runs = []
+        for flow_run_id, cnes_item in active_flow_runs.items():
+          flow_run = client.read_flow_run(flow_run_id=flow_run_id)
+          state = flow_run.state
+          if not state or not state.is_final():
+            continue
 
-    flow_stage = "collecting_results"
-    for future in cnes_futures:
-      log(
-        f"(vitacare_historico) coletando resultado do future "
-        f"task_run_id={future.task_run_id}"
-      )
-      results.extend(future.result())
+          finished_flow_runs.append((flow_run_id, cnes_item, state))
+
+        for flow_run_id, cnes_item, state in finished_flow_runs:
+          del active_flow_runs[flow_run_id]
+          log(
+            f"(vitacare_historico) flow run do CNES '{cnes_item}' finalizada "
+            f"com estado '{state.name}'"
+          )
+          if not state.is_completed():
+            failed_flow_runs.append((cnes_item, state.name))
+          submit_next_cnes()
+
+        if active_flow_runs:
+          active_cnes = ", ".join(active_flow_runs.values())
+          log(
+            f"(vitacare_historico) aguardando {len(active_flow_runs)} CNES "
+            f"ativo(s): {active_cnes}; {len(pending_cnes)} CNES restante(s)"
+          )
+          sleep(60)
 
   finally:
-    log(
-      f"(vitacare_historico) entrando no cleanup; etapa='{flow_stage}', "
-      f"future(s) submetido(s)={len(cnes_futures)}, resultado(s)={len(results)}"
-    )
-    if proxy_process_id:
-      stop_cloudsql_proxy(process_id=proxy_process_id)
     if instance_started:
       stop_cloudsql_instance()
-    if results:
-      write_log(log_items=results, log_table_id=log_table_id)
 
-  total_failed = sum(1 for result in results if result["status"] == "failed")
-
-  if total_failed > 0:
-    raise RuntimeError(f"{total_failed} extração(ões) falharam")
+  if failed_flow_runs:
+    raise RuntimeError(f"{len(failed_flow_runs)} CNES falharam: {failed_flow_runs}")
 
 
 _flows = [
+  flow_config(
+    flow=vitacare_historico_cnes,
+    schedules=[],
+    dockerfile="./pipelines/datalake/extract_load/vitacare_historico/Dockerfile",
+    memory="medium",
+  ),
   flow_config(
     flow=vitacare_historico,
     schedules=schedules,
     dockerfile="./pipelines/datalake/extract_load/vitacare_historico/Dockerfile",
     memory="medium",
-  )
+  ),
 ]
