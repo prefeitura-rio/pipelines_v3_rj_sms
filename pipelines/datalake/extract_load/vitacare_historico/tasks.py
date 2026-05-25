@@ -21,7 +21,7 @@ from pipelines.datalake.migrate.gcs_to_cloudsql.tasks import (
 )
 from pipelines.utils.cleanup import cleanup_columns_for_bigquery
 from pipelines.utils.datalake import upload_df_to_datalake
-from pipelines.utils.datetime import now, parse_date_or_today
+from pipelines.utils.datetime import now_naive, parse_date_or_today
 from pipelines.utils.env import environment_is_valid, get_prefect_url
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.logger import log
@@ -182,7 +182,7 @@ def extract_table_to_bigquery(
   table_name: str,
   chunk_size: int = 500_000,
 ) -> dict:
-  started_at = now()
+  started_at = now_naive()
   destination_table = table_name.lower()
   query = f"select * from [dbo].[{table_name}]"
   total_rows = 0
@@ -272,7 +272,7 @@ def extract_table_to_bigquery(
     if engine:
       engine.dispose()
     result["table_rows"] = total_rows
-    result["finished_at"] = now().isoformat()
+    result["finished_at"] = now_naive().isoformat()
 
   log(f"(extract_table_to_bigquery) extração finalizada: {result}")
   return result
@@ -292,7 +292,7 @@ def write_log(log_items: list[dict], log_table_id: str) -> dict:
 
   rows = []
   for log_item in log_items:
-    timestamp = log_item["finished_at"] or now().isoformat()
+    timestamp = log_item["finished_at"] or now_naive().isoformat()
     rows.append(
       {
         "flow_run_id": flow_run_id,

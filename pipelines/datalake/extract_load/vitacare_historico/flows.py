@@ -78,7 +78,7 @@ def vitacare_historico_cnes(
   total_failed = sum(1 for result in results if result["status"] == "failed")
 
   if total_failed > 0:
-    raise RuntimeError(f"{total_failed} extração(ões) falharam no CNES '{cnes}'")
+    log(f"{total_failed} extração(ões) falharam no CNES '{cnes}'")
 
 
 @flow(
