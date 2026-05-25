@@ -85,7 +85,7 @@ def get_todays_tcm_from_gcs(environment: str = "prod", skipped: bool = False):
   return output_df
 
 
-@task(nout=3)
+@task
 def build_email(
   environment: str = "prod", date: Optional[str] = None, tcm_df: pd.DataFrame = None
 ) -> Tuple[int, bool, str]:
