@@ -16,6 +16,7 @@ dependencies = [
   "google-cloud-storage>=3,<3.2",  # dbt-bigquery requer google-cloud-storage<3.2
   "gspread>=6.2.1",  # Task de baixar Google Sheets usa
   "infisicalsdk>=1.0.16",
+  "lxml>=6.1.0",
   "pandas>=3.0.1",
   "prefect>=3.6",
   "psycopg2-binary>=2.9.12",  # pd.read_sql() requer psycopg2 pra ler Postgres
