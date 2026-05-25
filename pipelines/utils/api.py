@@ -106,10 +106,10 @@ def convert_usd_to_brl(usd: float, default_rate: float = None) -> float:
     log(f"Erro ao obter cotação de `currency-api`: {e}", level="error")
 
   ################
-  # Opçaõ 3: Cotação padrão
+  # Opção 3: Cotação padrão
   if default_rate:
     return usd * default_rate
 
   ################
-  # Opçaõ 4: Chorar pro usuário
+  # Opção 4: Chorar pro usuário
   raise RuntimeError("Não foi possível descobrir a cotação do dólar!")
