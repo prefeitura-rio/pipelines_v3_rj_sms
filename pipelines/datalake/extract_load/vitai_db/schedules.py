@@ -187,6 +187,17 @@ flow_parameters = [
   },
 ]
 
-schedules = create_schedule_list(
-  parameters_list=flow_parameters, interval="12-hours", config={"hour": 2, "minute": 0}
+daily_parameters = [{**p, "relative_date": "D-3"} for p in flow_parameters]
+monthly_parameters = [{**p, "relative_date": "M-1"} for p in flow_parameters]
+
+daily_schedules = create_schedule_list(
+  parameters_list=daily_parameters, interval="12-hours", config={"hour": 2, "minute": 0}
 )
+
+monthly_schedules = create_schedule_list(
+  parameters_list=monthly_parameters,
+  interval="monthly",
+  config={"day": 1, "hour": 2, "minute": 0},
+)
+
+schedules = daily_schedules + monthly_schedules
