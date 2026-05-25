@@ -4,9 +4,9 @@ import re
 import time
 import unicodedata
 from typing import Any, Callable, List, Literal, Optional, Union
+from uuid import UUID
 
 from prefect import Task, get_client
-from prefect.client.schemas.objects import FlowRun
 from prefect.context import FlowRunContext
 from prefect.deployments.flow_runs import run_deployment
 from prefect.flows import Flow as OriginalFlow
@@ -154,37 +154,14 @@ def create_flow_run(
   return flow_run
 
 
-@authenticated_task
-def create_flow_run_task(
-  flow: Flow, parameters: dict = None, wait: bool = False, environment: str = "dev"
-):
-  """
-  Cria uma nova flow run de um determinado flow.
-  Args:
-    flow_(Flow):
-      O flow a ser executada.
-    parameters(dict?):
-      Parâmetros do flow.
-    wait(bool?):
-      Se deve esperar o flow terminar, ou retornar imediatamente.
-      Por padrão, não espera.
-    environment(str?):
-      Ambiente de execução; se "prod", executa o deployment de
-      produção; se "dev", executa o deployment de staging.
-  """
-  return create_flow_run(
-    flow=flow, parameters=parameters, wait=wait, environment=environment
-  )
-
-
 def wait_for_flow_run(
-  flow_run: FlowRun, timeout_seconds: int | None = None, raise_if_timeout: bool = True
+  flow_run_id: UUID, timeout_seconds: int | None = None, raise_if_timeout: bool = True
 ):
   """
   Aguarda uma execução de flow terminar, seja com sucesso ou erro.
 
   Args:
-    flow_run(FlowRun): A instância de FlowRun a ser esperada.
+    flow_run_id(UUID): O ID da FlowRun a ser esperada.
     timeout_seconds(int?):
       Tempo máximo a esperar o fim da FlowRun, em segundos.
     raise_if_timeout(bool?):
@@ -196,8 +173,7 @@ def wait_for_flow_run(
       timeout_seconds definido e raise_if_timeout=False,
       retorna False caso o tempo máximo expire.
   """
-  log(f"Esperando execução de {flow_run.name} ({str(flow_run.id)[:5]}...) terminar...")
-  time.sleep(60)  # Se conferirmos o status rápido demais, dá erro de NotReady
+  log(f"Esperando execução de Flow Run com ID [{str(flow_run_id)[:5]}...] terminar...")
   with get_client(sync_client=True) as client:
     start_time = time.monotonic()
     # Desculpa eu sei que é feio mas é literalmente a implementação
@@ -205,7 +181,7 @@ def wait_for_flow_run(
     while True:
       # Confere o status atual da flow run
       try:
-        updated_flow_run = client.read_flow_run(flow_run.id)
+        updated_flow_run = client.read_flow_run(flow_run_id)
       except Exception as e:  # FIXME: teste
         log(repr(e), level="error")
         time.sleep(15)
@@ -221,7 +197,7 @@ def wait_for_flow_run(
         if raise_if_timeout:
           raise TimeoutError(
             "Tempo máximo de espera por flow run excedido! "
-            f"flow_run.id='{flow_run.id}', "
+            f"flow_run.id='{flow_run_id}', "
             f"flow_run.state='{updated_flow_run.state}'"
           )
         return False
@@ -231,13 +207,13 @@ def wait_for_flow_run(
 
 @authenticated_task
 def wait_for_flow_run_task(
-  flow_run: FlowRun, timeout_seconds: int | None = None, raise_if_timeout: bool = True
+  flow_run_id: UUID, timeout_seconds: int | None = None, raise_if_timeout: bool = True
 ):
   """
   Aguarda uma execução de flow terminar, seja com sucesso ou erro.
 
   Args:
-    flow_run(FlowRun): A instância de FlowRun a ser esperada.
+    flow_run_id(UUID): O ID da FlowRun a ser esperada.
     timeout_seconds(int?):
       Tempo máximo a esperar o fim da FlowRun, em segundos.
     raise_if_timeout(bool?):
@@ -250,7 +226,9 @@ def wait_for_flow_run_task(
       retorna False caso o tempo máximo expire.
   """
   return wait_for_flow_run(
-    flow_run=flow_run, timeout_seconds=timeout_seconds, raise_if_timeout=raise_if_timeout
+    flow_run_id=flow_run_id,
+    timeout_seconds=timeout_seconds,
+    raise_if_timeout=raise_if_timeout,
   )
 
 

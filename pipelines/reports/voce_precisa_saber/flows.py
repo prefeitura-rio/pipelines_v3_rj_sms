@@ -69,13 +69,13 @@ def flow_voce_precisa_saber(
     ## Espera por (1) e (2)
     diario_wait_futures = []
     for fr_diario in [dorj_flow_run]:  # TODO: DOU
-      diario_wait_futures.append(wait_for_flow_run_task.submit(flow_run=fr_diario))
+      diario_wait_futures.append(wait_for_flow_run_task.submit(flow_run_id=fr_diario.id))
     wait(diario_wait_futures)
 
     ## (3) dbt
     # Queremos executar o seguinte comando:
     # $ dbt build --select +tag:cdi_vps+ --target ENV
-    dbt_flow_run = create_flow_run(
+    fr_dbt_id = create_flow_run(
       flow=sms_execute_dbt,
       parameters={
         "environment": environment,
@@ -89,7 +89,7 @@ def flow_voce_precisa_saber(
     )
 
     ## Espera por (3)
-    wait_dbt = wait_for_flow_run_task(flow_run_id=dbt_flow_run, timeout_seconds=(20 * 60))
+    wait_dbt = wait_for_flow_run_task(flow_run_id=fr_dbt_id, timeout_seconds=(20 * 60))
 
     ## (4) TCM
     # Espera DBT terminar, pega casos da tabela
@@ -102,7 +102,7 @@ def flow_voce_precisa_saber(
         parameters={"environment": environment, "case_id": tcm_case},
       )
       tcm_wait_futures.append(
-        wait_for_flow_run_task.submit(flow_run=fr_tcm, timeout_seconds=(20 * 60))
+        wait_for_flow_run_task.submit(flow_run_id=fr_tcm.id, timeout_seconds=(20 * 60))
       )
     # Espera por todos os flow runs do TCM
     wait(tcm_wait_futures)
