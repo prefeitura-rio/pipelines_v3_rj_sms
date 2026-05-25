@@ -18,7 +18,7 @@ def format_tcm_case(case_num: str) -> str | None:
   m = case_regex.search(case_num)
   if m is None:
     log(
-      f"'{case_num}' is not a valid TCM case number ([0-9]+/[0-9]+/[0-9]{{4}})",
+      f"'{case_num}' não é um processo TCM válido ([0-9]+/[0-9]+/[0-9]{{4}})",
       level="warning",
     )
     return None
@@ -28,7 +28,7 @@ def format_tcm_case(case_num: str) -> str | None:
   year = m.group("year")
   if len(year) != 4:
     log(
-      f"[{sec}/{num}/{year}] Year '{year}' has length {len(year)}; expected 4",
+      f"[{sec}/{num}/{year}] Ano '{year}' possui tamanho {len(year)}; esperado 4",
       level="warning",
     )
   return f"{sec}/{num}/{year}"
@@ -103,7 +103,7 @@ select tipo_diario, extracao_sucesso
 from sorted
 where row_num = 1
   """
-  log(f"Querying {FULL_TABLE} for success statuses for '{DATE}'...")
+  log(f"Consultando {FULL_TABLE} por status de sucesso para '{DATE}'...")
   # Algo como:
   # | tipo_diario | extracao_sucesso
   # | ------------------------------
@@ -111,9 +111,8 @@ where row_num = 1
   # | dou-sec3    | false
   # | ...
   rows = [row.values() for row in client.query(QUERY).result()]
-  log(f"Found {len(rows)} row(s)")
+  log(f"Encontrada(s) {len(rows)} linha(s)")
 
-  # Presume que foi bem sucedido a não ser que encontre um 'false'
   success_status = {"dorj": None, "dou": None}
   for dotype, success in rows:
     dotype = str(dotype).lower().strip()
@@ -124,7 +123,7 @@ where row_num = 1
     elif dotype.startswith("dorj"):
       do = "dorj"
     if do is None:
-      log(f"Got unrecognized tipo_diario='{dotype}'; skipping", level="warning")
+      log(f"Tipo não reconhecido tipo_diario='{dotype}'; ignorando", level="warning")
       continue
 
     # Se qualquer seção do diário falhou, cancela envio inteiro dele
@@ -138,14 +137,16 @@ where row_num = 1
       # Status subsequentes seriam um AND com true, mas isso é no-op
       # else: success_status[do] &= True
     else:
-      log(f"Got unrecognized extracao_sucesso='{success}'; skipping", level="warning")
+      log(
+        f"Valor não reconhecido extracao_sucesso='{success}'; ignorando", level="warning"
+      )
       continue
 
   log(success_status)
   no_status = [dotype for (dotype, status) in success_status.items() if status is None]
   if len(no_status) > 0:
     log(
-      f"Unspecified extraction status for type(s): {no_status}; treating as failures",
+      f"Status não especificado para tipo(s): {no_status}; considerando como falhas",
       level="warning",
     )
     for do in no_status:

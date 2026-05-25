@@ -10,6 +10,8 @@ from google.oauth2 import service_account
 # from infisical import InfisicalClient
 from infisical_sdk import InfisicalSDKClient as InfisicalClient
 
+from pipelines.utils.prefect import authenticated_task
+
 from .env import (
   get_current_environment,
   get_google_project_for_environment,
@@ -57,6 +59,24 @@ def get_secret(secret_name: str, environment: str = None, path: str = "/") -> di
     environment_slug=environment,
   ).secretValue
   return secret_value
+
+
+@authenticated_task
+def get_secret_task(secret_name: str, environment: str = None, path: str = "/") -> dict:
+  """
+  Obtém o secret no Infisical com nome e caminho especificados
+
+  Args:
+    secret_name (str): Nome do secret
+    environment (str?):
+      Environment em que se deve buscar o secret. Por padrão, valor da
+      variável de ambiente `environment`
+    path (str?): Caminho do secret; valor padrão "/"
+
+  Returns:
+    str: Valor do secret
+  """
+  return get_secret(secret_name=secret_name, environment=environment, path=path)
 
 
 def inject_env(secret_name: str, environment: str = None, path: str = "/") -> None:

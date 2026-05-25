@@ -17,26 +17,6 @@ from .utils import format_relevant_entry, format_tcm_case, get_latest_extraction
 
 
 @task
-def create_dbt_params_dict(environment: str = "prod"):
-  # Queremos executar o seguinte comando:
-  # $ dbt build --select +tag:cdi_vps+ --target ENV
-  return {
-    "environment": environment,
-    "rename_flow": True,
-    "send_discord_report": False,
-    "command": "build",
-    "select": "+tag:cdi_vps+",
-    "exclude": None,
-    "flag": None,
-  }
-
-
-@task
-def create_tcm_params_dict(case_id: str, environment: str = "prod"):
-  return {"environment": environment, "case_id": case_id}
-
-
-@task
 def fetch_tcm_cases(environment: str = "prod", date: Optional[str] = None) -> List[str]:
   client = bigquery.Client()
   project_name = get_google_project_for_environment(environment=environment)
@@ -50,9 +30,9 @@ SELECT voto
 FROM `{project_name}.{DATASET}.{TABLE}`
 WHERE voto is not NULL and data_publicacao = '{DATE}'
   """
-  log("Querying for TCM cases...")
+  log("Buscando processos do TCM...")
   rows = [str(row.values()[0]).strip() for row in client.query(QUERY).result()]
-  log(f"Found {len(rows)} row(s); sample of 5: {rows[:5]}")
+  log(f"Encontrada(s) {len(rows)} linhas(s); amostra de 5: {rows[:5]}")
 
   return rows
 
@@ -68,7 +48,10 @@ def get_todays_tcm_from_gcs(environment: str = "prod", skipped: bool = False):
   MONTH_STR = TODAY.strftime("%m")
   TODAY_STR = TODAY.strftime("%Y-%m-%d")
   if skipped:
-    log(f"[!] Looking for TCM case files created ONLY on '{TODAY_STR}'!", level="warning")
+    log(
+      f"[!] Procurando por arquivos do TCM criados SOMENTE em '{TODAY_STR}'!",
+      level="warning",
+    )
 
   PATH = (
     f"staging/brutos_diario_oficial/processos_tcm/"
@@ -76,21 +59,21 @@ def get_todays_tcm_from_gcs(environment: str = "prod", skipped: bool = False):
     f"mes_particao={MONTH_STR}/"
     f"data_particao={TODAY_STR}/"
   )
-  log(f"Looking for CSV files in '{PATH}'")
+  log(f"Procurando por CSVs em '{PATH}'")
   blobs = list(bucket.list_blobs(prefix=PATH, match_glob="**.csv"))
-  log(f"Found {len(blobs)} CSV file(s) for TCM cases")
+  log(f"Encontrado(s) {len(blobs)} CSV(s) de processos TCM")
   log([blob.name for blob in blobs])
 
   # Arquivos são bem pequenos (<5KB) então vamos baixar direto em
   # memória; a princípio só vamos ter 1 por dia
   output_df = pd.DataFrame()
   for blob in blobs:
-    log(f"Downloading '{blob.name}'...")
+    log(f"Baixando '{blob.name}'...")
     data = blob.download_as_text()
     pseudofile = io.StringIO(data)
     df = pd.read_csv(pseudofile, dtype=str, encoding="utf-8")
     df1 = df[["processo_id", "decisao_data", "voto_conselheiro"]]
-    log(f"'{blob.name}' has {len(df1)} row(s)")
+    log(f"'{blob.name}' tem {len(df1)} linha(s)")
     output_df = pd.concat([output_df, df1], ignore_index=True)
 
   # Se o dataframe possui a coluna (i.e. não está vazio)
@@ -98,7 +81,7 @@ def get_todays_tcm_from_gcs(environment: str = "prod", skipped: bool = False):
     # Padroniza números de processo do TCM
     output_df["processo_id"] = output_df["processo_id"].apply(format_tcm_case)
 
-  log(f"Final TCM table has {len(output_df)} row(s)")
+  log(f"Tabela final do TCM tem {len(output_df)} linha(s)")
   return output_df
 
 
@@ -122,9 +105,9 @@ SELECT edicao, fonte, content_email, pasta, link, voto
 FROM {FULL_TABLE}
 WHERE data_publicacao = '{DATE}'
   """
-  log(f"Querying {FULL_TABLE} for email contents for '{DATE}'...")
+  log(f"Consultando {FULL_TABLE} para conteúdo do email de '{DATE}'...")
   rows = [row.values() for row in client.query(QUERY).result()]
-  log(f"Found {len(rows)} row(s)")
+  log(f"Encontrada(s) {len(rows)} linha(s)")
 
   # Pegamos todos os processos do TCM relevantes
   tcm_case_numbers = []
@@ -137,7 +120,7 @@ WHERE data_publicacao = '{DATE}'
   # Se tivemos algum processo relevante
   tcm_cases = dict()
   if len(tcm_case_numbers) > 0:
-    log(f"Looking for TCM cases: {tcm_case_numbers}")
+    log(f"Procurando processos do TCM: {tcm_case_numbers}")
     if len(tcm_df) > 0 and (
       "processo_id" in tcm_df.columns
       and "decisao_data" in tcm_df.columns
@@ -146,16 +129,16 @@ WHERE data_publicacao = '{DATE}'
       # Pega os votos, se tivermos essa informação
       relevant_tcm_df = tcm_df[tcm_df["processo_id"].isin(tcm_case_numbers)]
       relevant_tcm_df = relevant_tcm_df.reset_index()
-      log(f"Found {len(relevant_tcm_df)} TCM case(s)")
+      log(f"Encontrado(s) {len(relevant_tcm_df)} processo(s) do TCM")
       # Salva data e URL do voto, mapeado pelo ID
       for _, row in relevant_tcm_df.iterrows():
         # row => 'processo_id', 'decisao_data', 'voto_conselheiro'
         pid = row["processo_id"]
         tcm_cases[pid] = (row["decisao_data"], row["voto_conselheiro"])
     else:
-      log("Empty TCM DataFrame")
+      log("DataFrame do TCM vazio")
   else:
-    log("No TCM cases to get")
+    log("Nenhum processo do TCM para obter")
 
   # Pega status da última extração de cada
   extraction_status = get_latest_extraction_status(PROJECT, DATE)
@@ -209,11 +192,11 @@ WHERE data_publicacao = '{DATE}'
     # estamos tapando buracos no barco com chiclete aqui
     content = content.replace("[tabela]", "").strip()
     if content == "Anexo" or content.startswith(("•", "·")):
-      log(f"`content` is invalid; skipping. Row: {row}", level="warning")
+      log(f"`content` é inválido; ignorando. Linha: {row}", level="warning")
       continue
     # Somente grava conteúdo se não estiver vazio
     if len(content) <= 0:
-      log(f"Empty `content`! Row: {row}", level="warning")
+      log(f"`content` vazio! Linha: {row}", level="warning")
       continue
 
     # Demanda: só adicionar link do DO se não tivermos voto do TCM
@@ -233,21 +216,21 @@ WHERE data_publicacao = '{DATE}'
             content += f'<br/><a href="{vote_url}">Abrir voto no TCM</a> ({vote_date})'
           # Se temos URL, mas não data (não sei se é possível, mas não custa testar)
           else:
-            log(
-              f"Vote missing date: '{tcm_case_id}' (url: '{vote_url}')", level="warning"
-            )
+            log(f"Voto sem data: '{tcm_case_id}' (url: '{vote_url}')", level="warning")
             content += f'<br/><a href="{vote_url}">Abrir voto no TCM</a>'
         # Voto existe e temos alguma informação, mas não o URL
         else:
           log(
-            f"Not enough information for vote: vote_date: '{vote_date}', vote_url: '{vote_url}'",
+            f"Voto faltando informação: vote_date: '{vote_date}', vote_url: '{vote_url}'",
             level="warning",
           )
           content += f"{do_link}<br/><small>Não foi possível obter o voto no TCM</small>"
       # Voto existe, mas não temos nada sobre
       else:
         # Adiciona link do DO e justificativa para falta de voto
-        log(f"Valid TCM case but we don't have it: '{tcm_case_id}'", level="warning")
+        log(
+          f"Processo TCM válido, mas não foi extraído: '{tcm_case_id}'", level="warning"
+        )
         content += f"{do_link}<br/><small>Não foi possível obter o voto no TCM</small>"
     # Não existe voto
     else:
@@ -265,7 +248,6 @@ WHERE data_publicacao = '{DATE}'
   # Confere primeiro se temos algum conteúdo para o email
   if not email_blocks or ERRO_AMBOS:
     # Confere se a falta de conteúdo foi por falha na extração
-    # TODO: pensar em forma mais elegante de fazer isso aqui; fiz meio corrido :x
     if ERRO_DOU or ERRO_DORJ:
       error_at = (
         "os Diários Oficiais (União e Município)"
@@ -477,7 +459,7 @@ Email gerado às {now().strftime("%H:%M:%S de %d/%m/%Y")}.
   response.encoding = response.apparent_encoding
   resp_json = response.json()
   if "success" in resp_json and resp_json["success"]:
-    log("Email delivery requested successfully")
+    log("Envio de email requisitado com sucesso")
     return
 
   raise RuntimeError(f"Email delivery failed: {resp_json}")

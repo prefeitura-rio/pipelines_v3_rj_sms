@@ -121,12 +121,12 @@ def authenticated_task(
 
 
 def create_flow_run(
-  flow_: Flow, parameters: dict = None, wait: bool = False, environment: str = "dev"
+  flow: Flow, parameters: dict = None, wait: bool = False, environment: str = "dev"
 ):
   """
   Cria uma nova flow run de um determinado flow.
   Args:
-    flow_(Flow):
+    flow(Flow):
       O flow a ser executada.
     parameters(dict?):
       Parâmetros do flow.
@@ -137,7 +137,7 @@ def create_flow_run(
       Ambiente de execução; se "prod", executa o deployment de
       produção; se "dev", executa o deployment de staging.
   """
-  deployment_name = f"{flow_.name}/{flow_.name}" + (
+  deployment_name = f"{flow.name}/{flow.name}" + (
     "" if environment == "prod" else " (stg)"
   )
   log(f"[create_flow_run] Requisitando execução de flow '{deployment_name}'...")
@@ -156,14 +156,27 @@ def create_flow_run(
 
 @authenticated_task
 def create_flow_run_task(
-  flow_: Flow, parameters: dict = None, wait: bool = False, environment: str = "dev"
+  flow: Flow, parameters: dict = None, wait: bool = False, environment: str = "dev"
 ):
+  """
+  Cria uma nova flow run de um determinado flow.
+  Args:
+    flow_(Flow):
+      O flow a ser executada.
+    parameters(dict?):
+      Parâmetros do flow.
+    wait(bool?):
+      Se deve esperar o flow terminar, ou retornar imediatamente.
+      Por padrão, não espera.
+    environment(str?):
+      Ambiente de execução; se "prod", executa o deployment de
+      produção; se "dev", executa o deployment de staging.
+  """
   return create_flow_run(
-    flow_=flow_, parameters=parameters, wait=wait, environment=environment
+    flow=flow, parameters=parameters, wait=wait, environment=environment
   )
 
 
-@authenticated_task
 def wait_for_flow_run(
   flow_run: FlowRun, timeout_seconds: int | None = None, raise_if_timeout: bool = True
 ):
@@ -176,7 +189,7 @@ def wait_for_flow_run(
       Tempo máximo a esperar o fim da FlowRun, em segundos.
     raise_if_timeout(bool?):
       Flag indicando se deve disparar erro caso o tempo
-      máximo expire.
+      máximo expire; True por padrão.
   Returns:
     out(bool):
       Retorna True quando a FlowRun termina. Em caso de
@@ -207,6 +220,31 @@ def wait_for_flow_run(
         return False
       time.sleep(30)  # Espera 30s entre conferências de status
   # :)
+
+
+@authenticated_task
+def wait_for_flow_run_task(
+  flow_run: FlowRun, timeout_seconds: int | None = None, raise_if_timeout: bool = True
+):
+  """
+  Aguarda uma execução de flow terminar, seja com sucesso ou erro.
+
+  Args:
+    flow_run(FlowRun): A instância de FlowRun a ser esperada.
+    timeout_seconds(int?):
+      Tempo máximo a esperar o fim da FlowRun, em segundos.
+    raise_if_timeout(bool?):
+      Flag indicando se deve disparar erro caso o tempo
+      máximo expire; True por padrão.
+  Returns:
+    out(bool):
+      Retorna True quando a FlowRun termina. Em caso de
+      timeout_seconds definido e raise_if_timeout=False,
+      retorna False caso o tempo máximo expire.
+  """
+  return wait_for_flow_run(
+    flow_run=flow_run, timeout_seconds=timeout_seconds, raise_if_timeout=raise_if_timeout
+  )
 
 
 @authenticated_task
