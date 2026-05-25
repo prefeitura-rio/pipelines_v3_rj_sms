@@ -9,8 +9,7 @@ from google.oauth2 import service_account
 
 # from infisical import InfisicalClient
 from infisical_sdk import InfisicalSDKClient as InfisicalClient
-
-from pipelines.utils.prefect import authenticated_task
+from prefect import task
 
 from .env import (
   get_current_environment,
@@ -61,7 +60,7 @@ def get_secret(secret_name: str, environment: str = None, path: str = "/") -> di
   return secret_value
 
 
-@authenticated_task
+@task  # (1) Não podemos usar authenticated_task porque ela depende de funções definidas aqui
 def get_secret_task(secret_name: str, environment: str = None, path: str = "/") -> dict:
   """
   Obtém o secret no Infisical com nome e caminho especificados
@@ -76,6 +75,10 @@ def get_secret_task(secret_name: str, environment: str = None, path: str = "/") 
   Returns:
     str: Valor do secret
   """
+  # (2) Então fazemos a authenticated_task manualmente
+  env = get_current_environment()
+  inject_bd_credentials(environment=env)
+
   return get_secret(secret_name=secret_name, environment=environment, path=path)
 
 

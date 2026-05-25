@@ -103,9 +103,9 @@ def authenticated_task(
 
     def new_function(**kwargs):
       env = get_current_environment()
-      log(f"[Injected] Set BD credentials for environment {env}", level="debug")
+      log(f"[Injected] Configurando credenciais BD para ambiente {env}", level="debug")
       inject_bd_credentials(environment=env)
-      log("[Injected] Now executing function normally...", level="debug")
+      log("[Injected] Executando task normalmente...", level="debug")
       return function(**kwargs)
 
     new_function.__name__ = function.__name__
