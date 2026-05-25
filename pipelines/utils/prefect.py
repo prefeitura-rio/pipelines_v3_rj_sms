@@ -196,13 +196,20 @@ def wait_for_flow_run(
       timeout_seconds definido e raise_if_timeout=False,
       retorna False caso o tempo máximo expire.
   """
+  log(f"Esperando execução de {flow_run.name} ({str(flow_run.id)[:5]}...) terminar...")
+  time.sleep(60)  # Se conferirmos o status rápido demais, dá erro de NotReady
   with get_client(sync_client=True) as client:
     start_time = time.monotonic()
     # Desculpa eu sei que é feio mas é literalmente a implementação
     # do próprio Prefect, quase copiada e colada
     while True:
       # Confere o status atual da flow run
-      updated_flow_run = client.read_flow_run(flow_run.id)
+      try:
+        updated_flow_run = client.read_flow_run(flow_run.id)
+      except Exception as e:  # FIXME: teste
+        log(repr(e), level="error")
+        time.sleep(15)
+        continue
       flow_state = updated_flow_run.state
       # Se terminou, sucesso
       if flow_state and flow_state.is_final():
@@ -218,7 +225,7 @@ def wait_for_flow_run(
             f"flow_run.state='{updated_flow_run.state}'"
           )
         return False
-      time.sleep(30)  # Espera 30s entre conferências de status
+      time.sleep(15)  # Espera entre conferências de status
   # :)
 
 
