@@ -14,7 +14,7 @@ from pipelines.datalake.transform.dbt.flows import sms_execute_dbt
 from pipelines.utils.datalake import get_email_recipients_task
 from pipelines.utils.infisical import get_secret_task
 from pipelines.utils.prefect import (
-  create_flow_run_task,
+  create_flow_run,
   flow,
   flow_config,
   wait_for_flow_run_task,
@@ -61,7 +61,7 @@ def flow_voce_precisa_saber(
     # )
 
     ## (2) DO-RJ
-    dorj_flow_run = create_flow_run_task(
+    dorj_flow_run = create_flow_run(
       flow=extract_diario_oficial_rj,
       parameters={"environment": environment, "date": date},
     )
@@ -75,7 +75,7 @@ def flow_voce_precisa_saber(
     ## (3) dbt
     # Queremos executar o seguinte comando:
     # $ dbt build --select +tag:cdi_vps+ --target ENV
-    dbt_flow_run = create_flow_run_task(
+    dbt_flow_run = create_flow_run(
       flow=sms_execute_dbt,
       parameters={
         "environment": environment,
@@ -97,7 +97,7 @@ def flow_voce_precisa_saber(
     # Para cada caso, cria uma flow run de extração do caso, adiciona na lista
     tcm_wait_futures = []
     for tcm_case in tcm_cases:
-      fr_tcm = create_flow_run_task(
+      fr_tcm = create_flow_run(
         flow=extract_tribunal_de_contas_rj,
         parameters={"environment": environment, "case_id": tcm_case},
       )
