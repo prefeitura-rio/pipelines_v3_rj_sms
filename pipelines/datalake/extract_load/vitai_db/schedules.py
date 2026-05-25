@@ -43,15 +43,6 @@ flow_parameters = [
   },
   {
     "environment": "prod",
-    "table_name": "cirurgia",
-    "schema_name": "basecentral",
-    "datetime_column": "created_at",
-    "target_name": "basecentral__cirurgia_eventos",
-    "partition_column": "datalake_loaded_at",
-    "batch_size": 10000,
-  },
-  {
-    "environment": "prod",
     "table_name": "classificacao_risco",
     "schema_name": "basecentral",
     "datetime_column": "created_at",
