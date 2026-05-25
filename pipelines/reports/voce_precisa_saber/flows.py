@@ -7,6 +7,7 @@ from pipelines.constants import CIT
 from pipelines.datalake.extract_load.diario_oficial_rj.flows import (
   extract_diario_oficial_rj,
 )
+from pipelines.datalake.extract_load.diario_oficial_uniao.flows import dou_extraction
 from pipelines.datalake.extract_load.tribunal_de_contas_rj.flows import (
   extract_tribunal_de_contas_rj,
 )
@@ -54,11 +55,10 @@ def flow_voce_precisa_saber(
   # permite que a extração inteira seja pulada, e só a etapa de envio de email seja
   # re-executada
   if not skip_to_email:
-    ## (1) DOU  # TODO
-    # dou_flow_run = create_flow_run(
-    #   flow= ... ,
-    #   parameters={"environment": environment, "date": date},
-    # )
+    ## (1) DOU
+    dou_flow_run = create_flow_run(
+      flow=dou_extraction, parameters={"environment": environment, "date": date}
+    )
 
     ## (2) DO-RJ
     dorj_flow_run = create_flow_run(
@@ -68,14 +68,14 @@ def flow_voce_precisa_saber(
 
     ## Espera por (1) e (2)
     diario_wait_futures = []
-    for fr_diario in [dorj_flow_run]:  # TODO: DOU
+    for fr_diario in [dou_flow_run, dorj_flow_run]:
       diario_wait_futures.append(wait_for_flow_run_task.submit(flow_run_id=fr_diario.id))
     wait(diario_wait_futures)
 
     ## (3) dbt
     # Queremos executar o seguinte comando:
     # $ dbt build --select +tag:cdi_vps+ --target ENV
-    fr_dbt_id = create_flow_run(
+    fr_dbt = create_flow_run(
       flow=sms_execute_dbt,
       parameters={
         "environment": environment,
@@ -89,7 +89,7 @@ def flow_voce_precisa_saber(
     )
 
     ## Espera por (3)
-    wait_dbt = wait_for_flow_run_task(flow_run_id=fr_dbt_id, timeout_seconds=(20 * 60))
+    wait_dbt = wait_for_flow_run_task(flow_run_id=fr_dbt.id, timeout_seconds=(20 * 60))
 
     ## (4) TCM
     # Espera DBT terminar, pega casos da tabela
