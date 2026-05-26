@@ -17,9 +17,9 @@ from .tasks import (
 
 @flow(
   name="Extração: DO-RJ (Diário Oficial Municipal)",
-  state_handlers=[handle_flow_state_change],
-  owners=[CIT.AVELLAR_ID.value],
   description="Extrai dados relevantes à SMS do Diário Oficial Municipal",
+  owners=[CIT.AVELLAR_ID.value],
+  tags=["CIT"],
 )
 def extract_diario_oficial_rj(
   date: Optional[str] = None,

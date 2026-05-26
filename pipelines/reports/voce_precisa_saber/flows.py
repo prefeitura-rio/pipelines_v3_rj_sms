@@ -28,8 +28,8 @@ from .tasks import build_email, fetch_tcm_cases, get_todays_tcm_from_gcs, send_e
 
 @flow(
   name="Report: CDI–Você Precisa Saber",
-  state_handlers=[handle_flow_state_change],
   owners=[CIT.AVELLAR_ID.value],
+  tags=["CIT"],
 )
 def flow_voce_precisa_saber(
   date: Optional[str] = None,

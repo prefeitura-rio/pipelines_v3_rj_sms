@@ -19,9 +19,9 @@ from pipelines.utils.state_handlers import handle_flow_state_change
 
 
 @flow(
-  name="Datalake - Extração e Carga de Dados - Vitai (Rio Saúde)",
-  state_handlers=[handle_flow_state_change],
+  name="Extração: Vitai (Rio Saúde)",
   owners=[CIT.HERIAN_ID.value],
+  tags=["CIT"],
 )
 def vitai_db_extraction(
   environment: str = "dev",

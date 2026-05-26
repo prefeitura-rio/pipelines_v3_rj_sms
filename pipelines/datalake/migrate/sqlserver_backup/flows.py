@@ -14,8 +14,8 @@ from .tasks import restore_gcs_backup_to_cloudsql
     "Restaura backups de SQL Server (.BAK), guardados em um bucket do GCS, "
     "para uma instância Cloud SQL"
   ),
-  state_handlers=[handle_flow_state_change],
   owners=[CIT.DANIEL_ID.value],
+  tags=["CIT"],
 )
 def sqlserver_backup(
   items: list[dict] = [

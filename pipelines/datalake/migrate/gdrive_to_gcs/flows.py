@@ -11,8 +11,8 @@ from .utils import build_execution_summary
 @flow(
   name="Migração: Google Drive → GCS",
   description="Lista arquivos do Google Drive e faz upload para o GCS",
-  state_handlers=[handle_flow_state_change],
   owners=[CIT.CIT_ID.value],
+  tags=["CIT"],
 )
 def gdrive_to_gcs(
   root_folder_id: str,

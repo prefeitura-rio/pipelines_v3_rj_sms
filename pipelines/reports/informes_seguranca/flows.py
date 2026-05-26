@@ -14,8 +14,8 @@ from .tasks import build_email, fetch_cids, send_email
 
 @flow(
   name="Report: Informes de Segurança",
-  state_handlers=[handle_flow_state_change],
   owners=[CIT.AVELLAR_ID.value],
+  tags=["CIT"],
 )
 def report_informes_seguranca(
   date: str | None = None,

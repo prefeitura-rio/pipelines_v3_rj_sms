@@ -13,8 +13,8 @@ from .tasks import download_from_db
 
 @flow(
   name="Migração: BD Relacional → BigQuery",
-  state_handlers=[handle_flow_state_change],
   owners=[CIT.PEDRO_ID.value],
+  tags=["CIT"],
 )
 def relational_db(
   # Parâmetros para o secret com o URL do banco de dados

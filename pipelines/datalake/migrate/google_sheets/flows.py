@@ -11,8 +11,8 @@ from .schedules import schedules
 
 @flow(
   name="Migração: Google Sheets → BigQuery",
-  state_handlers=[handle_flow_state_change],
   owners=[CIT.CIT_ID.value],
+  tags=["CIT"],
 )
 def migrate_google_sheets(
   # URL da planilha

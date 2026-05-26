@@ -18,8 +18,8 @@ from .tasks import (
 
 @flow(
   name="Transformação: DBT",
-  state_handlers=[handle_flow_state_change],
   owners=[CIT.CIT_ID.value],
+  tags=["CIT"],
 )
 def sms_execute_dbt(
   command: str = "test",

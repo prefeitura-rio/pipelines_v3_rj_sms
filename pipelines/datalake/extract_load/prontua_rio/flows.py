@@ -25,9 +25,9 @@ from .schedules import schedules
 
 
 @flow(
-  name="DataLake - Extração e Carga de Dados - ProntuaRio OpenBase",
-  state_handlers=[handle_flow_state_change],
+  name="Extração: ProntuaRio OpenBase",
   owners=[CIT.HERIAN_ID.value],
+  tags=["CIT"],
 )
 def prontuario_openbase_operator(
   cnes: str,
@@ -89,9 +89,9 @@ def prontuario_openbase_operator(
 
 
 @flow(
-  name="DataLake - Extração e Carga de Dados - ProntuaRio Postgres",
-  state_handlers=[handle_flow_state_change],
+  name="Extração: ProntuaRio Postgres",
   owners=[CIT.HERIAN_ID.value],
+  tags=["CIT"],
 )
 def prontuario_postgres_operator(
   cnes: str,
@@ -159,9 +159,9 @@ def prontuario_postgres_operator(
 
 
 @flow(
-  name="DataLake - Extração e Carga de Dados - ProntuaRio Backups (MANAGER)",
-  state_handlers=[handle_flow_state_change],
+  name="Extração: ProntuaRio Backups (MANAGER)",
   owners=[CIT.HERIAN_ID.value],
+  tags=["CIT"],
 )
 def prontuario_extraction_manager(
   environment: str = "dev",

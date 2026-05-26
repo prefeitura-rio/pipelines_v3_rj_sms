@@ -25,9 +25,9 @@ PREP_ENDPOINT = "/resultadoprepperiodo/"
 
 
 @flow(
-  name="DataLake - Extração e Carga de Dados - SICLOM API",
-  state_handlers=[handle_flow_state_change],
+  name="Extração: SICLOM API",
   owners=[SUBPAV.MAUES_ID.value],
+  tags=["SUBPAV"],
 )
 def siclom_period_extraction(
   environment: str = "dev",  # required=True in v1

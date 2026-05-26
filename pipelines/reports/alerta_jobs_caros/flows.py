@@ -10,8 +10,8 @@ from .tasks import get_recent_bigquery_jobs, send_discord_alert
 
 @flow(
   name="Report: Alerta Jobs Caros",
-  state_handlers=[handle_flow_state_change],
   owners=[CIT.PEDRO_ID.value],
+  tags=["CIT"],
 )
 def report_alerta_jobs_caros(environment: str = "staging"):
   jobs = get_recent_bigquery_jobs(

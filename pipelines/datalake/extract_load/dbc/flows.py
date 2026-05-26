@@ -6,16 +6,15 @@ from pipelines.utils.google import (
   upload_to_cloud_storage_task,
 )
 from pipelines.utils.prefect import flow, flow_config
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .tasks import run_conversion
 
 
 @flow(
-  name="DataLake - Extração e Carga de Dados - DBC e DBF",
-  state_handlers=[handle_flow_state_change],
-  owners=[CIT.AVELLAR_ID.value],
+  name="Extração: DBC e DBF",
   description="Converte arquivos DBC e DBF para CSV a partir de um URI de bucket GCS",
+  owners=[CIT.AVELLAR_ID.value],
+  tags=["CIT"],
 )
 def extract_dbc(gcs_uri: str, environment: str = "dev"):
   # Primeiro, baixamos o arquivo DBC/DBF para o disco local

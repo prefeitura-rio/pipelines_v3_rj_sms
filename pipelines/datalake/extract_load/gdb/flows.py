@@ -20,10 +20,13 @@ from .tasks import run_conversion, upload_csv_as_table
 
 
 @flow(
-  name="DataLake - Extração e Carga de Dados - GDB",
-  state_handlers=[handle_flow_state_change],
+  name="Extração: GDB",
   owners=[CIT.AVELLAR_ID.value],
-  description="Converte arquivos GDB para CSV a partir de um URI de bucket GCS",
+  description=(
+    "Extrai tabelas de um backup GDB para CSVs, a partir de um URI de bucket GCS; "
+    "faz upload de ZIP com CSVs para o bucket e cria tabelas do BigQuery"
+  ),
+  tags=["CIT"],
 )
 def extract_gdb(
   # URI do GCS do arquivo a ser convertido

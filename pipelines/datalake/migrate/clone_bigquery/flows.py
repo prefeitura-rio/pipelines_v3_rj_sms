@@ -12,8 +12,8 @@ from .tasks import clone_bigquery_table
 @flow(
   name="Migração: Clona BigQuery",
   description="Clona dataset de projeto no BigQuery para o nosso datalake",
-  state_handlers=[handle_flow_state_change],
   owners=[CIT.CIT_ID.value],
+  tags=["CIT"],
 )
 def clone_bigquery(
   source_project_name: str,  # ex. "rj-smfp"

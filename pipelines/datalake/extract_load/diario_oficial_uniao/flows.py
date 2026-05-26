@@ -19,8 +19,8 @@ from .schedules import schedules
 
 @flow(
   name="Extração: Diário Oficial da União",
-  state_handlers=[handle_flow_state_change],
   owners=[CIT.HERIAN_ID.value],
+  tags=["CIT"],
 )
 def dou_extraction(
   environment: str = "dev",

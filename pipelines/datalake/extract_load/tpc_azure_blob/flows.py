@@ -11,9 +11,9 @@ from .tasks import extract_data_from_blob, transform_data
 
 
 @flow(
-  name="DataLake - Extração e Carga de Dados - TPC",
-  state_handlers=[handle_flow_state_change],
+  name="Extração: TPC",
   owners=[CIT.DANIEL_ID.value],
+  tags=["CIT"],
 )
 def sms_dump_tpc(
   blob_file: str,
