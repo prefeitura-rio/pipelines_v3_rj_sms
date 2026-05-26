@@ -60,7 +60,48 @@ cases:
       annual: false
       month: null
       year: null
-      
+
+  # Extração de tabela (banco relacional) -> tabela (BigQuery)
+  - case_slug: "datalake-extract-relational-db"
+    flow_path: "pipelines.datalake.extract_load.relational_db.flows"
+    flow_name: "extract_load_relational_db"
+    params:
+      environment: dev
+      rename_flow: false
+      # db_url_infisical_key: ...
+      # db_url_infisical_path: ...
+      # target_dataset_id: ...
+      # target_table_id: ...
+      # source_schema_name: ...
+      # source_table_name: ...
+      ## Ou `source_datetime_column` + `relative_date`,
+      ## ou `extract_whole_table`
+      # source_datetime_column: ...
+      # relative_date: ...
+      # extract_whole_table: ...
+
+  # Clona tabelas do BigQuery, de um projeto qualquer para a SMS
+  - case_slug: "datalake-clone-bigquery-table"
+    flow_path: "pipelines.datalake.extract_load.clone_bigquery.flows"
+    flow_name: "clone_bigquery"
+    params:
+      environment: dev
+      # source_project_name: ... # ex. "rj-smfp"
+      # source_dataset_name: ...
+      # source_table_list: ...
+      # destination_dataset_name: ...
+      # dbt_select_exp: ...
+
+  # Extração de Diário Oficial da União (API) -> BigQuery
+  - case_slug: "extract-dou-api"
+    flow_path: "pipelines.datalake.extract_load.diario_oficial_uniao.flows"
+    flow_name: "dou_extraction"
+    params:
+      environment: "dev"
+      date: ""
+      dou_section: "DO1 DO2 DO3"
+      dataset_id: "brutos_diario_oficial"
+
   # Extração de tabelas do Postgre do prontuaRio, via backup em blob storage 
   - case_slug: "prontuaRio_postgres"
     flow_path: "pipelines.datalake.extract_load.prontua_rio.flows"
