@@ -4,16 +4,11 @@ from pipelines.utils.datalake import upload_to_datalake_task
 from pipelines.utils.google import download_google_sheets_task
 from pipelines.utils.io import create_data_folders_task
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 
 
-@flow(
-  name="Migração: Google Sheets → BigQuery",
-  owners=[CIT.CIT_ID.value],
-  tags=["CIT"],
-)
+@flow(name="Migração: Google Sheets → BigQuery", owners=[CIT.CIT_ID.value], tags=["CIT"])
 def migrate_google_sheets(
   # URL da planilha
   url: str,

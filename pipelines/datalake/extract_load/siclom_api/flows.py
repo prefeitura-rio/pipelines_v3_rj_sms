@@ -16,7 +16,6 @@ from pipelines.datalake.extract_load.siclom_api.tasks import (
 from pipelines.utils.datalake import upload_df_to_datalake_task
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 
@@ -24,11 +23,7 @@ CADASTRO_ENDPOINT = "/mostraPaciente/"
 PREP_ENDPOINT = "/resultadoprepperiodo/"
 
 
-@flow(
-  name="Extração: SICLOM API",
-  owners=[SUBPAV.MAUES_ID.value],
-  tags=["SUBPAV"],
-)
+@flow(name="Extração: SICLOM API", owners=[SUBPAV.MAUES_ID.value], tags=["SUBPAV"])
 def siclom_period_extraction(
   environment: str = "dev",  # required=True in v1
   endpoint: str = None,  # required=True in v1

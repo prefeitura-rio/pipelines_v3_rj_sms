@@ -2,7 +2,6 @@
 from pipelines.constants import CIT
 from pipelines.utils.google import build_bucket_name, list_google_drive_files
 from pipelines.utils.prefect import flow, flow_config
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .tasks import process_google_drive_file
 from .utils import build_execution_summary

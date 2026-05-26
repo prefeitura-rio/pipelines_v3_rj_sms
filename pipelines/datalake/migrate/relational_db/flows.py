@@ -5,16 +5,13 @@ from pipelines.constants import CIT
 from pipelines.utils.datalake import upload_df_to_datalake
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 from .tasks import download_from_db
 
 
 @flow(
-  name="Migração: BD Relacional → BigQuery",
-  owners=[CIT.PEDRO_ID.value],
-  tags=["CIT"],
+  name="Migração: BD Relacional → BigQuery", owners=[CIT.PEDRO_ID.value], tags=["CIT"]
 )
 def relational_db(
   # Parâmetros para o secret com o URL do banco de dados

@@ -13,10 +13,10 @@ from prefect.flows import Flow as OriginalFlow
 from prefect.flows import FlowDecorator as OriginalFlowDecorator
 from prefect.schedules import Schedule
 
-from pipelines.utils.state_handlers import handle_flow_state_change
 from pipelines.utils.env import get_current_environment, get_prefect_url, is_dev_run
 from pipelines.utils.infisical import inject_bd_credentials
 from pipelines.utils.logger import log
+from pipelines.utils.state_handlers import handle_flow_state_change
 
 #################
 ## FLOWS
@@ -62,10 +62,7 @@ class FlowDecorator(OriginalFlowDecorator):
   ):
     self.name = name
     self.description = description or ""
-    self.state_handlers = list(set(
-      handle_flow_state_change,
-      *(state_handlers or [])
-    ))
+    self.state_handlers = list(set(handle_flow_state_change, *(state_handlers or [])))
     self.owners = owners or []
     self.tags = tags or []
     self.log_prints = log_prints

@@ -14,7 +14,6 @@ from pipelines.utils.io import (
   zip_files_from_list_task,
 )
 from pipelines.utils.prefect import flow, flow_config
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .tasks import run_conversion, upload_csv_as_table
 

@@ -3,7 +3,6 @@ from pipelines.constants import CIT
 from pipelines.utils.google import ensure_instance_running, ensure_instance_stopped
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import flow, flow_config
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .tasks import restore_gcs_backup_to_cloudsql
 

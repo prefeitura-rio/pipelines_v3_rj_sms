@@ -3,7 +3,6 @@ from pipelines.constants import CIT
 from pipelines.datalake.transform.dbt.flows import sms_execute_dbt
 from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.prefect import create_flow_run, flow, flow_config, rename_flow_run
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 from .tasks import clone_bigquery_table

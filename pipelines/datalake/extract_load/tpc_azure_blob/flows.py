@@ -3,18 +3,13 @@ from pipelines.constants import CIT
 from pipelines.utils.datalake import upload_to_datalake_task
 from pipelines.utils.io import create_data_folders_task, create_partitions_task
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .constants import constants as tpc_constants
 from .schedules import schedules
 from .tasks import extract_data_from_blob, transform_data
 
 
-@flow(
-  name="Extração: TPC",
-  owners=[CIT.DANIEL_ID.value],
-  tags=["CIT"],
-)
+@flow(name="Extração: TPC", owners=[CIT.DANIEL_ID.value], tags=["CIT"])
 def sms_dump_tpc(
   blob_file: str,
   table_id: str,

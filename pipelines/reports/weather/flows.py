@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from pipelines.constants import CIT
 from pipelines.utils.prefect import flow, flow_config
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 from .tasks import fetch_weather, get_bairros, print_report, write_bairros_to_gcs
