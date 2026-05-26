@@ -25,6 +25,18 @@ cases:
       ## Desenvolvendo local, não queremos enviar nada
       skip_email: true
 
+  # CDI/Você Precisa Saber
+  ## Não consegui fazer executar create_flow_run localmente:
+  ## > prefect.exceptions.PrefectHTTPStatusError: ... {'detail': 'Deployment not found'}
+  - case_slug: "report----nao-roda-local----cdi-vps"
+    flow_path: "pipelines.reports.voce_precisa_saber.flows"
+    flow_name: "flow_voce_precisa_saber"
+    params:
+      environment: dev
+      # date: ...
+      # skip_to_email: ...
+      override_recipients: teste@example.local
+
 
   ################################
   #  EXTRACT/LOAD                #
