@@ -12,7 +12,7 @@ class vitacare_constants(Enum):
 
   LOCAL_DATABASE_HOST = "127.0.0.1"
   INSTANCE_NAME = "vitacare"
-  CNES_CONCURRENCY_LIMIT = 10
+  CNES_CONCURRENCY_LIMIT = 5
   DESTINATION_DATASET = "brutos_prontuario_vitacare_historico"
   LOG_DATASET = "controle_pipelines"
   LOG_TABLE = "log_vitacare_historico"
