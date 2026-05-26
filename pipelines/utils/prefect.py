@@ -173,7 +173,7 @@ def wait_for_flow_run(
       timeout_seconds definido e raise_if_timeout=False,
       retorna False caso o tempo máximo expire.
   """
-  log(f"Esperando execução de Flow Run com ID [{str(flow_run_id)[:5]}...] terminar...")
+  log(f"Esperando execução de Flow Run com ID [{str(flow_run_id)[:8]}...] terminar...")
   with get_client(sync_client=True) as client:
     start_time = time.monotonic()
     # Desculpa eu sei que é feio mas é literalmente a implementação

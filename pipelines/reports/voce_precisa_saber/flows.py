@@ -84,6 +84,7 @@ def flow_voce_precisa_saber(
         "command": "build",
         "select": "+tag:cdi_vps+",
         "exclude": None,
+        "target": None if environment == "prod" else "ci",
         "flag": None,
       },
     )
