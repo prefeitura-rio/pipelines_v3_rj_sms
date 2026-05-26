@@ -22,6 +22,7 @@ from pipelines.utils.prefect import (
 )
 
 from .constants import constants as flow_constants
+from .schedules import schedules
 from .tasks import build_email, fetch_tcm_cases, get_todays_tcm_from_gcs, send_email
 
 
@@ -133,4 +134,4 @@ def flow_voce_precisa_saber(
   )
 
 
-_flows = [flow_config(flow=flow_voce_precisa_saber, schedules=[])]
+_flows = [flow_config(flow=flow_voce_precisa_saber, schedules=schedules)]
