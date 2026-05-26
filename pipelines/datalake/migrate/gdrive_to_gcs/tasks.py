@@ -4,9 +4,9 @@ import posixpath
 import shutil
 import zipfile
 
-from google.cloud import bigquery
 from prefect.context import FlowRunContext
 
+from pipelines.utils.datalake import update_logs_to_datalake
 from pipelines.utils.datetime import now, parse_date_or_today
 from pipelines.utils.env import get_prefect_url
 from pipelines.utils.google import (
@@ -223,9 +223,4 @@ def write_log(log_items: list[dict], log_table_id: str) -> dict:
       }
     )
 
-  client = bigquery.Client()
-  errors = client.insert_rows_json(log_table_id, rows)
-  if errors:
-    raise RuntimeError(f"Erro inserindo logs no BigQuery: {errors}")
-
-  return {"inserted_rows": len(rows)}
+  return update_logs_to_datalake(logs=rows, table_full_id=log_table_id)

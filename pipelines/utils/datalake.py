@@ -373,6 +373,32 @@ def upload_df_to_datalake(
   return
 
 
+def update_logs_to_datalake(logs: List[dict], table_full_id: str) -> dict:
+  if not logs:
+    return {"inserted_rows": 0}
+
+  full_table_name = table_full_id.split(".")
+  if len(full_table_name) != 3:
+    raise ValueError(
+      f"`table_full_id` deve ter formato project.dataset.table: {table_full_id}"
+    )
+
+  project_id, dataset_id, table_id = full_table_name
+  log(
+    f"(update_logs_to_datalake) enviando {len(logs)} log(s) para "
+    f"{project_id}.{dataset_id}.{table_id}"
+  )
+  upload_df_to_datalake(
+    df=pd.DataFrame(logs),
+    dataset_id=dataset_id,
+    table_id=table_id,
+    dump_mode="append",
+    source_format="parquet",
+    date_partition_column="data_particao",
+  )
+  return {"inserted_rows": len(logs)}
+
+
 @task(retries=3, retry_delay_seconds=60)
 def upload_df_to_datalake_task(
   df: pd.DataFrame,

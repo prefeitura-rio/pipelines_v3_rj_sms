@@ -20,7 +20,7 @@ from pipelines.datalake.migrate.gcs_to_cloudsql.tasks import (
   stop_instance as stop_instance_task,
 )
 from pipelines.utils.cleanup import cleanup_columns_for_bigquery
-from pipelines.utils.datalake import upload_df_to_datalake
+from pipelines.utils.datalake import update_logs_to_datalake, upload_df_to_datalake
 from pipelines.utils.datetime import now_naive, parse_date_or_today
 from pipelines.utils.env import environment_is_valid, get_prefect_url
 from pipelines.utils.infisical import get_secret
@@ -313,10 +313,6 @@ def write_log(log_items: list[dict], log_table_id: str) -> dict:
       }
     )
 
-  client = bigquery.Client()
-  errors = client.insert_rows_json(log_table_id, rows)
-  if errors:
-    raise RuntimeError(f"Erro inserindo logs no BigQuery: {errors}")
-
+  result = update_logs_to_datalake(logs=rows, table_full_id=log_table_id)
   log(f"(write_log) {len(rows)} linha(s) inserida(s) em '{log_table_id}'")
-  return {"inserted_rows": len(rows)}
+  return result
