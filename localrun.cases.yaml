@@ -246,3 +246,13 @@ cases:
       target: null
       rename_flow: false
       send_discord_report: false
+
+
+
+  # Report: Monitoramento do HCI
+  - case_slug: "report_uso_hci"
+    flow_path: "pipelines.reports.monitoramento_hci.flows"
+    flow_name: "report_uso_hci"
+    params:
+      environment: "dev"
+
