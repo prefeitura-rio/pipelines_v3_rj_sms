@@ -170,11 +170,7 @@ def get_database_engine(database_name: str, environment: str):
     port=port,
     database=database_name,
     host=vitacare_constants.LOCAL_DATABASE_HOST.value,
-    query={
-      "driver": "ODBC Driver 18 for SQL Server",
-      "Encrypt": "no",
-      "TrustServerCertificate": "yes",
-    },
+    query={"driver": "ODBC Driver 17 for SQL Server", "TrustServerCertificate": "yes"},
   )
   return create_engine(database_url)
 
