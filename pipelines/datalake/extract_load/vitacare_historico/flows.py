@@ -13,6 +13,7 @@ from pipelines.utils.state_handlers import handle_flow_state_change
 from .constants import vitacare_constants
 from .schedules import schedules
 from .tasks import (
+  debug_vitacare_tds_connection,
   extract_table_to_bigquery,
   get_cnes_from_bigquery,
   get_database_tables,
@@ -182,7 +183,76 @@ def vitacare_historico(
     raise RuntimeError(f"{len(failed_flow_runs)} CNES falharam: {failed_flow_runs}")
 
 
+@flow(
+  name="Debug: Vitacare Histórico - TDS",
+  state_handlers=[handle_flow_state_change],
+  owners=[CIT.DANIEL_ID.value],
+)
+def debug_vitacare_historico_tds(
+  environment: str = "dev",
+  cnes: str = None,
+  table_name: str = "ATENDIMENTOS",
+  fetch_size: int = 10_000,
+  max_rows: int | None = None,
+  start_proxy: bool = True,
+  run_pyodbc: bool = True,
+):
+  environment = validate_environment(environment=environment)
+  rename_flow_run(new_name=f"{environment} - debug_vitacare_historico_tds - {cnes}")
+
+  if not cnes:
+    raise ValueError("Informe o CNES para diagnosticar uma database específica.")
+
+  database_environment = "dev"
+  database_name = f"vitacare_historic_{cnes}"
+  proxy_process_id = None
+
+  log(
+    "(debug_vitacare_historico_tds) iniciando flow de diagnóstico; "
+    f"environment='{environment}', database_environment='{database_environment}', "
+    f"cnes='{cnes}', database='{database_name}', table='{table_name}', "
+    f"fetch_size={fetch_size}, max_rows={max_rows}, start_proxy={start_proxy}, "
+    f"run_pyodbc={run_pyodbc}"
+  )
+  log(
+    "(debug_vitacare_historico_tds) este flow não liga/desliga a instância Cloud SQL "
+    "e não escreve logs no BigQuery; ele apenas testa conexão e leitura."
+  )
+
+  try:
+    if start_proxy:
+      log("(debug_vitacare_historico_tds) iniciando Cloud SQL Auth Proxy")
+      proxy_process_id = start_cloudsql_proxy(environment=database_environment)
+    else:
+      log(
+        "(debug_vitacare_historico_tds) start_proxy=False; assumindo proxy local "
+        "já disponível"
+      )
+
+    result = debug_vitacare_tds_connection(
+      database_name=database_name,
+      environment=database_environment,
+      table_name=table_name,
+      fetch_size=fetch_size,
+      max_rows=max_rows,
+      run_pyodbc=run_pyodbc,
+    )
+    log(f"(debug_vitacare_historico_tds) resultado final: {result}")
+    return result
+
+  finally:
+    if proxy_process_id:
+      log("(debug_vitacare_historico_tds) encerrando Cloud SQL Auth Proxy")
+      stop_cloudsql_proxy(process_id=proxy_process_id)
+
+
 _flows = [
+  flow_config(
+    flow=debug_vitacare_historico_tds,
+    schedules=[],
+    dockerfile="./pipelines/datalake/extract_load/vitacare_historico/Dockerfile",
+    memory="medium",
+  ),
   flow_config(
     flow=vitacare_historico_cnes,
     schedules=[],

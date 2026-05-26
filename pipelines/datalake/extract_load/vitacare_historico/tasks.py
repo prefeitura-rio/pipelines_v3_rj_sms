@@ -174,6 +174,274 @@ def get_database_engine(database_name: str, environment: str):
   return create_engine(database_url)
 
 
+def _debug_fetch_cursor(cursor, label: str, fetch_size: int, max_rows: int | None):
+  total_rows = 0
+  batch_count = 0
+
+  description = cursor.description or []
+  columns = [column[0] for column in description]
+  log(f"({label}) cursor aberto; {len(columns)} coluna(s): {columns}")
+
+  while True:
+    rows = cursor.fetchmany(fetch_size)
+    if not rows:
+      log(f"({label}) fetch finalizado sem novas linhas")
+      break
+
+    batch_count += 1
+    total_rows += len(rows)
+    log(
+      f"({label}) lote {batch_count}: {len(rows)} linha(s); total acumulado={total_rows}"
+    )
+
+    if batch_count == 1 and rows:
+      first_row = rows[0]
+      sample = {}
+      for index, column_name in enumerate(columns[:8]):
+        value = first_row[index]
+        value_text = repr(value)
+        if len(value_text) > 300:
+          value_text = value_text[:300] + "...<truncated>"
+        sample[column_name] = {"type": type(value).__name__, "repr": value_text}
+      log(f"({label}) amostra primeira linha: {sample}")
+
+    if max_rows and total_rows >= max_rows:
+      log(f"({label}) parada por max_rows={max_rows}")
+      break
+
+  return {"batches": batch_count, "rows": total_rows}
+
+
+def _debug_pytds_connection(
+  *,
+  host: str,
+  port: int,
+  database_name: str,
+  username: str,
+  password: str,
+  table_name: str,
+  fetch_size: int,
+  max_rows: int | None,
+):
+  import pytds  # pylint: disable=import-outside-toplevel
+
+  log("(debug_vitacare_tds_pytds) import pytds OK")
+  log(
+    f"(debug_vitacare_tds_pytds) conectando em {host}:{port}, database='{database_name}'"
+  )
+
+  with pytds.connect(
+    server=host,
+    port=port,
+    database=database_name,
+    user=username,
+    password=password,
+    login_timeout=30,
+    timeout=None,
+    autocommit=True,
+  ) as connection:
+    log("(debug_vitacare_tds_pytds) conexão aberta")
+    cursor = connection.cursor()
+    try:
+      log("(debug_vitacare_tds_pytds) executando select @@version")
+      cursor.execute("select @@version")
+      version_row = cursor.fetchone()
+      log(f"(debug_vitacare_tds_pytds) @@version={version_row}")
+    finally:
+      cursor.close()
+
+    cursor = connection.cursor()
+    try:
+      count_query = f"select count(*) from [dbo].[{table_name}]"
+      log(f"(debug_vitacare_tds_pytds) executando count: {count_query}")
+      cursor.execute(count_query)
+      count_row = cursor.fetchone()
+      log(f"(debug_vitacare_tds_pytds) count={count_row}")
+    finally:
+      cursor.close()
+
+    cursor = connection.cursor()
+    try:
+      top_query = f"select top 1 * from [dbo].[{table_name}]"
+      log(f"(debug_vitacare_tds_pytds) executando top 1: {top_query}")
+      cursor.execute(top_query)
+      top_result = _debug_fetch_cursor(
+        cursor=cursor, label="debug_vitacare_tds_pytds_top_1", fetch_size=1, max_rows=1
+      )
+      log(f"(debug_vitacare_tds_pytds) top 1 finalizado: {top_result}")
+    finally:
+      cursor.close()
+
+    cursor = connection.cursor()
+    try:
+      full_query = f"select * from [dbo].[{table_name}]"
+      log(
+        f"(debug_vitacare_tds_pytds) executando leitura completa: {full_query}; "
+        f"fetch_size={fetch_size}; max_rows={max_rows}"
+      )
+      cursor.execute(full_query)
+      full_result = _debug_fetch_cursor(
+        cursor=cursor,
+        label="debug_vitacare_tds_pytds_full",
+        fetch_size=fetch_size,
+        max_rows=max_rows,
+      )
+      log(f"(debug_vitacare_tds_pytds) leitura completa finalizada: {full_result}")
+      return full_result
+    finally:
+      cursor.close()
+
+
+def _debug_pyodbc_connection(
+  *,
+  host: str,
+  port: int,
+  database_name: str,
+  username: str,
+  password: str,
+  table_name: str,
+  fetch_size: int,
+  max_rows: int | None,
+):
+  import pyodbc  # pylint: disable=import-outside-toplevel
+
+  log("(debug_vitacare_tds_pyodbc) import pyodbc OK")
+  log(f"(debug_vitacare_tds_pyodbc) drivers disponíveis: {pyodbc.drivers()}")
+
+  connection_string = (
+    "DRIVER={ODBC Driver 18 for SQL Server};"
+    f"SERVER={host},{port};"
+    f"DATABASE={database_name};"
+    f"UID={username};"
+    f"PWD={password};"
+    "Encrypt=no;"
+    "TrustServerCertificate=yes;"
+    "Connection Timeout=30;"
+  )
+  log(
+    f"(debug_vitacare_tds_pyodbc) conectando em {host}:{port}, database='{database_name}'"
+  )
+
+  with pyodbc.connect(connection_string, autocommit=True) as connection:
+    log("(debug_vitacare_tds_pyodbc) conexão aberta")
+    cursor = connection.cursor()
+    try:
+      cursor.arraysize = fetch_size
+      log("(debug_vitacare_tds_pyodbc) executando select @@version")
+      cursor.execute("select @@version")
+      version_row = cursor.fetchone()
+      log(f"(debug_vitacare_tds_pyodbc) @@version={version_row}")
+    finally:
+      cursor.close()
+
+    cursor = connection.cursor()
+    try:
+      cursor.arraysize = fetch_size
+      count_query = f"select count(*) from [dbo].[{table_name}]"
+      log(f"(debug_vitacare_tds_pyodbc) executando count: {count_query}")
+      cursor.execute(count_query)
+      count_row = cursor.fetchone()
+      log(f"(debug_vitacare_tds_pyodbc) count={count_row}")
+    finally:
+      cursor.close()
+
+    cursor = connection.cursor()
+    try:
+      cursor.arraysize = fetch_size
+      full_query = f"select * from [dbo].[{table_name}]"
+      log(
+        f"(debug_vitacare_tds_pyodbc) executando leitura completa: {full_query}; "
+        f"fetch_size={fetch_size}; max_rows={max_rows}"
+      )
+      cursor.execute(full_query)
+      full_result = _debug_fetch_cursor(
+        cursor=cursor,
+        label="debug_vitacare_tds_pyodbc_full",
+        fetch_size=fetch_size,
+        max_rows=max_rows,
+      )
+      log(f"(debug_vitacare_tds_pyodbc) leitura completa finalizada: {full_result}")
+      return full_result
+    finally:
+      cursor.close()
+
+
+@task
+def debug_vitacare_tds_connection(
+  database_name: str,
+  environment: str,
+  table_name: str = "ATENDIMENTOS",
+  fetch_size: int = 10_000,
+  max_rows: int | None = None,
+  run_pyodbc: bool = True,
+) -> dict:
+  username = get_secret(
+    secret_name=vitacare_constants.INFISICAL_USERNAME.value,
+    path=vitacare_constants.INFISICAL_PATH.value,
+    environment=environment,
+  )
+  password = get_secret(
+    secret_name=vitacare_constants.INFISICAL_PASSWORD.value,
+    path=vitacare_constants.INFISICAL_PATH.value,
+    environment=environment,
+  )
+  port = int(
+    get_secret(
+      secret_name=vitacare_constants.INFISICAL_PORT.value,
+      path=vitacare_constants.INFISICAL_PATH.value,
+      environment=environment,
+    )
+  )
+  host = vitacare_constants.LOCAL_DATABASE_HOST.value
+
+  log(
+    "(debug_vitacare_tds_connection) iniciando diagnóstico: "
+    f"database='{database_name}', table='{table_name}', host='{host}', port={port}, "
+    f"fetch_size={fetch_size}, max_rows={max_rows}, run_pyodbc={run_pyodbc}"
+  )
+
+  results = {}
+  try:
+    results["pytds"] = {
+      "status": "success",
+      "result": _debug_pytds_connection(
+        host=host,
+        port=port,
+        database_name=database_name,
+        username=username,
+        password=password,
+        table_name=table_name,
+        fetch_size=fetch_size,
+        max_rows=max_rows,
+      ),
+    }
+  except Exception as exc:  # pylint: disable=broad-except
+    results["pytds"] = {"status": "failed", "error": repr(exc)}
+    log(f"(debug_vitacare_tds_connection) pytds falhou: {repr(exc)}", level="error")
+
+  if run_pyodbc:
+    try:
+      results["pyodbc"] = {
+        "status": "success",
+        "result": _debug_pyodbc_connection(
+          host=host,
+          port=port,
+          database_name=database_name,
+          username=username,
+          password=password,
+          table_name=table_name,
+          fetch_size=fetch_size,
+          max_rows=max_rows,
+        ),
+      }
+    except Exception as exc:  # pylint: disable=broad-except
+      results["pyodbc"] = {"status": "failed", "error": repr(exc)}
+      log(f"(debug_vitacare_tds_connection) pyodbc falhou: {repr(exc)}", level="error")
+
+  log(f"(debug_vitacare_tds_connection) diagnóstico finalizado: {results}")
+  return results
+
+
 @task
 def extract_table_to_bigquery(
   database_name: str,

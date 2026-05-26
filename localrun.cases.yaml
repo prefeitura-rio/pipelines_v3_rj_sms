@@ -127,6 +127,19 @@ cases:
       # cnes: "2280310"
       # table_name: "ATENDIMENTOS"
 
+  # Diagnóstico TDS Vitacare Histórico (sem BigQuery, sem start/stop da instância)
+  - case_slug: "debug-vitacare-historico-tds"
+    flow_path: "pipelines.datalake.extract_load.vitacare_historico.flows"
+    flow_name: "debug_vitacare_historico_tds"
+    params:
+      environment: dev
+      cnes: "2273225"
+      table_name: "ATENDIMENTOS"
+      fetch_size: 10000
+      max_rows:
+      start_proxy: true
+      run_pyodbc: true
+
   # Clona tabelas do BigQuery, de um projeto qualquer para a SMS
   - case_slug: "datalake-clone-bigquery-table"
     flow_path: "pipelines.datalake.extract_load.clone_bigquery.flows"
