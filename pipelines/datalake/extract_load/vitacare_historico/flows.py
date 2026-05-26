@@ -187,12 +187,12 @@ _flows = [
     flow=vitacare_historico_cnes,
     schedules=[],
     dockerfile="./pipelines/datalake/extract_load/vitacare_historico/Dockerfile",
-    memory="medium",
+    memory="small",
   ),
   flow_config(
     flow=vitacare_historico,
     schedules=schedules,
     dockerfile="./pipelines/datalake/extract_load/vitacare_historico/Dockerfile",
-    memory="medium",
+    memory="small",
   ),
 ]
