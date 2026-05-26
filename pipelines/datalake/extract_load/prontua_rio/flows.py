@@ -201,13 +201,13 @@ def prontuario_extraction_manager(
   # 2.2 Criar as flows runs para Openbase
   for param in openbase_params:
     create_flow_run(
-      flow_=prontuario_openbase_operator, parameters=param, environment=environment
+      flow=prontuario_openbase_operator, parameters=param, environment=environment
     )
 
   # 2.3 Criar as flows runs para Postgres
   for param in postgres_params:
     create_flow_run(
-      flow_=prontuario_postgres_operator, parameters=param, environment=environment
+      flow=prontuario_postgres_operator, parameters=param, environment=environment
     )
 
 
