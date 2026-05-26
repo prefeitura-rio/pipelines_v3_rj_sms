@@ -180,12 +180,7 @@ def wait_for_flow_run(
     # do próprio Prefect, quase copiada e colada
     while True:
       # Confere o status atual da flow run
-      try:
-        updated_flow_run = client.read_flow_run(flow_run_id)
-      except Exception as e:  # FIXME: teste
-        log(repr(e), level="error")
-        time.sleep(15)
-        continue
+      updated_flow_run = client.read_flow_run(flow_run_id)
       flow_state = updated_flow_run.state
       # Se terminou, sucesso
       if flow_state and flow_state.is_final():
