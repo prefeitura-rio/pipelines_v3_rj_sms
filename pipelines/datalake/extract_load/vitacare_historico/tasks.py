@@ -164,12 +164,17 @@ def get_database_engine(database_name: str, environment: str):
   # A engine conecta no proxy local. O proxy encaminha para a instância Cloud SQL.
   # Ref: https://cloud.google.com/sql/docs/sqlserver/samples/cloud-sql-sqlserver-sqlalchemy-connect-tcp
   database_url = URL.create(
-    drivername="mssql+pytds",
+    drivername="mssql+pyodbc",
     username=username,
     password=password,
     port=port,
     database=database_name,
     host=vitacare_constants.LOCAL_DATABASE_HOST.value,
+    query={
+      "driver": "ODBC Driver 18 for SQL Server",
+      "Encrypt": "no",
+      "TrustServerCertificate": "yes",
+    },
   )
   return create_engine(database_url)
 
