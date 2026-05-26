@@ -11,6 +11,7 @@ class vitacare_constants(Enum):
   INFISICAL_TABLES = "DATABASE_HISTORICO_TABLES"
 
   LOCAL_DATABASE_HOST = "127.0.0.1"
+  LOCAL_PROXY_HEALTHCHECK_PORT = 9090
   INSTANCE_NAME = "vitacare"
   CNES_CONCURRENCY_LIMIT = 10
   DESTINATION_DATASET = "brutos_prontuario_vitacare_historico"

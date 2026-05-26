@@ -2,7 +2,9 @@ import json
 import os
 import signal
 import subprocess
-from time import sleep
+import urllib.error
+import urllib.request
+from time import monotonic, sleep
 
 import pandas as pd
 from google.cloud import bigquery
@@ -26,6 +28,35 @@ from pipelines.utils.env import environment_is_valid, get_prefect_url
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
+
+
+def _wait_for_cloudsql_proxy_readiness(
+  process: subprocess.Popen, healthcheck_port: int, timeout_seconds: int = 60
+) -> None:
+  # O proxy v2 expõe /readiness quando iniciado com --health-check.
+  # Ref: https://github.com/GoogleCloudPlatform/cloud-sql-proxy/blob/main/cmd/root.go
+  started_at = monotonic()
+  readiness_url = f"http://127.0.0.1:{healthcheck_port}/readiness"
+
+  while monotonic() - started_at < timeout_seconds:
+    if process.poll() is not None:
+      raise RuntimeError(
+        "Cloud SQL Auth Proxy encerrou antes de ficar pronto. "
+        f"Código de saída: {process.returncode}"
+      )
+
+    try:
+      with urllib.request.urlopen(readiness_url, timeout=1) as response:
+        if response.status == 200:
+          return
+    except (urllib.error.URLError, TimeoutError):
+      pass
+
+    sleep(1)
+
+  raise TimeoutError(
+    f"Cloud SQL Auth Proxy não ficou pronto dentro de {timeout_seconds} segundo(s)."
+  )
 
 
 @task
@@ -110,6 +141,7 @@ def start_cloudsql_proxy(environment: str) -> int:
     path=vitacare_constants.INFISICAL_PATH.value,
     environment=environment,
   )
+  healthcheck_port = vitacare_constants.LOCAL_PROXY_HEALTHCHECK_PORT.value
 
   # O proxy abre uma porta local e encaminha tudo para o Cloud SQL.
   # Ref: https://cloud.google.com/sql/docs/sqlserver/connect-auth-proxy
@@ -117,6 +149,9 @@ def start_cloudsql_proxy(environment: str) -> int:
     "cloud-sql-proxy",
     f"--address={vitacare_constants.LOCAL_DATABASE_HOST.value}",
     f"--port={port}",
+    "--health-check",
+    f"--http-address={vitacare_constants.LOCAL_DATABASE_HOST.value}",
+    f"--http-port={healthcheck_port}",
     connection_name,
   ]
   log(
@@ -125,8 +160,8 @@ def start_cloudsql_proxy(environment: str) -> int:
   )
   process = subprocess.Popen(command)
 
-  # Tempo simples para o processo abrir a porta antes da próxima task conectar.
-  sleep(5)
+  _wait_for_cloudsql_proxy_readiness(process=process, healthcheck_port=healthcheck_port)
+  log("(start_cloudsql_proxy) Cloud SQL Auth Proxy pronto para conexões")
   return process.pid
 
 
