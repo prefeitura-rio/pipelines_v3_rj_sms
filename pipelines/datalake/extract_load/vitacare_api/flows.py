@@ -93,4 +93,5 @@ def vitacare_api(
     )
 
 
+# v1: LocalDaskExecutor(num_workers=5), memory_request="2Gi", memory_limit="2Gi".
 _flows = [flow_config(flow=vitacare_api, schedules=schedules)]
