@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pandas as pd
 
+from pipelines.utils.cleanup import cleanup_columns_for_bigquery
 from pipelines.utils.datetime import (
   is_valid_YYYYMMDD,
   now_str,
@@ -197,10 +198,11 @@ def extract_from_api(
       f"Esperado: {total_registros}, Obtido: {total_obtido}"
     )
 
-  df = pd.DataFrame(dados)
+  df = pd.DataFrame(dados, dtype=str)
   df["_run_id"] = str(uuid4())
   df["_extracted_at"] = extracted_at
   df["data_extracao"] = today_str()
+  df = cleanup_columns_for_bigquery(df, lowercase=True)
   return df
 
 
