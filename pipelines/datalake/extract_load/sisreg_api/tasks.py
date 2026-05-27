@@ -81,9 +81,9 @@ def extract_from_api(
   if not is_valid_YYYYMMDD(data_fim):
     raise ValueError(f"Data final '{data_fim}' é inválida!")
 
-  if data_inicio >= data_fim:
+  if data_inicio > data_fim:
     raise ValueError(
-      f"Data inicial '{data_inicio}' deve ser anterior à data final '{data_fim}'!"
+      f"Data inicial '{data_inicio}' não pode ser posterior à data final '{data_fim}'!"
     )
 
   extracted_at = now_str()

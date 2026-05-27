@@ -23,8 +23,8 @@ def extract_sisreg_api(
   ],
   data_inicio: Optional[str] = None,
   data_fim: Optional[str] = None,
-  tamanho_pagina: int = 10_000,
-  dias_por_faixa: int = 7,
+  page_size: int = 10_000,
+  dias_por_faixa: int = 1,
   dataset_id: str = "brutos_sisreg_api_v2",
   table_id: Optional[str] = None,
   environment: str = "dev",
@@ -40,9 +40,10 @@ def extract_sisreg_api(
     data_fim(str?):
       Data, no formato ISO (YYYY-MM-DD), até a qual
       registros são obtidos. Quando None, é o dia de hoje.
-    tamanho_pagina(int?):
+    page_size(int?):
       As respostas da API são paginadas; esse é o limite de
-      registros por página. Por padrão, 10,000.
+      registros por página. Por padrão, 10,000, o máximo que
+      a API permite.
     dias_por_faixa(int?):
       Quantos dias cada task deve processar
     dataset_id(str?):
@@ -81,7 +82,7 @@ def extract_sisreg_api(
         user=username,
         password=password,
         index_name=es_index,
-        page_size=tamanho_pagina,
+        page_size=page_size,
         data_inicio=data_inicio,
         data_fim=data_fim,
       )
