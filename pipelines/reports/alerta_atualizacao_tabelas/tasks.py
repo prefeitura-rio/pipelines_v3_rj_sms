@@ -98,17 +98,28 @@ def send_hci_discord_alert(environment: str, last_episodes: list):
     last_episode = pytz.timezone("America/Sao_Paulo").localize(record["last_episode"])
     days_diff = (datetime.now(pytz.timezone("America/Sao_Paulo")) - last_episode).days
 
-    if days_diff > 1:
-      lines.append(
-        f"- 🔴 `{provider}` *Último Episódio: {last_episode.strftime('%d/%m/%Y %H:%M:%S')}* ({days_diff} dias atrás)"
-      )
+    if provider != "prontuaRio":
+      if days_diff > 1:
+        lines.append(
+          f"- 🔴 `{provider}` *Último Episódio: {last_episode.strftime('%d/%m/%Y %H:%M:%S')}* ({days_diff} dias atrás)"
+        )
+      else:
+        lines.append(
+          f"- 🟢 `{provider}` *Último Episódio: {last_episode.strftime('%d/%m/%Y %H:%M:%S')}* ({days_diff} dias atrás)"
+        )
     else:
-      lines.append(
-        f"- 🟢 `{provider}` *Último Episódio: {last_episode.strftime('%d/%m/%Y %H:%M:%S')}* ({days_diff} dias atrás)"
-      )
+      # A atualização dos dados do ProntuaRio são semanais via backups
+      if days_diff > 8:
+        lines.append(
+          f"- 🔴 `{provider}` *Último Episódio: {last_episode.strftime('%d/%m/%Y %H:%M:%S')}* ({days_diff} dias atrás)"
+        )
+      else:
+        lines.append(
+          f"- 🟢 `{provider}` *Último Episódio: {last_episode.strftime('%d/%m/%Y %H:%M:%S')}* ({days_diff} dias atrás)"
+        )
 
   send_discord_message(
-    title="Alerta de Últimos Episódios Assistenciais - HCI",
+    title="Atualização de Episódios Assistenciais - HCI",
     message="\n".join(lines),
     slug="hci_status",
   )
