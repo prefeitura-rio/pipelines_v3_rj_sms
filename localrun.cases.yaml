@@ -25,6 +25,18 @@ cases:
       ## Desenvolvendo local, não queremos enviar nada
       skip_email: true
 
+  # CDI/Você Precisa Saber
+  ## Não consegui fazer executar create_flow_run localmente:
+  ## > prefect.exceptions.PrefectHTTPStatusError: ... {'detail': 'Deployment not found'}
+  - case_slug: "report----nao-roda-local----cdi-vps"
+    flow_path: "pipelines.reports.voce_precisa_saber.flows"
+    flow_name: "flow_voce_precisa_saber"
+    params:
+      environment: dev
+      # date: ...
+      # skip_to_email: ...
+      override_recipients: teste@example.local
+
 
   ################################
   #  EXTRACT/LOAD                #
@@ -60,6 +72,17 @@ cases:
       # dataset: brutos_gdb_{cnes/sih/sia}
       # lines_per_chunk: 100000
       # data_referencia: ...
+
+  # Extração TPC (Azure Blob) -> tabela staging
+  - case_slug: "datalake-extract-tpc-azure-blob"
+    flow_path: "pipelines.datalake.extract_load.tpc_azure_blob.flows"
+    flow_name: "sms_dump_tpc"
+    params:
+      environment: dev
+      blob_file: posicao
+      dataset_id: brutos_estoque_central_tpc
+      table_id: estoque_posicao
+      rename_flow: true
 
   # Extração SICLOM API
   - case_slug: "datalake-extract-siclom-api"
@@ -119,6 +142,17 @@ cases:
       # destination_dataset_name: ...
       # dbt_select_exp: ...
 
+  # Extração de Diário Oficial da União (API) -> BigQuery
+  - case_slug: "extract-dou-api"
+    flow_path: "pipelines.datalake.extract_load.diario_oficial_uniao.flows"
+    flow_name: "dou_extraction"
+    params:
+      environment: "dev"
+      date: ""
+      dou_section: "DO1 DO2 DO3"
+      dataset_id: "brutos_diario_oficial"
+
+      
   # Extração de tabelas do Postgre do prontuaRio, via backup em blob storage 
   - case_slug: "prontuaRio_postgres"
     flow_path: "pipelines.datalake.extract_load.prontua_rio.flows"
@@ -144,6 +178,40 @@ cases:
       bucket_name: 'subhue_backups'
       dataset: 'brutos_prontuario_prontuaRio_continuo_staging'
       lines_per_chunk: 5000
+         
+  # Extração de dados do Vitai no banco da RioSaúde
+  - case_slug: "vitai-db-extraction"
+    flow_path: "pipelines.datalake.extract_load.vitai_db.flows"
+    flow_name: "vitai_db_extraction"
+    params:
+      environment: dev
+      table_name: boletim
+      schema_name: "basecentral"
+      datetime_column: 'created_at'
+      target_name: "basecentral__boletim_eventos"
+      partition_column: 'datalake_loaded_at'
+      batch_size: 10000
+      # interval_start: '2026-01-01'
+      # interval_end: '2026-01-02'
+      relative_date: 'D-7'
+
+  # Extração do Diário Oficial -> tabela no BigQuery
+  - case_slug: "extract_diario_oficial_rj"
+    flow_path: "pipelines.datalake.extract_load.diario_oficial_rj.flows"
+    flow_name: "extract_diario_oficial_rj"
+    params:
+      environment: dev
+      date: null
+      dataset_id: brutos_diario_oficial
+
+  # Extração do Tribunal de Contas -> tabela no BigQuery
+  - case_slug: "extract_tribunal_de_contas_rj"
+    flow_path: "pipelines.datalake.extract_load.tribunal_de_contas_rj.flows"
+    flow_name: "extract_tribunal_de_contas_rj"
+    params:
+      environment: dev
+      # case_id: ...
+      dataset_id: brutos_diario_oficial
 
 
   ################################
