@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime
 
 import pandas as pd
-import pytz
 from google.cloud import bigquery
 from prefect import task
 
+from pipelines.utils.datetime import SAO_PAULO_TZ, now
 from pipelines.utils.monitor import send_discord_message
 
 
@@ -16,14 +15,14 @@ def verify_tables_freshness(environment: str, table_ids: dict):
   for table_id, projects in table_ids.items():
     table_metadata = client.get_table(table_id)
 
-    today_americas = datetime.now(tz=pytz.timezone("America/Sao_Paulo"))
+    today_americas = now()
 
     last_updated = (
       table_metadata.modified
       if table_metadata.modified is not None
       else table_metadata.created
     )
-    last_updated_americas = last_updated.astimezone(pytz.timezone("America/Sao_Paulo"))
+    last_updated_americas = last_updated.astimezone(SAO_PAULO_TZ)
 
     results.append(
       {
@@ -47,7 +46,7 @@ def send_discord_alert(environment: str, results: list):
 
     affected_projects.extend(result["affected_projects"])
 
-    last_updated = result["last_updated"].astimezone(pytz.timezone("America/Sao_Paulo"))
+    last_updated = result["last_updated"].astimezone(SAO_PAULO_TZ)
     lines.append(
       f"- 🔴 `{result['table_id']}` *Última Modificação: {last_updated.strftime('%d/%m/%Y %H:%M:%S')}*"
     )
@@ -95,8 +94,8 @@ def send_hci_discord_alert(environment: str, last_episodes: list):
 
   for record in last_episodes:
     provider = record["provider"]
-    last_episode = pytz.timezone("America/Sao_Paulo").localize(record["last_episode"])
-    days_diff = (datetime.now(pytz.timezone("America/Sao_Paulo")) - last_episode).days
+    last_episode = record["last_episode"].replace(tzinfo=SAO_PAULO_TZ)
+    days_diff = (now() - last_episode).days
 
     if provider != "prontuaRio":
       if days_diff > 1:
