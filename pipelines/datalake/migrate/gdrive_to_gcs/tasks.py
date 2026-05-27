@@ -135,7 +135,7 @@ def prepare_files_for_upload(downloaded_file: dict) -> list[dict]:
       }
     ]
 
-  except Exception as exc:  # pylint: disable=broad-except
+  except Exception as exc:
     log(f"Erro extraindo ZIP '{source_path}': {repr(exc)}", level="error")
     return [
       {
@@ -171,7 +171,7 @@ def upload_file(prepared_file: dict, bucket_name: str) -> dict:
     prepared_file["finished_at"] = now().isoformat()
     return prepared_file
 
-  except Exception as exc:  # pylint: disable=broad-except
+  except Exception as exc:
     log(
       f"Erro enviando arquivo '{prepared_file['source_path']}': {repr(exc)}",
       level="error",
@@ -192,7 +192,9 @@ def cleanup_downloaded_file(downloaded_file: dict) -> None:
 
 
 @task
-def write_log(log_items: list[dict], log_table_id: str) -> dict:
+def write_log(
+  log_items: list[dict], dataset_id: str, table_id: str, environment: str
+) -> dict:
   if not log_items:
     return {"inserted_rows": 0}
 
@@ -204,8 +206,7 @@ def write_log(log_items: list[dict], log_table_id: str) -> dict:
     flow_run_id = str(flow_run_context.flow_run.id)
     flow_run_url = f"{get_prefect_url()}/runs/flow-run/{flow_run_id}"
 
-  execution_datetime = now()
-  fallback_timestamp = execution_datetime.isoformat()
+  fallback_timestamp = now().isoformat()
   rows = []
   for log_item in log_items:
     timestamp = log_item.get("finished_at") or fallback_timestamp
@@ -223,4 +224,6 @@ def write_log(log_items: list[dict], log_table_id: str) -> dict:
       }
     )
 
-  return update_logs_to_datalake(logs=rows, table_full_id=log_table_id)
+  return update_logs_to_datalake(
+    logs=rows, dataset_id=dataset_id, table_id=table_id, environment=environment
+  )

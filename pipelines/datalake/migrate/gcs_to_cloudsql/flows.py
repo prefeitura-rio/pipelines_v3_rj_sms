@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from pipelines.constants import CIT
-from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.google import build_bucket_name
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
@@ -37,8 +36,6 @@ def gcs_to_cloudsql(
   resolved_bucket_name = build_bucket_name(
     bucket_name=bucket_name, environment=environment
   )
-  project_id = get_google_project_for_environment(environment=environment)
-  log_table_id = f"{project_id}.{LOG_DATASET_ID}.{table_id}"
 
   results = []
   instance_started = False
@@ -64,14 +61,19 @@ def gcs_to_cloudsql(
     if instance_started:
       try:
         stop_instance(instance_name=instance_name)
-      except Exception as exc:  # pylint: disable=broad-except
+      except Exception as exc:
         log(
           f"(gcs_to_cloudsql) erro ao desligar instância '{instance_name}': {repr(exc)}",
           level="error",
         )
 
     if results:
-      write_log(log_items=results, log_table_id=log_table_id)
+      write_log(
+        log_items=results,
+        dataset_id=LOG_DATASET_ID,
+        table_id=table_id,
+        environment=environment,
+      )
 
   total_success = sum(1 for result in results if result["status"] == "success")
   total_failed = sum(1 for result in results if result["status"] == "failed")

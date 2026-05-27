@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from pipelines.constants import CIT
 from pipelines.utils.datetime import from_relative_date
-from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.google import build_bucket_name
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
@@ -39,8 +38,6 @@ def gdrive_to_gcs(
   resolved_bucket_name = build_bucket_name(
     bucket_name=bucket_name, environment=environment
   )
-  project_id = get_google_project_for_environment(environment=environment)
-  log_table_id = f"{project_id}.{LOG_DATASET_ID}.{table_id}"
 
   files = []
   log_items = []
@@ -65,7 +62,12 @@ def gdrive_to_gcs(
 
   finally:
     if log_items:
-      write_log(log_items=log_items, log_table_id=log_table_id)
+      write_log(
+        log_items=log_items,
+        dataset_id=LOG_DATASET_ID,
+        table_id=table_id,
+        environment=environment,
+      )
 
   total_success = sum(1 for log_item in log_items if log_item["status"] == "success")
   total_failed = sum(1 for log_item in log_items if log_item["status"] == "failed")

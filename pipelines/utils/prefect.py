@@ -143,7 +143,11 @@ def authenticated_task(
 
 
 def create_flow_run(
-  flow_, parameters: dict = None, wait: bool = False, environment: str = "dev"
+  flow_,
+  parameters: dict = None,
+  wait: bool = False,
+  environment: str = "dev",
+  flow_run_name: str = None,
 ):
   """
   Cria uma nova flow run de um determinado flow.
@@ -164,6 +168,7 @@ def create_flow_run(
   log(f"[create_flow_run] Requisitando execução de flow '{deployment_name}'...")
   flow_run = run_deployment(
     name=deployment_name,
+    flow_run_name=flow_run_name,
     parameters=parameters,
     timeout=(0 if not wait else None),
     as_subflow=False,  # tenho recebido erro 422 sem isso aqui --Avellar
@@ -172,6 +177,7 @@ def create_flow_run(
   log(
     f"[create_flow_run] Flow run criada; confira em: {base_url}/runs/flow-run/{flow_run.id}"
   )
+  return flow_run
 
 
 @authenticated_task

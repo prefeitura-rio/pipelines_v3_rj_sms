@@ -94,7 +94,7 @@ def restore_backup(restore_item: dict, instance_name: str) -> dict:
     )
     wait_for_operations(instance_name=instance_name)
 
-  except Exception as exc:  # pylint: disable=broad-except
+  except Exception as exc:
     result["status"] = "failed"
     result["error_message"] = str(exc)
     log(f"(restore_backup) erro restaurando '{gcs_uri}': {repr(exc)}", level="error")
@@ -106,7 +106,9 @@ def restore_backup(restore_item: dict, instance_name: str) -> dict:
 
 
 @task
-def write_log(log_items: list[dict], log_table_id: str) -> dict:
+def write_log(
+  log_items: list[dict], dataset_id: str, table_id: str, environment: str
+) -> dict:
   if not log_items:
     return {"inserted_rows": 0}
 
@@ -118,8 +120,7 @@ def write_log(log_items: list[dict], log_table_id: str) -> dict:
     flow_run_id = str(flow_run_context.flow_run.id)
     flow_run_url = f"{get_prefect_url()}/runs/flow-run/{flow_run_id}"
 
-  execution_datetime = now()
-  fallback_timestamp = execution_datetime.isoformat()
+  fallback_timestamp = now().isoformat()
 
   rows = []
   for log_item in log_items:
@@ -140,4 +141,6 @@ def write_log(log_items: list[dict], log_table_id: str) -> dict:
       }
     )
 
-  return update_logs_to_datalake(logs=rows, table_full_id=log_table_id)
+  return update_logs_to_datalake(
+    logs=rows, dataset_id=dataset_id, table_id=table_id, environment=environment
+  )

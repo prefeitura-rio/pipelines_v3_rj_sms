@@ -45,7 +45,7 @@ def stop_cloudsql_instance() -> None:
   )
   try:
     stop_instance_task.fn(instance_name=vitacare_constants.INSTANCE_NAME.value)
-  except Exception as exc:  # pylint: disable=broad-except
+  except Exception as exc:
     log(
       f"(stop_cloudsql_instance) erro ao desligar instância "
       f"'{vitacare_constants.INSTANCE_NAME.value}': {repr(exc)}",
@@ -243,7 +243,7 @@ def extract_table_to_bigquery(
         level="warning",
       )
 
-  except Exception as exc:  # pylint: disable=broad-except
+  except Exception as exc:
     error_text = str(exc)
     result["status"] = "failed"
     if "Invalid object name" in error_text:
@@ -280,7 +280,9 @@ def extract_table_to_bigquery(
 
 
 @task
-def write_log(log_items: list[dict], log_table_id: str) -> dict:
+def write_log(
+  log_items: list[dict], dataset_id: str, table_id: str, environment: str
+) -> dict:
   if not log_items:
     return {"inserted_rows": 0}
 
@@ -313,6 +315,8 @@ def write_log(log_items: list[dict], log_table_id: str) -> dict:
       }
     )
 
-  result = update_logs_to_datalake(logs=rows, table_full_id=log_table_id)
-  log(f"(write_log) {len(rows)} linha(s) inserida(s) em '{log_table_id}'")
+  result = update_logs_to_datalake(
+    logs=rows, dataset_id=dataset_id, table_id=table_id, environment=environment
+  )
+  log(f"(write_log) {len(rows)} linha(s) inserida(s) em '{dataset_id}.{table_id}'")
   return result

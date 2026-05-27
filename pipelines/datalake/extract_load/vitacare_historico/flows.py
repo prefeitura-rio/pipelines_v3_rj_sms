@@ -2,12 +2,10 @@
 from time import sleep
 
 from prefect import get_client
-from prefect.deployments.flow_runs import run_deployment
 
 from pipelines.constants import CIT
-from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.logger import log
-from pipelines.utils.prefect import flow, flow_config, get_prefect_url, rename_flow_run
+from pipelines.utils.prefect import create_flow_run, flow, flow_config, rename_flow_run
 from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .constants import vitacare_constants
@@ -25,10 +23,6 @@ from .tasks import (
 )
 
 
-def _deployment_name(flow_, environment: str) -> str:
-  return f"{flow_.name}/{flow_.name}" + ("" if environment == "prod" else " (stg)")
-
-
 @flow(
   name="Extração: Vitacare Histórico - CNES",
   state_handlers=[handle_flow_state_change],
@@ -38,7 +32,8 @@ def vitacare_historico_cnes(
   environment: str = "dev",
   cnes: str = None,
   table_names: list[str] = None,
-  log_table_id: str = None,
+  log_dataset_id: str = vitacare_constants.LOG_DATASET.value,
+  log_table_id: str = vitacare_constants.LOG_TABLE.value,
 ):
   environment = validate_environment(environment=environment)
   rename_flow_run(new_name=f"{environment} - vitacare_historico - {cnes}")
@@ -46,13 +41,6 @@ def vitacare_historico_cnes(
 
   if not table_names:
     table_names = get_database_tables(environment=environment)
-  if not log_table_id:
-    project_id = get_google_project_for_environment(environment=environment)
-    log_table_id = (
-      f"{project_id}.{vitacare_constants.LOG_DATASET.value}."
-      f"{vitacare_constants.LOG_TABLE.value}"
-    )
-
   proxy_process_id = None
   results = []
 
@@ -73,7 +61,12 @@ def vitacare_historico_cnes(
     if proxy_process_id:
       stop_cloudsql_proxy(process_id=proxy_process_id)
     if results:
-      write_log(log_items=results, log_table_id=log_table_id)
+      write_log(
+        log_items=results,
+        dataset_id=log_dataset_id,
+        table_id=log_table_id,
+        environment=environment,
+      )
 
   total_failed = sum(1 for result in results if result["status"] == "failed")
 
@@ -96,11 +89,8 @@ def vitacare_historico(
   table_names = (
     [table_name] if table_name else get_database_tables(environment=environment)
   )
-  project_id = get_google_project_for_environment(environment=environment)
-  log_table_id = (
-    f"{project_id}.{vitacare_constants.LOG_DATASET.value}."
-    f"{vitacare_constants.LOG_TABLE.value}"
-  )
+  log_dataset_id = vitacare_constants.LOG_DATASET.value
+  log_table_id = vitacare_constants.LOG_TABLE.value
 
   instance_started = False
   active_flow_runs = {}
@@ -121,23 +111,19 @@ def vitacare_historico(
         return
 
       cnes_item = pending_cnes.pop()
-      flow_run = run_deployment(
-        name=_deployment_name(vitacare_historico_cnes, environment),
+      flow_run = create_flow_run(
+        flow_=vitacare_historico_cnes,
         flow_run_name=f"{environment} - vitacare_historico - {cnes_item}",
         parameters={
           "environment": environment,
           "cnes": cnes_item,
           "table_names": table_names,
+          "log_dataset_id": log_dataset_id,
           "log_table_id": log_table_id,
         },
-        timeout=0,
-        as_subflow=False,
+        environment=environment,
       )
       active_flow_runs[flow_run.id] = cnes_item
-      log(
-        f"(vitacare_historico) flow run criada para CNES '{cnes_item}': "
-        f"{get_prefect_url()}/runs/flow-run/{flow_run.id}"
-      )
 
     while (
       pending_cnes

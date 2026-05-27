@@ -341,6 +341,14 @@ def get_google_drive_service():
   return build("drive", "v3", credentials=credentials)
 
 
+def _date_to_isoformat(date) -> str | None:
+  if date is None:
+    return None
+  if isinstance(date, str):
+    return date
+  return date.date().isoformat() if hasattr(date, "date") else date.isoformat()
+
+
 def list_google_drive_files(folder_id: str, start_date: str, end_date: str) -> list[dict]:
   """
   Lista arquivos de uma pasta e subpastas do Google Drive.
@@ -357,11 +365,13 @@ def list_google_drive_files(folder_id: str, start_date: str, end_date: str) -> l
   service = get_google_drive_service()
 
   if not end_date:
-    end_date = str(from_relative_date("D-0"))
+    end_date = from_relative_date("D-0")
+
+  start_date = _date_to_isoformat(start_date)
+  end_date = _date_to_isoformat(end_date)
+
   if start_date and start_date > end_date:
     raise ValueError("start date precisa ser anterior a end_date")
-
-  listed_files = []
 
   folder_mime_type = "application/vnd.google-apps.folder"
   root_folder = (
@@ -369,7 +379,8 @@ def list_google_drive_files(folder_id: str, start_date: str, end_date: str) -> l
   )
   root_folder_name = root_folder["name"]
 
-  def list_files(current_folder_id: str, current_path: str):
+  def list_files(current_folder_id: str, current_path: str) -> list[dict]:
+    files = []
     page_token = None
     date_filters = [f"modifiedTime <= '{end_date}T23:59:59'"]
 
@@ -404,10 +415,10 @@ def list_google_drive_files(folder_id: str, start_date: str, end_date: str) -> l
         relative_path = f"{current_path}/{item['name']}" if current_path else item["name"]
 
         if item["mimeType"] == folder_mime_type:
-          list_files(item["id"], relative_path)
+          files.extend(list_files(item["id"], relative_path))
           continue
 
-        listed_files.append(
+        files.append(
           {"id": item["id"], "name": item["name"], "relative_path": relative_path}
         )
 
@@ -415,7 +426,9 @@ def list_google_drive_files(folder_id: str, start_date: str, end_date: str) -> l
       if not page_token:
         break
 
-  list_files(folder_id, root_folder_name)
+    return files
+
+  listed_files = list_files(folder_id, root_folder_name)
 
   log(f"Encontrado(s) {len(listed_files)} arquivo(s) no Google Drive")
   return listed_files
