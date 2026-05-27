@@ -36,7 +36,11 @@ def report_alerta_atualizacao_hci(environment: str = "dev"):
 
 _flows = [
   flow_config(
-    flow=report_alerta_atualizacao_tabelas, schedules=freshness_tables_schedule
+    flow=report_alerta_atualizacao_tabelas,
+    schedules=freshness_tables_schedule,
+    memory="small",
   ),
-  flow_config(flow=report_alerta_atualizacao_hci, schedules=freshness_hci_schedule),
+  flow_config(
+    flow=report_alerta_atualizacao_hci, schedules=freshness_hci_schedule, memory="small"
+  ),
 ]
