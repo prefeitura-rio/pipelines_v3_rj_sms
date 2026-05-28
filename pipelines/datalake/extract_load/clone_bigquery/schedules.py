@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from prefect.schedules import Cron
+
 from pipelines.utils.schedules import create_schedule_list
 
 flow_parameters = [
@@ -65,6 +67,34 @@ flow_parameters = [
   },
 ]
 
-schedules = create_schedule_list(
+cegonha_flow_parameters = [
+  {
+    "source_project_name": "rj-crm-registry",
+    "source_dataset_name": "rmi_conversas",
+    "source_table_list": ["chatbot"],
+    "destination_dataset_name": "brutos_iplanrio_staging",
+    "environment": "prod",
+  },
+  {
+    "source_project_name": "rj-crm-registry",
+    "source_dataset_name": "intermediario_rmi_conversas",
+    "source_table_list": ["resposta_disparo"],
+    "destination_dataset_name": "brutos_iplanrio_staging",
+    "environment": "prod",
+  },
+]
+
+daily_schedules = create_schedule_list(
   parameters_list=flow_parameters, interval="daily", config={"hour": 5}
 )
+
+cegonha_schedules = [
+  Cron(
+    "*/15 7-21 * * 1-5",
+    timezone="America/Sao_Paulo",
+    parameters=params,
+  )
+  for params in cegonha_flow_parameters
+]
+
+schedules = daily_schedules + cegonha_schedules
