@@ -76,7 +76,7 @@ def extract_sisreg_api(
   # 1) Extrai e salva cada lote em disco, retorna caminho do parquet
   extraction_futures = []
   for data_inicio, data_fim in faixas:
-    rate_limit("um-por-segundo")
+    rate_limit("meio-por-segundo")
     extraction_futures.append(
       extract_from_api.submit(
         user=username,

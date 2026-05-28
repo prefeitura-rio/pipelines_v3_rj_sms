@@ -65,7 +65,7 @@ def gerar_faixas_de_data(
   return faixas
 
 
-@task(retries=5, retry_delay_seconds=30)
+@task(retries=5, retry_delay_seconds=30, tags=["sisreg-extracao-paralela"])
 def extract_from_api(
   user: str,
   password: str,
