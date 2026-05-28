@@ -39,6 +39,11 @@ def gerar_faixas_de_data(
   else:
     dt_inicio = datetime.fromisoformat(data_inicio).date()
 
+  if dt_inicio > dt_fim:
+    raise ValueError(
+      f"Data inicial '{dt_inicio}' não pode ser posterior à data final '{dt_fim}'!"
+    )
+
   log("Gerando faixas de datas para processamento em lotes")
   faixas = []
   while dt_inicio <= dt_fim:
@@ -86,8 +91,6 @@ def extract_from_api(
     raise ValueError(
       f"Data inicial '{data_inicio}' não pode ser posterior à data final '{data_fim}'!"
     )
-
-  extracted_at = now_str()
 
   ###
 
@@ -199,10 +202,10 @@ def extract_from_api(
     )
 
   df = pd.DataFrame(dados, dtype=str)
-  df["_run_id"] = str(uuid4())
-  df["_extracted_at"] = extracted_at
-  df["data_extracao"] = today_str()
   df = cleanup_columns_for_bigquery(df, lowercase=True)
+  df["_run_id"] = str(uuid4())
+  df["_extracted_at"] = now_str()
+  df["data_extracao"] = today_str()
   return df
 
 
