@@ -3,6 +3,7 @@ import time
 from datetime import datetime, timedelta
 from typing import List, Optional
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -11,7 +12,7 @@ from pipelines.utils.datetime import (
   is_valid_YYYYMMDD,
   now_str,
   parse_date_or_today,
-  today_str,
+  today,
 )
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
@@ -153,12 +154,26 @@ def extract_from_api(
   #     '_source': {
   #       ... # Dados de verdade (agora é sério)
   #     },
-  #     "sort": [ x, 'xxx' ]
   #   },
   #   ...
   # ]
   # Dados de verdade ficam no '_source', é um dicionário enorme
-  dados: List[dict] = [reg.get("_source", {}) for reg in hits]
+  dados: List[dict] = []
+  for registro in hits:
+    dado: dict = registro.get("_source", None)
+    if not dado:
+      continue
+    data_solicitacao = dado.get("data_solicitacao")
+    dado["mes_particao"] = (
+      datetime.fromisoformat(data_solicitacao)
+      .astimezone(ZoneInfo("America/Sao_Paulo"))
+      .date()
+      .replace(day=1)
+      .isoformat()
+      if data_solicitacao
+      else today().replace(day=1).isoformat()
+    )
+    dados.append(dado)
   log(f"Processados {len(dados)}/{total_registros} registros (lote inicial)")
 
   ####
@@ -184,7 +199,21 @@ def extract_from_api(
     if not hits:
       break
 
-    dados.extend([reg.get("_source", {}) for reg in hits])
+    for registro in hits:
+      dado: dict = registro.get("_source", None)
+      if not dado:
+        continue
+      data_solicitacao = dado.get("data_solicitacao")
+      dado["mes_particao"] = (
+        datetime.fromisoformat(data_solicitacao)
+        .astimezone(ZoneInfo("America/Sao_Paulo"))
+        .date()
+        .replace(day=1)
+        .isoformat()
+        if data_solicitacao
+        else today().replace(day=1).isoformat()
+      )
+      dados.append(dado)
     log(f"Processados {len(dados)}/{total_registros} registros")
 
   # Scrolls em aberto consomem memória do servidor de API;
@@ -205,7 +234,6 @@ def extract_from_api(
   df = cleanup_columns_for_bigquery(df, lowercase=True)
   df["_run_id"] = str(uuid4())
   df["_extracted_at"] = now_str()
-  df["data_extracao"] = today_str()
   return df
 
 
