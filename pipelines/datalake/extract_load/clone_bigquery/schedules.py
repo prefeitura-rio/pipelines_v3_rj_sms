@@ -85,7 +85,9 @@ cegonha_flow_parameters = [
 ]
 
 daily_schedules = create_schedule_list(
-  parameters_list=flow_parameters, interval="daily", config={"hour": 5}
+  parameters_list=flow_parameters,
+  interval="daily",
+  config={"hour": 5},
 )
 
 cegonha_schedules = [
