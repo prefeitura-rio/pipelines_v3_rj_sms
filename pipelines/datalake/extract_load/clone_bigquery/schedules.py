@@ -89,11 +89,7 @@ daily_schedules = create_schedule_list(
 )
 
 cegonha_schedules = [
-  Cron(
-    "*/15 7-21 * * 1-5",
-    timezone="America/Sao_Paulo",
-    parameters=params,
-  )
+  Cron("*/15 7-21 * * 1-5", timezone="America/Sao_Paulo", parameters=params)
   for params in cegonha_flow_parameters
 ]
 
