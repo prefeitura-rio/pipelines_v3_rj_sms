@@ -55,7 +55,7 @@ def send_discord_alert(environment: str, results: list):
     send_discord_message(
       title="Alerta de Tabelas Desatualizadas",
       message="🟢 Todas as tabelas estão atualizadas",
-      slug="warning",
+      slug="freshness",
     )
     return
 
@@ -66,7 +66,7 @@ def send_discord_alert(environment: str, results: list):
   message += "\n\n**Projetos Afetados:**\n" + "\n".join(affected_projects)
 
   send_discord_message(
-    title="Alerta de Tabelas Desatualizadas", message=message, slug="warning"
+    title="Alerta de Tabelas Desatualizadas", message=message, slug="freshness"
   )
 
 
@@ -120,5 +120,5 @@ def send_hci_discord_alert(environment: str, last_episodes: list):
   send_discord_message(
     title="Atualização de Episódios Assistenciais - HCI",
     message="\n".join(lines),
-    slug="hci_status",
+    slug="freshness",
   )
