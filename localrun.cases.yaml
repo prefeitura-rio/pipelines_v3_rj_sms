@@ -159,6 +159,27 @@ cases:
       # source_table_list: ...
       # destination_dataset_name: ...
       # dbt_select_exp: ...
+    
+  # Clona tabelas com respostas de disparo do projeto Cegonha Digital
+  - case_slug: "test-cegonha-clone-chatbot"
+    flow_path: "pipelines.datalake.extract_load.clone_bigquery.flows"
+    flow_name: "clone_bigquery"
+    params:
+      environment: dev
+      source_project_name: "rj-crm-registry"
+      source_dataset_name: "rmi_conversas"
+      source_table_list: ["chatbot"]
+      destination_dataset_name: "brutos_iplanrio"
+
+  - case_slug: "test-cegonha-clone-resposta-disparo"
+    flow_path: "pipelines.datalake.extract_load.clone_bigquery.flows"
+    flow_name: "clone_bigquery"
+    params:
+      environment: dev
+      source_project_name: "rj-crm-registry"
+      source_dataset_name: "intermediario_rmi_conversas"
+      source_table_list: ["resposta_disparo"]
+      destination_dataset_name: "brutos_iplanrio"
 
   # Extração de Diário Oficial da União (API) -> BigQuery
   - case_slug: "extract-dou-api"
