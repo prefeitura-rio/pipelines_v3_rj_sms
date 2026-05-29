@@ -92,7 +92,7 @@ daily_schedules = create_schedule_list(
 
 cegonha_schedules = [
     Cron(
-        "*/15 7-21 * * 1-5",
+        "*/15 7-21 * * *",
         timezone="America/Sao_Paulo",
         parameters=params,
     )
