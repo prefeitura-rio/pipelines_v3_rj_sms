@@ -275,18 +275,3 @@ cases:
       target: null
       rename_flow: false
       send_discord_report: false
-
-  # Paiente restrito do HCI
-  - case_slug: "test-hci-pacientes-restritos"
-    flow_path: "pipelines.datalake.transform.gemini.pacientes_restritos.flows"
-    flow_name: "hci_pacientes_restritos"
-    params:
-      environment: "dev"
-      rename_flow: false
-      query: |
-        select
-          id_hci,
-          cpf,
-          clinical_motivation
-        from `rj-sms.app_historico_clinico.episodio_assistencial`
-        limit 5
