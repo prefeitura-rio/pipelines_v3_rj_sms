@@ -50,7 +50,8 @@ def clone_bigquery_table(
 
     try:
       command = (
-        f"CREATE OR REPLACE TABLE `{destination_table_id}` CLONE `{source_table_id}`"
+        f"DROP TABLE IF EXISTS `{destination_table_id}`;\n"
+        f"CREATE OR REPLACE TABLE `{destination_table_id}` CLONE `{source_table_id}`;"
       )
       log(f"Executando comando:\n\t{command}")
       query_job = bq_client.query_and_wait(command)
