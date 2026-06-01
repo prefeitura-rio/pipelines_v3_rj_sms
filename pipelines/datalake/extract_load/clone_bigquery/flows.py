@@ -20,7 +20,7 @@ def clone_bigquery(
   source_dataset_name: str,
   source_table_list: list[str],
   destination_dataset_name: str,
-  dbt_select_exp: str = None,
+  dbt_select_exp: str | None = None,
   environment: str = "dev",
 ):
   """

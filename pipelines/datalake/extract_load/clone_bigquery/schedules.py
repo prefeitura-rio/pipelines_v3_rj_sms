@@ -74,7 +74,7 @@ cegonha_flow_parameters = [
     "source_table_list": ["chatbot"],
     "destination_dataset_name": "brutos_iplanrio",
     "environment": "prod",
-  },
+  }
 ]
 
 daily_schedules = create_schedule_list(
