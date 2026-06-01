@@ -75,13 +75,6 @@ cegonha_flow_parameters = [
     "destination_dataset_name": "brutos_iplanrio",
     "environment": "prod",
   },
-  {
-    "source_project_name": "rj-crm-registry",
-    "source_dataset_name": "intermediario_rmi_conversas",
-    "source_table_list": ["resposta_disparo"],
-    "destination_dataset_name": "brutos_iplanrio",
-    "environment": "prod",
-  },
 ]
 
 daily_schedules = create_schedule_list(
