@@ -322,7 +322,7 @@ def upload_df_to_datalake(
     dataset_is_public(bool?):
       Flag de dataset público; por padrão, `False`
   """
-  if not df or df.empty:
+  if df is None or df.empty:
     log(
       f"Dataframe vazio para '{dataset_id}.{table_id}'; upload ignorado", level="warning"
     )

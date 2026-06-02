@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from elasticsearch import Elasticsearch, exceptions
 
+from pipelines.utils.cleanup import cleanup_bigquery_name
 from pipelines.utils.logger import log
 
 
@@ -56,8 +57,6 @@ def table_name_from_resource(resource: str) -> str:
   Retorna o nome de tabela designada para recurso ("index")
   sendo requisitado no ElasticSearch
   """
-  if resource.startswith("solicitacao"):
-    return "solicitacoes"
-  if resource.startswith("marcacao"):
-    return "marcacoes"
+  if resource.startswith("solicitacao") or resource.startswith("marcacao"):
+    return cleanup_bigquery_name(resource, lowercase=True)
   raise NotImplementedError(f"Não há tabela definida por padrão para '{resource}'")
