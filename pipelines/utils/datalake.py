@@ -280,7 +280,7 @@ def create_date_partitions(
 
 
 def upload_df_to_datalake(
-  df: pd.DataFrame,
+  df: pd.DataFrame | None,
   dataset_id: str,
   table_id: str,
   dump_mode: Literal["replace", "append"] = "replace",
@@ -322,7 +322,7 @@ def upload_df_to_datalake(
     dataset_is_public(bool?):
       Flag de dataset público; por padrão, `False`
   """
-  if df.empty:
+  if not df or df.empty:
     log(
       f"Dataframe vazio para '{dataset_id}.{table_id}'; upload ignorado", level="warning"
     )
