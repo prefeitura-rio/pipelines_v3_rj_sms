@@ -129,6 +129,16 @@ cases:
       month: null
       year: null
 
+  # Extração Exames Laboratoriais API
+  - case_slug: "exames_laboratoriais"
+    flow_path: "pipelines.datalake.extract_load.exames_laboratoriais.flows"
+    flow_name: "exames_laboratoriais"
+    params:
+      environment: dev
+      intervalo: "D-1"
+      hours_per_window: 1.5
+      dataset: brutos_exames_laboratoriais
+
   # Extração de tabela (banco relacional) -> tabela (BigQuery)
   - case_slug: "datalake-extract-relational-db"
     flow_path: "pipelines.datalake.extract_load.relational_db.flows"
