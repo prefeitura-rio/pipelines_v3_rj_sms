@@ -98,7 +98,7 @@ def extract_sisreg_api(
       table_id=(table_id if table_id else table_name_from_resource(es_index)),
       dump_mode="append",
       source_format="parquet",
-      date_partition_column="mes_particao",
+      date_partition_column="data_particao",
     )
   # TODO: validação de quais uploads foram bem sucedidos, quais não
 

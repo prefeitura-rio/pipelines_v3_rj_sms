@@ -164,7 +164,7 @@ def extract_from_api(
     if not dado:
       continue
     data_solicitacao = dado.get("data_solicitacao")
-    dado["mes_particao"] = (
+    dado["data_particao"] = (
       datetime.fromisoformat(data_solicitacao)
       .astimezone(ZoneInfo("America/Sao_Paulo"))
       .date()
@@ -204,7 +204,7 @@ def extract_from_api(
       if not dado:
         continue
       data_solicitacao = dado.get("data_solicitacao")
-      dado["mes_particao"] = (
+      dado["data_particao"] = (
         datetime.fromisoformat(data_solicitacao)
         .astimezone(ZoneInfo("America/Sao_Paulo"))
         .date()
