@@ -57,13 +57,16 @@ def flow_voce_precisa_saber(
   if not skip_to_email:
     ## (1) DOU
     dou_flow_run = create_flow_run(
-      flow=dou_extraction, parameters={"environment": environment, "date": date}
+      flow=dou_extraction,
+      parameters={"environment": environment, "date": date},
+      environment=environment,
     )
 
     ## (2) DO-RJ
     dorj_flow_run = create_flow_run(
       flow=extract_diario_oficial_rj,
       parameters={"environment": environment, "date": date},
+      environment=environment,
     )
 
     ## Espera por (1) e (2)
@@ -87,6 +90,7 @@ def flow_voce_precisa_saber(
         "target": None if environment == "prod" else "ci",
         "flag": None,
       },
+      environment=environment,
     )
 
     ## Espera por (3)
@@ -101,6 +105,7 @@ def flow_voce_precisa_saber(
       fr_tcm = create_flow_run(
         flow=extract_tribunal_de_contas_rj,
         parameters={"environment": environment, "case_id": tcm_case},
+        environment=environment,
       )
       tcm_wait_futures.append(
         wait_for_flow_run_task.submit(flow_run_id=fr_tcm.id, timeout_seconds=(20 * 60))
