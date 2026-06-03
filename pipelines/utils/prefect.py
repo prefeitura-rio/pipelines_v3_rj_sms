@@ -121,7 +121,7 @@ def authenticated_task(
 
 
 def create_flow_run(
-  flow: Flow, parameters: dict = None, wait: bool = False, environment: str = "dev"
+  flow: Flow, parameters: dict = None, wait: bool = False, environment: str | None = None
 ):
   """
   Cria uma nova flow run de um determinado flow.
@@ -137,6 +137,8 @@ def create_flow_run(
       Ambiente de execução; se "prod", executa o deployment de
       produção; se "dev", executa o deployment de staging.
   """
+  environment = environment or get_current_environment()
+
   deployment_name = f"{flow.name}/{flow.name}" + (
     "" if environment == "prod" else " (stg)"
   )
