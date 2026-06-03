@@ -36,7 +36,13 @@ def gerar_faixas_de_data(
   dt_fim = parse_date_or_today(data_fim).date()
 
   if not data_inicio:
-    dt_inicio = dt_fim - timedelta(days=6 * 30)
+    try:
+      # Tentamos pegar o mesmo dia 1 ano atrás
+      dt_inicio = dt_fim.replace(year=dt_fim.year - 1)
+    except ValueError:
+      # Se deu ValueError, é possível e provável que a data seja 29/fev
+      # Então tentamos subtrair um dia também
+      dt_inicio = dt_fim.replace(year=dt_fim.year - 1, day=dt_fim.day - 1)
   else:
     dt_inicio = datetime.fromisoformat(data_inicio).date()
 
