@@ -25,6 +25,36 @@ cases:
       ## Desenvolvendo local, não queremos enviar nada
       skip_email: true
 
+  # CDI/Você Precisa Saber
+  ## Não consegui fazer executar create_flow_run localmente:
+  ## > prefect.exceptions.PrefectHTTPStatusError: ... {'detail': 'Deployment not found'}
+  - case_slug: "report----nao-roda-local----cdi-vps"
+    flow_path: "pipelines.reports.voce_precisa_saber.flows"
+    flow_name: "flow_voce_precisa_saber"
+    params:
+      environment: dev
+      # date: ...
+      # skip_to_email: ...
+      override_recipients: teste@example.local
+
+  # Alerta de Tabelas Desatualizadas
+  - case_slug: "report-atualizacao-tabelas"
+    flow_path: "pipelines.reports.alerta_atualizacao_tabelas.flows"
+    flow_name: "report_alerta_atualizacao_tabelas"
+    params:
+      environment: dev
+      table_ids: 
+        # Tabela atualizada (espera-se que esteja)
+        "rj-sms.projeto_whatsapp.telefones_validos": ["IplanRio - E Aí?"] 
+        # Tabela desatualizada
+        "rj-sms.projeto_gestacoes.temp_correlacao_prenatal_20250831_192404": ["S/SUBPAV/SAP - BI de Gestantes"] 
+  
+  # Alerta dos últimos episódios do HCI
+  - case_slug: "report-atualizacao-hci"
+    flow_path: "pipelines.reports.alerta_atualizacao_tabelas.flows"
+    flow_name: "report_alerta_atualizacao_hci"
+    params:
+      environment: dev
 
   ################################
   #  EXTRACT/LOAD                #
@@ -112,6 +142,16 @@ cases:
       table_id_prefix: estoque_posicao
       target_date: D-1
 
+  # Extração Exames Laboratoriais API
+  - case_slug: "exames_laboratoriais"
+    flow_path: "pipelines.datalake.extract_load.exames_laboratoriais.flows"
+    flow_name: "exames_laboratoriais"
+    params:
+      environment: dev
+      intervalo: "D-1"
+      hours_per_window: 1.5
+      dataset: brutos_exames_laboratoriais
+
   # Extração de tabela (banco relacional) -> tabela (BigQuery)
   - case_slug: "datalake-extract-relational-db"
     flow_path: "pipelines.datalake.extract_load.relational_db.flows"
@@ -142,6 +182,17 @@ cases:
       # source_table_list: ...
       # destination_dataset_name: ...
       # dbt_select_exp: ...
+    
+  # Clona tabelas com respostas de disparo do projeto Cegonha Digital
+  - case_slug: "test-cegonha-clone-chatbot"
+    flow_path: "pipelines.datalake.extract_load.clone_bigquery.flows"
+    flow_name: "clone_bigquery"
+    params:
+      environment: dev
+      source_project_name: "rj-crm-registry"
+      source_dataset_name: "rmi_conversas"
+      source_table_list: ["chatbot"]
+      destination_dataset_name: "brutos_iplanrio"
 
   # Extração de Diário Oficial da União (API) -> BigQuery
   - case_slug: "extract-dou-api"

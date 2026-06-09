@@ -6,11 +6,11 @@ from pipelines.datalake.extract_load.diario_oficial_uniao.tasks import (
   download_files,
   get_xml_files,
   login,
-  parse_date,
   report_extraction_status,
   unpack_zip,
   upload_to_datalake,
 )
+from pipelines.utils.datetime import parse_date_or_today
 from pipelines.utils.prefect import flow, flow_config
 from pipelines.utils.state_handlers import handle_flow_state_change
 
@@ -24,7 +24,7 @@ from .schedules import schedules
 )
 def dou_extraction(
   environment: str = "dev",
-  date: str = "",
+  date: str | None = None,
   dou_section: str = "DO1 DO2 DO3",
   dataset_id: str = "brutos_diario_oficial",
 ):
@@ -33,8 +33,7 @@ def dou_extraction(
   """
 
   dirs = create_dirs()
-
-  parsed_date = parse_date(date=date)
+  parsed_date = parse_date_or_today(date)
 
   # Realiza o login
   session = login(enviroment=environment)
@@ -64,7 +63,7 @@ def dou_extraction(
 
   # Reportando status da extração
   report_status = report_extraction_status(
-    status=upload_status, date=date, environment=environment
+    status=upload_status, date_str=parsed_date.date().isoformat(), environment=environment
   )
 
   # Deleta os diretórios temporários

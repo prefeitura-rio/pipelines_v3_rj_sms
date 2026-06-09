@@ -16,7 +16,7 @@ from pipelines.datalake.extract_load.diario_oficial_uniao.constants import (
   constants as flow_constants,
 )
 from pipelines.utils.datalake import upload_df_to_datalake
-from pipelines.utils.datetime import now, parse_date_or_today
+from pipelines.utils.datetime import now
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.io import create_tmp_data_folder
 from pipelines.utils.logger import log
@@ -28,11 +28,6 @@ def create_dirs() -> dict[str, str]:
   download_dir = create_tmp_data_folder(prefix="download")
   output_dir = create_tmp_data_folder(prefix="output")
   return {"download_dir": download_dir, "output_dir": output_dir}
-
-
-@task
-def parse_date(date: str) -> datetime.datetime:
-  return parse_date_or_today(date)
 
 
 @task(retries=3, retry_delay_seconds=600)
@@ -97,10 +92,11 @@ def download_files(
   """Faz o download dos arquivos .zip com os atos oficiais de cada seção para um dia específico.
 
   Args:
-      session (requests.Session): Instância de Session da biblioteca requests
-          que contém os cookies da sessão.
-      sections (str): Seções do DOU a serem extraídas (DO1, DO2 e DO3)
-      date (datetime.datetime): Data do diário oficial a ser extraído.
+    session (requests.Session):
+      Instância de Session da biblioteca requests
+      que contém os cookies da sessão.
+    sections (str): Seções do DOU a serem extraídas (DO1, DO2 e DO3)
+    date (datetime.datetime): Data do diário oficial a ser extraído.
 
   Returns:
       list | None: Lista contendo o caminho dos arquivos .zip baixados ou None.
@@ -152,8 +148,8 @@ def unpack_zip(zip_files: list, output_path: str) -> None:
   """Descompacta os arquivos .zip baixados.
 
   Args:
-      zip_files (list): Lista com os arquivos .zip baixados.
-      output_path (str): Caminho para o diretório onde os arquivos .xml serão armazenados.
+    zip_files (list): Lista com os arquivos .zip baixados.
+    output_path (str): Caminho para o diretório onde os arquivos .xml serão armazenados.
   """
   try:
     log("⬇️ Iniciando descompactação dos arquivos .zip")
@@ -246,11 +242,11 @@ def get_xml_files(xml_dir: str, output_dir: str = None) -> str:
 def upload_to_datalake(parquet_path: str, dataset: str):
   """Função para realizar a carga dos dados extraídos no datalake da SMS Rio.
   Args:
-      parquet_path (str): Caminho para o arquivo parquet com os dados a serem carregados.
-      dataset (str): Dataset do BigQuery onde os dados serão carregados.
+    parquet_path (str): Caminho para o arquivo parquet com os dados a serem carregados.
+    dataset (str): Dataset do BigQuery onde os dados serão carregados.
 
   Returns:
-      bool: True se o upload for bem-sucedido, False caso contrário.
+    bool: True se o upload for bem-sucedido, False caso contrário.
   """
   if parquet_path == "":
     log("⚠️ Não há registros para enviar ao datalake.")
@@ -277,17 +273,16 @@ def upload_to_datalake(parquet_path: str, dataset: str):
 
 
 @task
-def report_extraction_status(status: bool, date: str, environment: str = "dev"):
+def report_extraction_status(status: bool, date_str: str, environment: str = "dev"):
   """
   Reporta o status da extração para o BigQuery.
 
   Args:
-      status (bool): Indica se a extração foi bem-sucedida (True) ou não (False).
-      date (str): Data da extração.
-      environment (str, optional): Ambiente de execução (ex: "dev", "prod"). Padrão para "dev".
+    status (bool): Indica se a extração foi bem-sucedida (True) ou não (False).
+    date_str (str): Data da extração (YYYY-MM-DD).
+    environment (str, optional): Ambiente de execução (ex: "dev", "prod"). Padrão para "dev".
   """
   log("⬆️ Reportando status da extração...")
-  date = parse_date_or_today(date).strftime("%Y-%m-%d")
 
   success = "true" if status else "false"
   current_datetime = now().strftime("%Y-%m-%d %H:%M:%S")
@@ -302,18 +297,18 @@ def report_extraction_status(status: bool, date: str, environment: str = "dev"):
   FULL_TABLE_NAME = f"`{PROJECT}.{DATASET}.{TABLE}`"
 
   log(
-    f"Inserting into {FULL_TABLE_NAME} status of success={success} for date='{date}'..."
+    f"Inserting into {FULL_TABLE_NAME} status of success={success} for date='{date_str}'..."
   )
 
   client = bigquery.Client()
   query_job = client.query(
     f"""
-        INSERT INTO {FULL_TABLE_NAME} (
-            data_publicacao, tipo_diario, extracao_sucesso, _updated_at
-        )
-        VALUES (
-            '{date}', '{tipo_diario}', {success}, '{current_datetime}'
-        )
+      INSERT INTO {FULL_TABLE_NAME} (
+        data_publicacao, tipo_diario, extracao_sucesso, _updated_at
+      )
+      VALUES (
+        '{date_str}', '{tipo_diario}', {success}, '{current_datetime}'
+      )
     """
   )
   query_job.result()
