@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from hashlib import sha256
 import os
+from hashlib import sha256
 
 import pandas as pd
 import requests
@@ -24,10 +24,7 @@ def login(username: str, password: str):
 
   res = requests.post(
     URL,
-    headers={
-      "referer": URL,
-      "user-agent": USER_AGENT,
-    },
+    headers={"referer": URL, "user-agent": USER_AGENT},
     data={
       "usuario": username,
       # Form de login do site apaga o campo senha
@@ -52,9 +49,8 @@ def login(username: str, password: str):
   cookies_dict = res.cookies.get_dict()
   if "SESSION" not in cookies_dict:
     log(
-      "Cookie de sessão não foi obtido! Provável erro iminente"
-      f"\n{cookies_dict}",
-      level="warning"
+      f"Cookie de sessão não foi obtido! Provável erro iminente\n{cookies_dict}",
+      level="warning",
     )
   return cookies_dict
 
@@ -77,10 +73,7 @@ def baixar_endpoint(endpoint: str, cookies: dict):
   log("Baixando arquivo... (costuma levar ~1min)")
   with requests.get(
     url=f"{URL}{endpoint_url}",
-    headers={
-      "referer": URL,
-      "user-agent": USER_AGENT,
-    },
+    headers={"referer": URL, "user-agent": USER_AGENT},
     params=endpoint_params,
     cookies=cookies,
     stream=True,

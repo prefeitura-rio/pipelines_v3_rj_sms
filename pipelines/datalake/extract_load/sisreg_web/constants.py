@@ -29,6 +29,6 @@ class constants(Enum):
         "pagina": "",
         "ordenacao": "",
         "coluna": "",
-      }
+      },
     }
   }

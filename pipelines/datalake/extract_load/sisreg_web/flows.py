@@ -7,8 +7,8 @@ from pipelines.utils.infisical import get_secret
 from pipelines.utils.prefect import flow, flow_config
 from pipelines.utils.state_handlers import handle_flow_state_change
 
-from .tasks import baixar_endpoint, file_to_dataframe, login
 from .constants import constants
+from .tasks import baixar_endpoint, file_to_dataframe, login
 
 
 @flow(
@@ -21,7 +21,7 @@ def extract_sisreg_web(
   endpoint: Literal["escala"] = "escala",
   dataset_id: str = "brutos_sisreg",
   table_id: str = "escala",
-  environment: str = "dev"
+  environment: str = "dev",
 ):
   USERNAME = get_secret(
     secret_name=constants.INFISICAL_USERNAME.value,
