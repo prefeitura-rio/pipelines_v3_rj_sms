@@ -12,11 +12,17 @@ from .constants import constants
 
 
 @flow(
-  name="Extração: SISREG Web",
+  name="Extração: Sisreg Web",
+  description="Flow de extração de escalas profissionais do site do Sisreg",
   owners=[CIT.AVELLAR_ID.value],
   state_handlers=[handle_flow_state_change],
 )
-def extract_sisreg_web(endpoint: Literal["escala"] = "escala", environment: str = "dev"):
+def extract_sisreg_web(
+  endpoint: Literal["escala"] = "escala",
+  dataset_id: str = "brutos_sisreg",
+  table_id: str = "escala",
+  environment: str = "dev"
+):
   USERNAME = get_secret(
     secret_name=constants.INFISICAL_USERNAME.value,
     path=constants.INFISICAL_PATH.value,
@@ -33,10 +39,11 @@ def extract_sisreg_web(endpoint: Literal["escala"] = "escala", environment: str 
   df = file_to_dataframe(file_path=csv_path)
   upload_df_to_datalake_task(
     df=df,
-    dataset_id="",
-    table_id="",
+    dataset_id=dataset_id,
+    table_id=table_id,
     dump_mode="replace",
     source_format="parquet",
+    date_partition_column="data_particao",
     dataset_is_public=False,
   )
 
