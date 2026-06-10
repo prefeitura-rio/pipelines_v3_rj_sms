@@ -4,10 +4,11 @@ from typing import Literal
 from pipelines.constants import CIT
 from pipelines.utils.datalake import upload_df_to_datalake_task
 from pipelines.utils.infisical import get_secret
-from pipelines.utils.prefect import flow, flow_config
+from pipelines.utils.prefect import flow, flow_config, rename_flow_run
 from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .constants import constants
+from .schedules import schedules
 from .tasks import baixar_endpoint, file_to_dataframe, login
 
 
@@ -23,6 +24,10 @@ def extract_sisreg_web(
   table_id: str = "escala",
   environment: str = "dev",
 ):
+  rename_flow_run(
+    new_name=f"Extração {endpoint} -> '{dataset_id}.{table_id}' ({environment})"
+  )
+
   USERNAME = get_secret(
     secret_name=constants.INFISICAL_USERNAME.value,
     path=constants.INFISICAL_PATH.value,
@@ -48,4 +53,4 @@ def extract_sisreg_web(
   )
 
 
-_flows = [flow_config(flow=extract_sisreg_web, schedules=[])]
+_flows = [flow_config(flow=extract_sisreg_web, schedules=schedules, region="bra")]
