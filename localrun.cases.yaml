@@ -265,6 +265,13 @@ cases:
       # case_id: ...
       dataset_id: brutos_diario_oficial
 
+  # Extração do Tribunal de Contas -> tabela no BigQuery
+  - case_slug: "extract_sisreg_web"
+    flow_path: "pipelines.datalake.extract_load.sisreg_web.flows"
+    flow_name: "extract_sisreg_web"
+    params:
+      environment: dev
+      # ...
 
   ################################
   #  MIGRATE                     #
