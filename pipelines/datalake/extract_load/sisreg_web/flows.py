@@ -46,7 +46,7 @@ def extract_sisreg_web(
     df=df,
     dataset_id=dataset_id,
     table_id=table_id,
-    dump_mode="replace",
+    dump_mode="append",
     source_format="parquet",
     date_partition_column="data_particao",
     dataset_is_public=False,
