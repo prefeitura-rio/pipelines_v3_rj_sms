@@ -130,6 +130,8 @@ def send_report(data, environment: str):
       or evt_type.startswith("Dados do usuário")
     ):
       section = "access"
+      if environment != "dev" and "desenvolvimento" in evt_type:
+        warnings.append(f"⚠️ Login de desenvolvimento em prod")
     elif evt_type.startswith("Busca") or evt_type.startswith("Consulta"):
       section = "use"
 
