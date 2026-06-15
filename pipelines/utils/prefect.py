@@ -7,6 +7,8 @@ from typing import Any, Callable, List, Literal, Optional, Union
 from uuid import UUID
 
 from prefect import Task, get_client
+from prefect.client.schemas import FlowRun
+from prefect.client.schemas.filters import FlowRunFilter
 from prefect.context import FlowRunContext
 from prefect.deployments.flow_runs import run_deployment
 from prefect.flows import Flow as OriginalFlow
@@ -376,3 +378,24 @@ def as_task(function, args: list = None, kwargs: dict = None):
   kwargs = dict() if not kwargs else kwargs
 
   return function(*args, **kwargs)
+
+
+def get_flow_runs_with_state(
+  states: List[
+    Literal[
+      "SCHEDULED",
+      "PENDING",
+      "RUNNING",
+      "COMPLETED",
+      "FAILED",
+      "CANCELLED",
+      "CRASHED",
+      "PAUSED",
+      "CANCELLING",
+    ]
+  ],
+) -> List[FlowRun]:
+  with get_client(sync_client=True) as client:
+    return client.read_flow_runs(
+      flow_run_filter=FlowRunFilter(state={"type": {"any_": states}})
+    )
