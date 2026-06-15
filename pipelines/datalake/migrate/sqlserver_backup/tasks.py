@@ -12,11 +12,11 @@ def restore_gcs_backup_to_cloudsql(item: dict, instance_name: str) -> dict:
   Restaura um backup do GCS para uma instância do Cloud SQL.
 
   Args:
-          item (dict): Item com os dados da restauração.
-          instance_name (str): Nome da instância Cloud SQL de destino.
+    item (dict): Item com os dados da restauração.
+    instance_name (str): Nome da instância Cloud SQL de destino.
 
   Returns:
-          dict: Resultado padronizado do processamento do item.
+    dict: Resultado padronizado do processamento do item.
   """
   source_uri = item.get("source_uri")
   database_name = item.get("database_name")
@@ -41,7 +41,7 @@ def restore_gcs_backup_to_cloudsql(item: dict, instance_name: str) -> dict:
 
     return build_gcs_to_cloudsql_result(item=item, status="success")
 
-  except Exception as exc:  # pylint: disable=broad-except
+  except Exception as exc:
     log(
       f"Erro restaurando backup '{source_uri}' para o banco "
       f"'{database_name}': {repr(exc)}",

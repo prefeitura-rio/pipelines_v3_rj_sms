@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from pipelines.constants import CIT
 from pipelines.utils.prefect import flow, flow_config
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .tasks import (
   fetch_case_page,
@@ -13,8 +12,8 @@ from .tasks import (
 
 @flow(
   name="Extração: TCM (Tribunal de Contas do Município)",
-  state_handlers=[handle_flow_state_change],
   owners=[CIT.AVELLAR_ID.value],
+  tags=["CIT"],
 )
 def extract_tribunal_de_contas_rj(
   case_id: str, dataset_id: str = "brutos_diario_oficial", environment: str = "dev"

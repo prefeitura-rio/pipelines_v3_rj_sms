@@ -35,7 +35,7 @@ def safe_df_to_parquet(df: pd.DataFrame, output_path: Optional[str]) -> str:
     output_path = os.path.join(root_folder, f"{uuid.uuid4()}.parquet")
 
   df = df.fillna("").astype(str)
-  df.to_parquet(output_path, index=False)
+  df.to_parquet(output_path, index=False, compression="zstd")
   return output_path
 
 
@@ -280,7 +280,7 @@ def create_date_partitions(
 
 
 def upload_df_to_datalake(
-  df: pd.DataFrame,
+  df: pd.DataFrame | None,
   dataset_id: str,
   table_id: str,
   dump_mode: Literal["replace", "append"] = "replace",
@@ -322,7 +322,7 @@ def upload_df_to_datalake(
     dataset_is_public(bool?):
       Flag de dataset público; por padrão, `False`
   """
-  if df.empty:
+  if df is None or df.empty:
     log(
       f"Dataframe vazio para '{dataset_id}.{table_id}'; upload ignorado", level="warning"
     )

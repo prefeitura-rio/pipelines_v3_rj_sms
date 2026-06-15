@@ -23,9 +23,16 @@ from pipelines.utils.logger import log
 
 
 class Flow(OriginalFlow):
-  def __init__(self, *args, owners: Optional[List[str]] = None, **kwargs):
-    # Guarda a lista de owners como atributo
+  def __init__(
+    self,
+    *args,
+    owners: Optional[List[str]] = None,
+    tags: Optional[List[str]] = None,
+    **kwargs,
+  ):
+    # Guarda listas de owners, tags como atributos
     self.owners = owners or []
+    self.tags = tags or []
     # Continua chamando o __init__ do Flow original
     super().__init__(*args, **kwargs)
 
@@ -38,6 +45,7 @@ class FlowDecorator(OriginalFlowDecorator):
   description: str = ""
   state_handlers: List[Callable] = None
   owners: List[str] = None
+  tags: List[str] = None
   log_prints: bool = False
 
   def __init__(
@@ -47,13 +55,19 @@ class FlowDecorator(OriginalFlowDecorator):
     description: str = "",
     state_handlers: List[Callable] = None,
     owners: Optional[List[str]] = None,
+    tags: Optional[List[str]] = None,
     log_prints: bool = False,
     **kwargs,
   ):
     self.name = name
     self.description = description or ""
-    self.state_handlers = state_handlers or []
+
+    # Importação no meio do código porque senão dá erro de importação circular :(
+    from pipelines.utils.state_handlers import handle_flow_state_change
+
+    self.state_handlers = list(set([handle_flow_state_change, *(state_handlers or [])]))
     self.owners = owners or []
+    self.tags = tags or []
     self.log_prints = log_prints
 
   def __call__(self, *args, **kwargs):
@@ -62,6 +76,7 @@ class FlowDecorator(OriginalFlowDecorator):
       name=self.name,
       description=self.description,
       owners=self.owners,
+      tags=self.tags,
       log_prints=self.log_prints,
       on_completion=[*self.state_handlers],
       on_failure=[*self.state_handlers],
@@ -121,7 +136,7 @@ def authenticated_task(
 
 
 def create_flow_run(
-  flow: Flow, parameters: dict = None, wait: bool = False, environment: str = "dev"
+  flow: Flow, parameters: dict = None, wait: bool = False, environment: str | None = None
 ):
   """
   Cria uma nova flow run de um determinado flow.
@@ -137,6 +152,8 @@ def create_flow_run(
       Ambiente de execução; se "prod", executa o deployment de
       produção; se "dev", executa o deployment de staging.
   """
+  environment = environment or get_current_environment()
+
   deployment_name = f"{flow.name}/{flow.name}" + (
     "" if environment == "prod" else " (stg)"
   )
@@ -256,6 +273,7 @@ def flow_config(
   dockerfile: str = None,
   memory: Literal["small", "medium", "large"] = "small",
   mount_gcs: bool = False,
+  region: Optional[Literal["bra"]] = None,
 ) -> dict:
   """
   Retorna uma configuração de flow, a ser usada na variável
@@ -264,12 +282,12 @@ def flow_config(
   Args:
     flow(Flow):
       O flow a ser executado.
-    schedules(list[Schedule]):
+    schedules(list[Schedule]?):
       Lista de schedules para o flow; pode ser vazia/None.
-    dockerfile(str):
+    dockerfile(str?):
       Caminho do Dockerfile customizado que executa o flow.
       Pode ser vazio/None. Ex.: `"./pipelines/datalake/..."`
-    memory(Literal["small", "medium", "large"]):
+    memory(Literal["small", "medium", "large"]?):
       Quantidade de memória RAM disponibilizada para a VM
       executando o flow. Atenção: em Google Cloud Run Jobs,
       não existe disco rígido; o filesystem reside na
@@ -279,12 +297,18 @@ def flow_config(
         muitos dados em "disco".
       * Para `memory="medium"`, são alocados 12 GB de RAM
       * Para `memory="large"`, são alocados 24 GB de RAM
-    mount_gcs(bool):
+    mount_gcs(bool?):
       Flag indicando se um bucket do GCS deve ser montado
       em `/mnt/gcs` ou não. Como não há disco, se for
       necessário escrever arquivos maiores que a RAM
       disponível, é necessário usar um bucket externo.
       Falso por padrão.
+    region(Literal["bra"]?):
+      Identificador interno de região onde o flow será executado.
+      Se None, será a região padrão (prov. us-central1).
+      Tenha em mente que regiões alternativas costumam ser mais
+      caras do que a região padrão; só use se absolutamente
+      necessário (p.ex. geoblocking de websites).
   """
   if not schedules:
     schedules = []
@@ -293,12 +317,16 @@ def flow_config(
   if memory not in ("small", "medium", "large"):
     raise ValueError(f"'{memory}' não é um valor válido para `memory`!")
 
+  if not region:
+    region = None
+
   return {
     "flow": flow,
     "schedules": schedules,
     "dockerfile": dockerfile,
     "memory": memory,
     "gcs": bool(mount_gcs),
+    "region": region,
   }
 
 

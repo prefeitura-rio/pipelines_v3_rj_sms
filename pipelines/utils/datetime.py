@@ -26,6 +26,16 @@ def now(utc: bool = False) -> datetime.datetime:
   return datetime.datetime.now(tz=SAO_PAULO_TZ)
 
 
+def now_naive(utc: bool = False) -> datetime.datetime:
+  """
+  Retorna datetime.now() sem informação de timezone.
+
+  Por padrão, preserva o horário local BRT retornado por `now()` e remove
+  apenas o `tzinfo`.
+  """
+  return now(utc=utc).replace(tzinfo=None)
+
+
 def now_str() -> str:
   """Retorna data/hora atual (fuso BRT) como 'YYYY-MM-DD HH:MM:SS'"""
   return now().strftime("%Y-%m-%d %H:%M:%S")
@@ -90,6 +100,38 @@ def from_relative_date(
   return result
 
 
+def is_valid_date(day: int, month: int, year: int) -> bool:
+  try:
+    datetime.date(year, month, day)
+    return True
+  except ValueError:
+    return False
+
+
+def is_valid_YYYYMMDD(date: str) -> bool:
+  """
+  Retorna True para data 'YYYY-MM-DD' válida; False caso contrário
+  """
+  if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", date):
+    log(f"Data '{date}' é inválida!", level="warning")
+    return False
+
+  year, month, day = [int(v) for v in date.split("-")]
+  return is_valid_date(day, month, year)
+
+
+def is_valid_DDMMYYYY(date: str) -> bool:
+  """
+  Retorna True para data 'DD/MM/YYYY' válida; False caso contrário
+  """
+  if not re.fullmatch(r"[0-9]{2}/[0-9]{2}/[0-9]{4}", date):
+    log(f"Data '{date}' é inválida!", level="warning")
+    return False
+
+  day, month, year = [int(v) for v in date.split("/")]
+  return is_valid_date(day, month, year)
+
+
 def parse_date_or_today(
   date: Optional[str], subtract_days_from_today: Optional[int] = None
 ) -> datetime.datetime:
@@ -129,10 +171,10 @@ def parse_date_or_today(
   # Caso contrário, vamos tentar interpretar a string recebida
   date = date.strip()
   # Se recebemos o formato ISO 'YYYY-MM-DD'
-  if re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", date):
+  if is_valid_YYYYMMDD(date):
     return datetime.datetime.fromisoformat(date)
   # Se recebemos o formato 'DD/MM/YYYY'
-  if re.fullmatch(r"[0-9]{2}/[0-9]{2}/[0-9]{4}", date):
+  if is_valid_DDMMYYYY(date):
     return datetime.datetime.strptime(date, "%d/%m/%Y")
   # Senão, faz última tentativa de parsing da string, pode dar erro
   return parser.parse(date, ignoretz=True, dayfirst=True)
@@ -172,9 +214,9 @@ def get_age_from_birthdate(birthdate: str, today: str = None) -> int | None:
   >>> get_age_from_birthdate("")
   None
   >>> get_age_from_birthdate("banana")
-  [...] WARNING - prefect | Formato esperado é `YYYY-MM-DD`; recebido 'banana'
+  [...] WARNING - prefect | Data inválida 'banana'
   >>> get_age_from_birthdate("2000-01-01", today="banana")
-  [...] WARNING - prefect | Formato esperado é `YYYY-MM-DD`; recebido 'banana'
+  [...] WARNING - prefect | Data inválida 'banana'
   """
   if birthdate is None:
     return None
@@ -183,12 +225,12 @@ def get_age_from_birthdate(birthdate: str, today: str = None) -> int | None:
   if len(birthdate) <= 0:
     return None
 
-  if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", birthdate):
-    log(f"Formato esperado é `YYYY-MM-DD`; recebido {repr(birthdate)}", level="warning")
+  if not is_valid_YYYYMMDD(birthdate):
+    log(f"Data inválida {repr(birthdate)}", level="warning")
     return None
 
-  if today is not None and not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", today):
-    log(f"Formato esperado é `YYYY-MM-DD`; recebido {repr(today)}", level="warning")
+  if today is not None and not is_valid_YYYYMMDD(today):
+    log(f"Data inválida {repr(today)}", level="warning")
     return None
 
   dt_today = datetime.datetime.fromisoformat(today) if today is not None else now()
