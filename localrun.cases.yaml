@@ -196,13 +196,28 @@ cases:
       # case_id: ...
       dataset_id: brutos_diario_oficial
 
-  # Extração do Tribunal de Contas -> tabela no BigQuery
+  # Extração do Sisreg (web)
   - case_slug: "extract_sisreg_web"
     flow_path: "pipelines.datalake.extract_load.sisreg_web.flows"
     flow_name: "extract_sisreg_web"
     params:
       environment: dev
       # ...
+
+  # Extração do Sisreg (API)
+  - case_slug: "datalake-extract-sisreg-api"
+    flow_path: "pipelines.datalake.extract_load.sisreg_api.flows"
+    flow_name: "extract_sisreg_api"
+    params:
+      environment: dev
+      es_index: solicitacao-ambulatorial-rj
+      data_inicio: null
+      data_fim: null
+      # tamanho_pagina: 10000
+      # dias_por_faixa: 7
+      # dataset_id: brutos_sisreg_api_v2
+      # table_id: solicitacoes
+
 
   ################################
   #  MIGRATE                     #

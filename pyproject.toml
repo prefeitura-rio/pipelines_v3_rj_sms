@@ -5,13 +5,14 @@ description = "Pipelines"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"  # dbt ainda não existe pra Python 3.14+
 dependencies = [
-  "azure-storage-blob>=12.27.1",
+  "azure-storage-blob>=12.27.1",  # TPC é Azure
   "basedosdados>=2.0.3",
-  "beautifulsoup4>=4.14.3",
+  "beautifulsoup4>=4.14.3",  # DO-RJ é BeautifulSoup a rodo
   "db-dtypes>=1.4.4",  # BigQuery reclama sem db-dtypes
   "dbt-bigquery>=1.11.1",
   "dbt-core>=1.11.7",
   "discord-py>=2.6.4",
+  "elasticsearch>=9.4.0",  # API do Sisreg é ElasticSearch
   "google-cloud-bigquery>=3.40.1",
   "google-cloud-storage>=3,<3.2",  # dbt-bigquery requer google-cloud-storage<3.2
   "gspread>=6.2.1",  # Task de baixar Google Sheets usa
