@@ -32,7 +32,9 @@ def get_recent_bigquery_jobs(
   query_job = client.query(query)
   results = query_job.result().to_dataframe()
 
-  results["custo_real_estimado"] = convert_usd_to_brl(usd=1) * results["custo_dolar_estimado"]
+  results["custo_real_estimado"] = (
+    convert_usd_to_brl(usd=1) * results["custo_dolar_estimado"]
+  )
 
   return results
 
