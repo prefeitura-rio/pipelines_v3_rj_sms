@@ -221,7 +221,7 @@ def upload_to_cloud_storage(
       O que fazer se o dado já existir no GCS: `"raise"` dispara erro de conflito;
       `"replace"` substitui o dado; `"pass"` não faz nada. Por padrão, é `"replace"`.
   """
-  log(f"Fazendo upload de '{path}' para 'gs://{bucket_name}/{blob_prefix}'")
+  log(f"Fazendo upload de '{path}' para 'gs://{bucket_name}/{blob_prefix or ''}'")
   client = storage.Client()
   bucket = client.get_bucket(bucket_name)
 

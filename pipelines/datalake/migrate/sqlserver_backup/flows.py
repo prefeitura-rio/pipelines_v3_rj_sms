@@ -3,7 +3,6 @@ from pipelines.constants import CIT
 from pipelines.utils.google import build_bucket_name
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .constants import LOG_DATASET_ID, LOG_TABLE_ID
 from .schedules import schedules
@@ -18,12 +17,15 @@ from .tasks import (
 
 
 @flow(
-  name="Migrate: GCS to Cloud SQL",
-  state_handlers=[handle_flow_state_change],
+  name="Migração: Backup SQL Server → Cloud SQL",
+  description=(
+    "Restaura backups de SQL Server (.BAK), guardados em um bucket do GCS, "
+    "para uma instância Cloud SQL"
+  ),
   owners=[CIT.DANIEL_ID.value],
-  description="Restaura backups do GCS para uma instância Cloud SQL",
+  tags=["CIT"],
 )
-def gcs_to_cloudsql(
+def sqlserver_backup(
   backup_type: str,
   bucket_name: str,
   instance_name: str,
@@ -79,7 +81,7 @@ def gcs_to_cloudsql(
   total_failed = sum(1 for result in results if result["status"] == "failed")
 
   log(
-    f"(gcs_to_cloudsql) processamento finalizado: "
+    f"(sqlserver_backup) processamento finalizado: "
     f"{total_success} sucesso(s), {total_failed} falha(s)"
   )
 
@@ -87,4 +89,4 @@ def gcs_to_cloudsql(
     raise RuntimeError(f"{total_failed} restauração(ões) falharam")
 
 
-_flows = [flow_config(flow=gcs_to_cloudsql, schedules=schedules)]
+_flows = [flow_config(flow=sqlserver_backup, schedules=schedules)]

@@ -1,25 +1,25 @@
 # -*- coding: utf-8 -*-
 from pipelines.constants import CIT
+from pipelines.datalake.transform.dbt.flows import sms_execute_dbt
 from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.prefect import create_flow_run, flow, flow_config, rename_flow_run
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 from .tasks import clone_bigquery_table
 
 
 @flow(
-  name="DataLake - Extração e Carga de Dados - Clonagem de BigQuery",
-  description="Clona dataset de projeto externo no BigQuery para o nosso datalake",
-  state_handlers=[handle_flow_state_change],
+  name="Migração: Clona BigQuery",
+  description="Clona dataset de projeto no BigQuery para o nosso datalake",
   owners=[CIT.CIT_ID.value],
+  tags=["CIT"],
 )
 def clone_bigquery(
   source_project_name: str,  # ex. "rj-smfp"
   source_dataset_name: str,
   source_table_list: list[str],
   destination_dataset_name: str,
-  dbt_select_exp: str = None,
+  dbt_select_exp: str | None = None,
   environment: str = "dev",
 ):
   """
@@ -57,7 +57,7 @@ def clone_bigquery(
 
   if dbt_select_exp:
     create_flow_run(
-      flow_name="DataLake - Transformação - DBT",
+      flow=sms_execute_dbt,
       environment=environment,
       parameters={
         "command": "run",

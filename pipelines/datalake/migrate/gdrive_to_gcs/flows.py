@@ -4,7 +4,7 @@ from pipelines.utils.datetime import from_relative_date
 from pipelines.utils.google import build_bucket_name
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
-from pipelines.utils.state_handlers import handle_flow_state_change
+from pipelines.utils.google import build_bucket_name, list_google_drive_files
 
 from .schedules import schedules
 from .tasks import (
@@ -20,10 +20,10 @@ LOG_DATASET_ID = "controle_pipelines"
 
 
 @flow(
-  name="Migrate: Google Drive to GCS",
-  state_handlers=[handle_flow_state_change],
+  name="Migração: Google Drive → GCS",
+  description="Lista arquivos do Google Drive e faz upload para o GCS",
   owners=[CIT.DANIEL_ID.value],
-  description="Lista arquivos do Google Drive e envia para o GCS",
+  tags=["CIT"],
 )
 def gdrive_to_gcs(
   root_folder_id: str,

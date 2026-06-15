@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import re
+import time
 import unicodedata
 from typing import Any, Callable, List, Literal, Optional, Union
+from uuid import UUID
 
 from prefect import Task, get_client
 from prefect.context import FlowRunContext
@@ -21,9 +23,16 @@ from pipelines.utils.logger import log
 
 
 class Flow(OriginalFlow):
-  def __init__(self, *args, owners: Optional[List[str]] = None, **kwargs):
-    # Guarda a lista de owners como atributo
+  def __init__(
+    self,
+    *args,
+    owners: Optional[List[str]] = None,
+    tags: Optional[List[str]] = None,
+    **kwargs,
+  ):
+    # Guarda listas de owners, tags como atributos
     self.owners = owners or []
+    self.tags = tags or []
     # Continua chamando o __init__ do Flow original
     super().__init__(*args, **kwargs)
 
@@ -36,6 +45,7 @@ class FlowDecorator(OriginalFlowDecorator):
   description: str = ""
   state_handlers: List[Callable] = None
   owners: List[str] = None
+  tags: List[str] = None
   log_prints: bool = False
 
   def __init__(
@@ -45,13 +55,19 @@ class FlowDecorator(OriginalFlowDecorator):
     description: str = "",
     state_handlers: List[Callable] = None,
     owners: Optional[List[str]] = None,
+    tags: Optional[List[str]] = None,
     log_prints: bool = False,
     **kwargs,
   ):
     self.name = name
     self.description = description or ""
-    self.state_handlers = state_handlers or []
+
+    # Importação no meio do código porque senão dá erro de importação circular :(
+    from pipelines.utils.state_handlers import handle_flow_state_change
+
+    self.state_handlers = list(set([handle_flow_state_change, *(state_handlers or [])]))
     self.owners = owners or []
+    self.tags = tags or []
     self.log_prints = log_prints
 
   def __call__(self, *args, **kwargs):
@@ -60,6 +76,7 @@ class FlowDecorator(OriginalFlowDecorator):
       name=self.name,
       description=self.description,
       owners=self.owners,
+      tags=self.tags,
       log_prints=self.log_prints,
       on_completion=[*self.state_handlers],
       on_failure=[*self.state_handlers],
@@ -77,24 +94,6 @@ flow = FlowDecorator
 #################
 ## TASKS
 #################
-
-# TODO:
-# - Caso uma Task falhe, Tasks downstream que não dependam dela ainda
-#   são executadas
-# - Ainda não temos consenso se isso é uma mudança positiva ou não
-# - Caso não seja, acho que o código abaixo resolveria o problema; quando
-#   uma Task falha, ele envia o status de Failed para a Flow Run em si
-# - É possível que ele continue executando com o status Failed? Não sei,
-#   problema pra ser testado caso a gente vá usar mesmo um dia
-# def on_task_fail_kill_flow_run(task: Task, task_run: TaskRun, state: State):
-#   log(
-#     "[on_task_fail_kill_flow_run] Task falhou, enviando status 'Failed' para Flow Run"
-#   )
-#   fr_ctx = FlowRunContext.get()
-#   fr_ctx.client.set_flow_run_state(fr_ctx.flow_run.id, Failed(), force=True)
-#   log(
-#     "[on_task_fail_kill_flow_run] Status de 'Failed' para Flow Run foi requisitado! :)"
-#   )
 
 
 def authenticated_task(
@@ -119,9 +118,9 @@ def authenticated_task(
 
     def new_function(**kwargs):
       env = get_current_environment()
-      log(f"[Injected] Set BD credentials for environment {env}", level="debug")
+      log(f"[Injected] Configurando credenciais BD para ambiente {env}", level="debug")
       inject_bd_credentials(environment=env)
-      log("[Injected] Now executing function normally...", level="debug")
+      log("[Injected] Executando task normalmente...", level="debug")
       return function(**kwargs)
 
     new_function.__name__ = function.__name__
@@ -129,40 +128,34 @@ def authenticated_task(
 
   # Instância de Task
   if fn is not None:
-    return Task(
-      fn=inject_credential_setting_in_function(fn),
-      # on_failure=[on_task_fail_kill_flow_run],   TODO: vide acima
-      **task_init_kwargs,
-    )
+    return Task(fn=inject_credential_setting_in_function(fn), **task_init_kwargs)
   # Decorator
   return lambda any_function: Task(
-    fn=inject_credential_setting_in_function(any_function),
-    # on_failure=[on_task_fail_kill_flow_run],  TODO: vide acima
-    **task_init_kwargs,
+    fn=inject_credential_setting_in_function(any_function), **task_init_kwargs
   )
 
 
 def create_flow_run(
-  flow_,
-  parameters: dict = None,
-  wait: bool = False,
-  environment: str = "dev",
-  flow_run_name: str = None,
+  flow: Flow, parameters: dict = None, wait: bool = False, environment: str | None = None, flow_run_name: str = None,
+
 ):
   """
   Cria uma nova flow run de um determinado flow.
-  Args
-    flow_(Flow):
+  Args:
+    flow(Flow):
       O flow a ser executada.
-    parameters(dict):
+    parameters(dict?):
       Parâmetros do flow.
-    wait(bool):
+    wait(bool?):
       Se deve esperar o flow terminar, ou retornar imediatamente.
-    environment(str):
-      Ambiente de execução; se "prod", executa o deployment em
-      produção; se "dev", executa o deployment em staging.
+      Por padrão, não espera.
+    environment(str?):
+      Ambiente de execução; se "prod", executa o deployment de
+      produção; se "dev", executa o deployment de staging.
   """
-  deployment_name = f"{flow_.name}/{flow_.name}" + (
+  environment = environment or get_current_environment()
+
+  deployment_name = f"{flow.name}/{flow.name}" + (
     "" if environment == "prod" else " (stg)"
   )
   log(f"[create_flow_run] Requisitando execução de flow '{deployment_name}'...")
@@ -180,12 +173,77 @@ def create_flow_run(
   return flow_run
 
 
+def wait_for_flow_run(
+  flow_run_id: UUID, timeout_seconds: int | None = None, raise_if_timeout: bool = True
+):
+  """
+  Aguarda uma execução de flow terminar, seja com sucesso ou erro.
+
+  Args:
+    flow_run_id(UUID): O ID da FlowRun a ser esperada.
+    timeout_seconds(int?):
+      Tempo máximo a esperar o fim da FlowRun, em segundos.
+    raise_if_timeout(bool?):
+      Flag indicando se deve disparar erro caso o tempo
+      máximo expire; True por padrão.
+  Returns:
+    out(bool):
+      Retorna True quando a FlowRun termina. Em caso de
+      timeout_seconds definido e raise_if_timeout=False,
+      retorna False caso o tempo máximo expire.
+  """
+  log(f"Esperando execução de Flow Run com ID [{str(flow_run_id)[:8]}...] terminar...")
+  with get_client(sync_client=True) as client:
+    start_time = time.monotonic()
+    # Desculpa eu sei que é feio mas é literalmente a implementação
+    # do próprio Prefect, quase copiada e colada
+    while True:
+      # Confere o status atual da flow run
+      updated_flow_run = client.read_flow_run(flow_run_id)
+      flow_state = updated_flow_run.state
+      # Se terminou, sucesso
+      if flow_state and flow_state.is_final():
+        return True
+      # Se tivemos timeout
+      if (
+        timeout_seconds is not None and (time.monotonic() - start_time) >= timeout_seconds
+      ):
+        if raise_if_timeout:
+          raise TimeoutError(
+            "Tempo máximo de espera por flow run excedido! "
+            f"flow_run.id='{flow_run_id}', "
+            f"flow_run.state='{updated_flow_run.state}'"
+          )
+        return False
+      time.sleep(15)  # Espera entre conferências de status
+  # :)
+
+
 @authenticated_task
-def wait_for_flow_run(**kwargs):
+def wait_for_flow_run_task(
+  flow_run_id: UUID, timeout_seconds: int | None = None, raise_if_timeout: bool = True
+):
   """
-  Aguarda uma execução de flow terminar
+  Aguarda uma execução de flow terminar, seja com sucesso ou erro.
+
+  Args:
+    flow_run_id(UUID): O ID da FlowRun a ser esperada.
+    timeout_seconds(int?):
+      Tempo máximo a esperar o fim da FlowRun, em segundos.
+    raise_if_timeout(bool?):
+      Flag indicando se deve disparar erro caso o tempo
+      máximo expire; True por padrão.
+  Returns:
+    out(bool):
+      Retorna True quando a FlowRun termina. Em caso de
+      timeout_seconds definido e raise_if_timeout=False,
+      retorna False caso o tempo máximo expire.
   """
-  raise NotImplementedError()  # TODO
+  return wait_for_flow_run(
+    flow_run_id=flow_run_id,
+    timeout_seconds=timeout_seconds,
+    raise_if_timeout=raise_if_timeout,
+  )
 
 
 @authenticated_task
@@ -217,6 +275,7 @@ def flow_config(
   dockerfile: str = None,
   memory: Literal["small", "medium", "large"] = "small",
   mount_gcs: bool = False,
+  region: Optional[Literal["bra"]] = None,
 ) -> dict:
   """
   Retorna uma configuração de flow, a ser usada na variável
@@ -225,12 +284,12 @@ def flow_config(
   Args:
     flow(Flow):
       O flow a ser executado.
-    schedules(list[Schedule]):
+    schedules(list[Schedule]?):
       Lista de schedules para o flow; pode ser vazia/None.
-    dockerfile(str):
+    dockerfile(str?):
       Caminho do Dockerfile customizado que executa o flow.
       Pode ser vazio/None. Ex.: `"./pipelines/datalake/..."`
-    memory(Literal["small", "medium", "large"]):
+    memory(Literal["small", "medium", "large"]?):
       Quantidade de memória RAM disponibilizada para a VM
       executando o flow. Atenção: em Google Cloud Run Jobs,
       não existe disco rígido; o filesystem reside na
@@ -240,12 +299,18 @@ def flow_config(
         muitos dados em "disco".
       * Para `memory="medium"`, são alocados 12 GB de RAM
       * Para `memory="large"`, são alocados 24 GB de RAM
-    mount_gcs(bool):
+    mount_gcs(bool?):
       Flag indicando se um bucket do GCS deve ser montado
       em `/mnt/gcs` ou não. Como não há disco, se for
       necessário escrever arquivos maiores que a RAM
       disponível, é necessário usar um bucket externo.
       Falso por padrão.
+    region(Literal["bra"]?):
+      Identificador interno de região onde o flow será executado.
+      Se None, será a região padrão (prov. us-central1).
+      Tenha em mente que regiões alternativas costumam ser mais
+      caras do que a região padrão; só use se absolutamente
+      necessário (p.ex. geoblocking de websites).
   """
   if not schedules:
     schedules = []
@@ -254,12 +319,16 @@ def flow_config(
   if memory not in ("small", "medium", "large"):
     raise ValueError(f"'{memory}' não é um valor válido para `memory`!")
 
+  if not region:
+    region = None
+
   return {
     "flow": flow,
     "schedules": schedules,
     "dockerfile": dockerfile,
     "memory": memory,
     "gcs": bool(mount_gcs),
+    "region": region,
   }
 
 

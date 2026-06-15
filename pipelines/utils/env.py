@@ -105,6 +105,19 @@ def getenv_or_action(
   return value
 
 
+def setenv_if_empty(key: str, value: str):
+  """
+  Se a variável de ambiente não estiver definida, cria ela
+  com o valor especificado e retorna False; caso contrário,
+  não faz nada, e retorna True.
+  """
+  current_value = getenv(key)
+  if current_value is None:
+    os.environ[key] = value
+    return False
+  return True
+
+
 def is_local_run():
   """
   Retorna `True` se a variável de ambiente `IN_DEBUGGER` é true;
