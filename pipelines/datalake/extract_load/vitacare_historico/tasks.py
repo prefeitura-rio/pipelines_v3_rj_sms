@@ -13,10 +13,10 @@ from sqlalchemy.engine import URL
 from pipelines.datalake.extract_load.vitacare_historico.constants import (
   vitacare_constants,
 )
-from pipelines.datalake.migrate.gcs_to_cloudsql.tasks import (
+from pipelines.datalake.migrate.sqlserver_backup.tasks import (
   start_instance as start_instance_task,
 )
-from pipelines.datalake.migrate.gcs_to_cloudsql.tasks import (
+from pipelines.datalake.migrate.sqlserver_backup.tasks import (
   stop_instance as stop_instance_task,
 )
 from pipelines.utils.cleanup import cleanup_columns_for_bigquery

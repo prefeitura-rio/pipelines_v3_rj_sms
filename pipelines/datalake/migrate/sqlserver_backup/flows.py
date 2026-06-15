@@ -49,7 +49,7 @@ def sqlserver_backup(
     )
 
     if not restore_plan:
-      log("(gcs_to_cloudsql) nenhum backup para restaurar")
+      log("(sqlserver_backup) nenhum backup para restaurar")
       return
 
     instance_started = True
@@ -65,7 +65,7 @@ def sqlserver_backup(
         stop_instance(instance_name=instance_name)
       except Exception as exc:
         log(
-          f"(gcs_to_cloudsql) erro ao desligar instância '{instance_name}': {repr(exc)}",
+          f"(sqlserver_backup) erro ao desligar instância '{instance_name}': {repr(exc)}",
           level="error",
         )
 
