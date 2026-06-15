@@ -4,7 +4,6 @@ from pipelines.utils.datetime import from_relative_date
 from pipelines.utils.google import build_bucket_name
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
-from pipelines.utils.google import build_bucket_name, list_google_drive_files
 
 from .schedules import schedules
 from .tasks import (

@@ -136,8 +136,11 @@ def authenticated_task(
 
 
 def create_flow_run(
-  flow: Flow, parameters: dict = None, wait: bool = False, environment: str | None = None, flow_run_name: str = None,
-
+  flow: Flow,
+  parameters: dict = None,
+  wait: bool = False,
+  environment: str | None = None,
+  flow_run_name: str = None,
 ):
   """
   Cria uma nova flow run de um determinado flow.
