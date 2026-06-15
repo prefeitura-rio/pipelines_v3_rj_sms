@@ -4,7 +4,7 @@ from pipelines.utils.prefect import authenticated_task as task
 
 
 @task
-def foo(text:str) -> str:
+def foo(text: str) -> str:
   log("foo")
 
   return f"{text}"
