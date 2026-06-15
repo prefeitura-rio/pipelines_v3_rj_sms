@@ -354,6 +354,13 @@ cases:
         # Tabela desatualizada
         "rj-sms.projeto_gestacoes.temp_correlacao_prenatal_20250831_192404": ["S/SUBPAV/SAP - BI de Gestantes"]
 
+  # Alerta jobs caros
+  - case_slug: "report_jobs_caros"
+    flow_path: "pipelines.reports.alerta_jobs_caros.flows"
+    flow_name: "report_alerta_jobs_caros"
+    params:
+      environment: dev
+
   # Alerta dos últimos episódios do HCI
   - case_slug: "report-atualizacao-hci"
     flow_path: "pipelines.reports.alerta_atualizacao_tabelas.flows"

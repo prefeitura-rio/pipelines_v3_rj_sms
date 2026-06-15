@@ -98,7 +98,7 @@ def send_discord_embed(
     slug(str): Referência ao canal de destino
     username(str?): Nome de usuário da conta que envia a mensagem
   """
-  asyncio.run(send_discord_webhook(slug=slug, embed_content=contents, username=username))
+  return send_discord_webhook(slug=slug, embed_content=contents, username=username)
 
 
 def send_discord_message(
