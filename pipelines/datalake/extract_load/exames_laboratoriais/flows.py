@@ -12,16 +12,11 @@ from pipelines.utils.datalake import upload_df_to_datalake_task
 from pipelines.utils.datetime import from_relative_date
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import flow, flow_config
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 
 
-@flow(
-  name="Extração: Exames Laboratoriais",
-  owners=[CIT.DANIEL_ID.value],
-  tags=["CIT"],
-)
+@flow(name="Extração: Exames Laboratoriais", owners=[CIT.DANIEL_ID.value], tags=["CIT"])
 def exames_laboratoriais(
   dataset: str = "brutos_exames_laboratoriais",
   environment: str = "dev",
