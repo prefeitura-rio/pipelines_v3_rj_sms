@@ -15,7 +15,9 @@ from .utils import table_name_from_resource
 
 
 @flow(
-  name="Extração: Sisreg API", owners=[CIT.AVELLAR_ID.value, SUBGERAL.MILOSKI_ID.value]
+  name="Extração: Sisreg API",
+  owners=[CIT.AVELLAR_ID.value, SUBGERAL.MILOSKI_ID.value],
+  tags=["CIT", "SUBGERAL"],
 )
 def extract_sisreg_api(
   es_index: Literal[
@@ -51,9 +53,9 @@ def extract_sisreg_api(
       Por padrão, 'brutos_sisreg_api'.
     table_id(str?):
       Nome da tabela onde os dados devem ser inseridos.
-      Se None (padrão), é inferido de 'es_index':
-      * Endpoints `solicitacao-*` vão para a tabela "solicitacoes";
-      * Endpoint `marcacao-*` vai para a tabela "marcacoes".
+      Se None (padrão), é inferido de 'es_index': por exemplo,
+      o endpoint "marcacao-ambulatorial-rj" vai para a tabela
+      "marcacao_ambulatorial_rj".
     environment(str?):
       Ambiente de execução, "dev" (padrão) ou "prod".
   """

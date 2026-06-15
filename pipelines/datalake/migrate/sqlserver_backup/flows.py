@@ -65,7 +65,7 @@ def sqlserver_backup(
   total_success = sum(1 for result in results if result["status"] == "success")
   total_failed = sum(1 for result in results if result["status"] == "failed")
   log(
-    f"(gcs_to_closqlserver_backupudsql) processamento finalizado: "
+    f"(sqlserver_backup) processamento finalizado: "
     f"{total_success} sucesso(s), {total_failed} falha(s)"
   )
   return results

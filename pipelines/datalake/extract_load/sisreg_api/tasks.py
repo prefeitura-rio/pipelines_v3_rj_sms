@@ -30,7 +30,7 @@ def gerar_faixas_de_data(
   """
   Gera uma lista de tuplas (inicio, fim) dividindo o intervalo
   entre data_inicial e data_final em blocos de tamanho 'dias_por_faixa'.
-  * Caso `data_inicio` seja None, será `data_fim` subtraída de 6 meses.
+  * Caso `data_inicio` seja None, será `data_fim` subtraída de 1 ano.
   * Caso `data_fim` seja None, será o dia de hoje.
   """
   dt_fim = parse_date_or_today(data_fim).date()
