@@ -6,10 +6,10 @@ def validate_restore_input(item: dict) -> None:
   Valida os campos mínimos necessários para restauração no Cloud SQL.
 
   Args:
-          item (dict): Item de entrada.
+    item (dict): Item de entrada.
 
   Returns:
-          None
+    None
   """
   if not item.get("source_uri"):
     raise ValueError("Item sem 'source_uri'.")
@@ -25,12 +25,12 @@ def build_gcs_to_cloudsql_result(
   Monta o resultado padronizado do processamento de um item.
 
   Args:
-          item (dict): Item original da etapa.
-          status (str): Status do processamento.
-          error_detail (str, optional): Detalhe do erro, se houver.
+    item (dict): Item original da etapa.
+    status (str): Status do processamento.
+    error_detail (str, optional): Detalhe do erro, se houver.
 
   Returns:
-          dict: Resultado padronizado do processamento.
+    dict: Resultado padronizado do processamento.
   """
   return {
     "source_uri": item.get("source_uri"),

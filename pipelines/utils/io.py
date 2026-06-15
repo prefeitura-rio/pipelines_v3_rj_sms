@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 import os
+import re
 import shutil
 import sys
-from typing import List
 import zipfile
+from datetime import datetime
+from pathlib import Path
+from typing import List
 
 from pipelines.utils.cleanup import prettify_byte_size
 from pipelines.utils.datetime import today_str
 from pipelines.utils.env import is_local_run
 from pipelines.utils.logger import log
-from pipelines.utils.prefect import authenticated_task as task, get_normalized_flow_name
+from pipelines.utils.prefect import authenticated_task as task
+from pipelines.utils.prefect import get_normalized_flow_name
 
 
 def get_gcs_mount_dir():
@@ -73,11 +77,11 @@ def create_data_folders_task() -> dict[str, str]:
   apaga seu conteúdo.
 
   Returns:
-          dict: O dicionário:
-          {
-                  "data": "{cwd}/data/raw"
-                  "partition_directory": "{cwd}/data/partition_directory"
-          }
+    dict: O dicionário:
+    {
+      "data": "{cwd}/data/raw"
+      "partition_directory": "{cwd}/data/partition_directory"
+    }
   """
   try:
     path_raw = os.path.join(os.getcwd(), "data", "raw")
@@ -98,6 +102,96 @@ def create_data_folders_task() -> dict[str, str]:
 
   except Exception as e:  # pylint: disable=W0703
     sys.exit(f"Problema ao criar pastas: {e}")
+
+
+def create_partitions(
+  data_path: str | list[str],
+  partition_directory: str,
+  level: str = "day",
+  partition_date: str = None,
+  file_type: str = "csv",
+) -> None:
+  """
+  Copia arquivos para diretórios particionados por dia ou mês.
+  """
+  log(f"Data path: {data_path}")
+  log(f"Partition directory: {partition_directory}")
+  log(f"Partition level: {level}")
+  log(f"Partition date: {partition_date}")
+  log(f"File type: {file_type}")
+
+  if isinstance(data_path, str):
+    if os.path.isdir(data_path):
+      files = Path(data_path).glob(f"*.{file_type}")
+    else:
+      files = [data_path]
+  elif isinstance(data_path, list):
+    files = data_path
+  else:
+    raise ValueError("data_path deve ser uma string ou uma lista")
+
+  for file_name in files:
+    if level == "day":
+      if partition_date is None:
+        date_match = re.search(r"\d{4}-\d{2}-\d{2}", str(file_name))
+        if not date_match:
+          raise ValueError(
+            "Nome do arquivo deve conter uma data YYYY-MM-DD para partição diária"
+          )
+        parsed_date = datetime.strptime(date_match.group(), "%Y-%m-%d")
+      else:
+        parsed_date = datetime.strptime(partition_date, "%Y-%m-%d")
+
+      output_directory = (
+        f"{partition_directory}/ano_particao={int(parsed_date.strftime('%Y'))}"
+        f"/mes_particao={int(parsed_date.strftime('%m'))}"
+        f"/data_particao={parsed_date.strftime('%Y-%m-%d')}"
+      )
+
+    elif level == "month":
+      if partition_date is None:
+        date_match = re.search(r"\d{4}-\d{2}", str(file_name))
+        if not date_match:
+          raise ValueError(
+            "Nome do arquivo deve conter uma data YYYY-MM para partição mensal"
+          )
+        parsed_date = datetime.strptime(date_match.group(), "%Y-%m")
+      else:
+        parsed_date = datetime.strptime(partition_date, "%Y-%m")
+
+      output_directory = (
+        f"{partition_directory}/ano_particao={int(parsed_date.strftime('%Y'))}"
+        f"/mes_particao={parsed_date.strftime('%m')}"
+      )
+
+    else:
+      raise ValueError("level deve ser 'day' ou 'month'")
+
+    os.makedirs(output_directory, exist_ok=True)
+    shutil.copy(file_name, output_directory)
+    log(f"Arquivo {file_name} copiado para partição: {output_directory}")
+
+  log("Partições criadas com sucesso")
+
+
+@task
+def create_partitions_task(
+  data_path: str | list[str],
+  partition_directory: str,
+  level: str = "day",
+  partition_date: str = None,
+  file_type: str = "csv",
+) -> None:
+  """
+  Task Prefect v3 para copiar arquivos para diretórios particionados.
+  """
+  return create_partitions(
+    data_path=data_path,
+    partition_directory=partition_directory,
+    level=level,
+    partition_date=partition_date,
+    file_type=file_type,
+  )
 
 
 def list_files_in_folder(folder: str, endswith: str = None, recursive: bool = False):
@@ -131,13 +225,13 @@ def list_files_in_folder_task(folder: str, endswith: str = None, recursive: bool
   """
   Retorna uma lista com o caminho de arquivos em uma pasta.
   Args:
-          folder(str):
-                  Caminho da pasta
-          endswith(str?):
-                  Filtro pelo final de arquivos; ex. `endswith=".csv"`
-          recursive(bool?):
-                  Quando `recursive=True` é passado, também procura por
-                  arquivos em subpastas
+    folder(str):
+      Caminho da pasta
+    endswith(str?):
+      Filtro pelo final de arquivos; ex. `endswith=".csv"`
+    recursive(bool?):
+      Quando `recursive=True` é passado, também procura por
+      arquivos em subpastas
   """
   return list_files_in_folder(folder, endswith=endswith, recursive=recursive)
 

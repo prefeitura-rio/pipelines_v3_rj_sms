@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from pipelines.utils.prefect import flow, flow_config, rename_flow_run
+from pipelines.constants import CIT
 from pipelines.utils.git import download_gh_repo_task
-from pipelines.utils.state_handlers import handle_flow_state_change
-from pipelines.constants import constants as global_consts
+from pipelines.utils.prefect import flow, flow_config, rename_flow_run
 
 from .schedules import schedules
 from .tasks import (
@@ -12,16 +11,11 @@ from .tasks import (
   estimate_dbt_costs,
   execute_dbt,
   get_dbt_target_from_environment,
-  should_upload_artifacts,
   upload_dbt_artifacts_to_gcs,
 )
 
 
-@flow(
-  name="DataLake - Transformação - DBT",
-  state_handlers=[handle_flow_state_change],
-  owners=[global_consts.CIT_ID.value],
-)
+@flow(name="Transformação: DBT", owners=[CIT.CIT_ID.value], tags=["CIT"])
 def sms_execute_dbt(
   command: str = "test",
   select: str | None = None,
@@ -29,7 +23,7 @@ def sms_execute_dbt(
   flag: str | None = None,
   target: str | None = None,
   rename_flow: bool = False,
-  send_discord_report: bool = False,
+  send_discord_report: bool = True,
   environment: str = "dev",
 ):
   #######################################
@@ -89,8 +83,7 @@ def sms_execute_dbt(
   #######################################
   ##  3) Faz upload para GCS
   #######################################
-  should_upload = should_upload_artifacts(command=command)
-  if should_upload:
+  if command in ("build", "source freshness"):
     upload_dbt_artifacts_to_gcs(
       dbt_path=repo_path, environment=environment, wait_for=[execution_info]
     )

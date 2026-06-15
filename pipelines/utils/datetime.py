@@ -3,10 +3,10 @@ import datetime
 import re
 from typing import Optional
 from zoneinfo import ZoneInfo
+
 from dateutil import parser
 
 from pipelines.utils.logger import log
-
 
 UTC_TZ = ZoneInfo("UTC")
 SAO_PAULO_TZ = ZoneInfo("America/Sao_Paulo")
@@ -17,18 +17,23 @@ def now(utc: bool = False) -> datetime.datetime:
   Retorna datetime.now() ou em BRT (padrão) ou em UTC
 
   Args:
-          utc(bool?):
-                  Se deve usar fuso horário UTC. Por padrão, é `False`,
-                  e usa o fuso BRT (America/Sao_Paulo).
+    utc(bool?):
+      Se deve usar fuso horário UTC. Por padrão, é `False`,
+      e usa o fuso BRT (America/Sao_Paulo).
   """
   if utc:
     return datetime.datetime.now(tz=UTC_TZ)
   return datetime.datetime.now(tz=SAO_PAULO_TZ)
 
 
-def today_str() -> str:
-  """Retorna o dia atual (fuso BRT) como 'YYYY-MM-DD'"""
-  return now().date().isoformat()
+def now_naive(utc: bool = False) -> datetime.datetime:
+  """
+  Retorna datetime.now() sem informação de timezone.
+
+  Por padrão, preserva o horário local BRT retornado por `now()` e remove
+  apenas o `tzinfo`.
+  """
+  return now(utc=utc).replace(tzinfo=None)
 
 
 def now_str() -> str:
@@ -36,7 +41,18 @@ def now_str() -> str:
   return now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+def today() -> datetime.date:
+  """Retorna datetime.now().date(), em fuso BRT"""
+  return now().date()
+
+
+def today_str() -> str:
+  """Retorna o dia atual (fuso BRT) como 'YYYY-MM-DD'"""
+  return today().isoformat()
+
+
 def current_year() -> int:
+  """Retorna o ano atual (fuso BRT)"""
   return now().year
 
 
@@ -47,19 +63,18 @@ def from_relative_date(
   Converte uma data relativa para um objeto de data.
 
   Suporta os formatos:
-          `D-N`: data atual menos `N` dias
-          `M-N`: primeiro dia do mês atual menos `N` meses
-          `Y-N`: primeiro dia do ano atual menos `N` anos
+    `D-N`: data atual menos `N` dias
+    `M-N`: primeiro dia do mês atual menos `N` meses
+    `Y-N`: primeiro dia do ano atual menos `N` anos
 
   Caso o valor não seja uma data relativa, tenta convertê-lo
   para `datetime` via `datetime.fromisoformat()`.
   """
   if relative_date is None:
-    log("Relative date is None, returning None", level="info")
+    log("Data relativa é `None`; retornando `None`")
     return None
 
-  current_datetime = now()
-  current_date = current_datetime.date()
+  current_date = today()
 
   if relative_date.startswith(("D-", "M-", "Y-")):
     quantity = int(relative_date.split("-", maxsplit=1)[1])
@@ -74,11 +89,47 @@ def from_relative_date(
     else:
       result = datetime.date(current_date.year - quantity, 1, 1)
   else:
-    log("The input dated is not a relative date, converting to datetime", level="info")
+    log(
+      f"O valor passado, '{relative_date}', não é uma data relativa; "
+      "tentando conversão para datetime",
+      level="warning",
+    )
     result = datetime.datetime.fromisoformat(relative_date)
 
-  log(f"Relative date is {relative_date}, returning {result}", level="info")
+  log(f"Data relativa '{relative_date}' calculada como '{result}'")
   return result
+
+
+def is_valid_date(day: int, month: int, year: int) -> bool:
+  try:
+    datetime.date(year, month, day)
+    return True
+  except ValueError:
+    return False
+
+
+def is_valid_YYYYMMDD(date: str) -> bool:
+  """
+  Retorna True para data 'YYYY-MM-DD' válida; False caso contrário
+  """
+  if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", date):
+    log(f"Data '{date}' é inválida!", level="warning")
+    return False
+
+  year, month, day = [int(v) for v in date.split("-")]
+  return is_valid_date(day, month, year)
+
+
+def is_valid_DDMMYYYY(date: str) -> bool:
+  """
+  Retorna True para data 'DD/MM/YYYY' válida; False caso contrário
+  """
+  if not re.fullmatch(r"[0-9]{2}/[0-9]{2}/[0-9]{4}", date):
+    log(f"Data '{date}' é inválida!", level="warning")
+    return False
+
+  day, month, year = [int(v) for v in date.split("/")]
+  return is_valid_date(day, month, year)
 
 
 def parse_date_or_today(
@@ -120,10 +171,10 @@ def parse_date_or_today(
   # Caso contrário, vamos tentar interpretar a string recebida
   date = date.strip()
   # Se recebemos o formato ISO 'YYYY-MM-DD'
-  if re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", date):
+  if is_valid_YYYYMMDD(date):
     return datetime.datetime.fromisoformat(date)
   # Se recebemos o formato 'DD/MM/YYYY'
-  if re.fullmatch(r"[0-9]{2}/[0-9]{2}/[0-9]{4}", date):
+  if is_valid_DDMMYYYY(date):
     return datetime.datetime.strptime(date, "%d/%m/%Y")
   # Senão, faz última tentativa de parsing da string, pode dar erro
   return parser.parse(date, ignoretz=True, dayfirst=True)
@@ -163,9 +214,9 @@ def get_age_from_birthdate(birthdate: str, today: str = None) -> int | None:
   >>> get_age_from_birthdate("")
   None
   >>> get_age_from_birthdate("banana")
-  [...] WARNING - prefect | Formato esperado é `YYYY-MM-DD`; recebido 'banana'
+  [...] WARNING - prefect | Data inválida 'banana'
   >>> get_age_from_birthdate("2000-01-01", today="banana")
-  [...] WARNING - prefect | Formato esperado é `YYYY-MM-DD`; recebido 'banana'
+  [...] WARNING - prefect | Data inválida 'banana'
   """
   if birthdate is None:
     return None
@@ -174,12 +225,12 @@ def get_age_from_birthdate(birthdate: str, today: str = None) -> int | None:
   if len(birthdate) <= 0:
     return None
 
-  if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", birthdate):
-    log(f"Formato esperado é `YYYY-MM-DD`; recebido {repr(birthdate)}", level="warning")
+  if not is_valid_YYYYMMDD(birthdate):
+    log(f"Data inválida {repr(birthdate)}", level="warning")
     return None
 
-  if today is not None and not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", today):
-    log(f"Formato esperado é `YYYY-MM-DD`; recebido {repr(today)}", level="warning")
+  if today is not None and not is_valid_YYYYMMDD(today):
+    log(f"Data inválida {repr(today)}", level="warning")
     return None
 
   dt_today = datetime.datetime.fromisoformat(today) if today is not None else now()

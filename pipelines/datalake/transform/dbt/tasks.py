@@ -1,26 +1,31 @@
 # -*- coding: utf-8 -*-
-
-from datetime import datetime
 import os
+import secrets
 import shutil
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
+import pandas as pd
 from dbt.cli.main import dbtRunner, dbtRunnerResult
 from google.cloud import bigquery
-import pandas as pd
 from prefect.states import Failed
 
 from pipelines.utils.api import convert_usd_to_brl
 from pipelines.utils.cleanup import process_null_str
 from pipelines.utils.datetime import now
-from pipelines.utils.env import environment_is_valid, get_google_project_for_environment
+from pipelines.utils.env import (
+  environment_is_valid,
+  get_google_project_for_environment,
+  setenv_if_empty,
+)
 from pipelines.utils.google import download_path_from_bucket, upload_to_cloud_storage
 from pipelines.utils.logger import log
 from pipelines.utils.monitor import send_discord_message
-from pipelines.utils.prefect import authenticated_task as task, get_run_parameters
+from pipelines.utils.prefect import authenticated_task as task
+from pipelines.utils.prefect import get_run_parameters
 
-from .utils import Summarizer, log_to_file, process_dbt_logs
 from .constants import constants as dbt_constants
+from .utils import Summarizer, log_to_file, process_dbt_logs
 
 
 @task
@@ -37,25 +42,27 @@ def execute_dbt(
   Executa um comando dbt com os parâmetros especificados.
 
   Args:
-          repository_path (str):
-                  Caminho, na máquina local, para o repositório do dbt.
-          command (str?):
-                  O comando dbt a ser executado; p.ex.: "run", "build", etc.
-                  Possui valor padrão de "run".
-          target (str?):
-                  O target (`--target`) do dbt; p.ex.: "dev", "ci", "prod".
-                  Possui valor padrão de "dev".
-          select (str?):
-                  Valor passado ao argumento `--select`. É vazio por padrão.
-          exclude (str?):
-                  Valor passado ao argumento `--exclude`. É vazio por padrão.
-          state (str?):
-                  Valor passado ao argumento `--state`. É vazio por padrão.
-          flag (str?):
-                  Flags adicionais passadas ao comando.
+    repository_path (str):
+      Caminho, na máquina local, para o repositório do dbt.
+    command (str?):
+      O comando dbt a ser executado; p.ex.: "run", "build", etc.
+      Possui valor padrão de "run".
+    target (str?):
+      O target (`--target`) do dbt; p.ex.: "dev", "ci", "prod".
+      Possui valor padrão de "dev".
+    select (str?):
+      Valor passado ao argumento `--select`. É vazio por padrão.
+    exclude (str?):
+      Valor passado ao argumento `--exclude`. É vazio por padrão.
+    state (str?):
+      Valor passado ao argumento `--state`. É vazio por padrão.
+    flag (str?):
+      Flags adicionais passadas ao comando.
   """
-  commands = command.split(" ")
+  # Cria HASH_SECRET no ambiente se não existir
+  setenv_if_empty("HASH_SECRET", secrets.token_hex(32))
 
+  commands = command.split(" ")
   cli_args = commands + [
     "--profiles-dir",
     repository_path,
@@ -114,6 +121,10 @@ def estimate_dbt_costs(execution_info: dict, environment: str) -> float:
   """
   affected_datasets = []
   running_result: dbtRunnerResult = execution_info["running_result"]
+  if not running_result.result:
+    log(f"Erro ao executar dbt! {repr(running_result)}", level="error")
+    raise running_result.exception
+
   for command_result in running_result.result:
     affected_datasets.append(command_result.node.schema)
 
@@ -127,24 +138,24 @@ def estimate_dbt_costs(execution_info: dict, environment: str) -> float:
   query_string = '/* {"app": "dbt",%'
   project_id = get_google_project_for_environment(environment=environment)
   query = f"""
-	SELECT
-		destination_table.project_id as destination_project_id,
-		destination_table.dataset_id as destination_dataset_id,
-		destination_table.table_id as destination_table_id,
-		CASE statement_type
-			WHEN 'SCRIPT'
-				THEN 0
-			WHEN 'CREATE_MODEL'
-				THEN 50 * 6.25 * (total_bytes_billed / 1024 / 1024 / 1024 / 1024)
-			ELSE 6.25 * (total_bytes_billed / 1024 / 1024 / 1024 / 1024)
-		END as cost_in_usd,
-	FROM `{project_id}.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
-	WHERE
-		query like '{query_string}' and
-		creation_time >= '{start_time}' and
-		creation_time <= '{end_time}'
-	ORDER BY creation_time
-	"""
+  SELECT
+    destination_table.project_id as destination_project_id,
+    destination_table.dataset_id as destination_dataset_id,
+    destination_table.table_id as destination_table_id,
+    CASE statement_type
+      WHEN 'SCRIPT'
+        THEN 0
+      WHEN 'CREATE_MODEL'
+        THEN 50 * 6.25 * (total_bytes_billed / 1024 / 1024 / 1024 / 1024)
+      ELSE 6.25 * (total_bytes_billed / 1024 / 1024 / 1024 / 1024)
+    END as cost_in_usd,
+  FROM `{project_id}.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+  WHERE
+    query like '{query_string}' and
+    creation_time >= '{start_time}' and
+    creation_time <= '{end_time}'
+  ORDER BY creation_time
+  """
   client = bigquery.Client()
   query_job = client.query(query)
   results: pd.DataFrame = query_job.result().to_dataframe()
@@ -163,13 +174,13 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
   uma falha do flow se detectar erro na execução.
 
   Args:
-          execution_info(dict):
-                  Dicionário com informações sobre a execução. Deve conter chaves
-                  `command` (str), `running_result` (dbtRunnerResult),
-                  `execution_time` (float), `start_time`, `end_time` (datetime)
-                  e `log_path` (str).
-          estimated_total_cost(float):
-                  Custo estimado em BRL.
+    execution_info(dict):
+      Dicionário com informações sobre a execução. Deve conter chaves
+      `command` (str), `running_result` (dbtRunnerResult),
+      `execution_time` (float), `start_time`, `end_time` (datetime)
+      e `log_path` (str).
+    estimated_total_cost(float):
+      Custo estimado em BRL.
   """
   runner_result: dbtRunnerResult = execution_info["running_result"]
   running_results = runner_result.result.results
@@ -273,11 +284,11 @@ def get_dbt_target_from_environment(environment: str, requested_target: str = No
   # Nem todo target existe/é permitido
   # https://github.com/prefeitura-rio/queries-rj-sms/blob/master/profiles.yml
   allowed_targets = [
-		"prod",    # rj-sms     (dataset.table)
-		"dev",     # rj-sms-dev (username__dataset.table)
-		"ci",      # rj-sms-dev (dataset.table)
-		"sandbox", # rj-sms-sandbox (dataset.table)
-	]  # fmt: skip
+    "prod",    # rj-sms     (dataset.table)
+    "dev",     # rj-sms-dev (username__dataset.table)
+    "ci",      # rj-sms-dev (dataset.table)
+    "sandbox", # rj-sms-sandbox (dataset.table)
+  ]  # fmt: skip
 
   if requested_target in allowed_targets:
     return requested_target
@@ -304,12 +315,6 @@ def download_dbt_artifacts_from_gcs(dbt_path: str, environment: str):
   except Exception as e:
     log(f"Erro baixando dbt artifacts do bucket: {e}", level="error")
     return None
-
-
-@task
-def should_upload_artifacts(command: str):
-  """Confere se `command` é `"build"` ou `"source freshness"`"""
-  return command in ["build", "source freshness"]
 
 
 @task

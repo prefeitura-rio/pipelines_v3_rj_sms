@@ -3,23 +3,30 @@ name = "pipelines-v3-rj-sms"
 version = "0.0.1"
 description = "Pipelines"
 readme = "README.md"
-requires-python = ">=3.13,<3.14"  # dbt não existe pra Python 3.14+
+requires-python = ">=3.13,<3.14"  # dbt ainda não existe pra Python 3.14+
 dependencies = [
+  "azure-storage-blob>=12.27.1",  # TPC é Azure
   "basedosdados>=2.0.3",
+  "beautifulsoup4>=4.14.3",  # DO-RJ é BeautifulSoup a rodo
   "db-dtypes>=1.4.4",  # BigQuery reclama sem db-dtypes
   "dbt-bigquery>=1.11.1",
   "dbt-core>=1.11.7",
   "discord-py>=2.6.4",
+  "elasticsearch>=9.4.0",  # API do Sisreg é ElasticSearch
   "google-cloud-bigquery>=3.40.1",
   "google-cloud-storage>=3,<3.2",  # dbt-bigquery requer google-cloud-storage<3.2
-  "gspread>=6.2.1",
+  "gspread>=6.2.1",  # Task de baixar Google Sheets usa
   "infisicalsdk>=1.0.16",
+  "lxml>=6.1.0",
   "pandas>=3.0.1",
   "prefect>=3.6",
+  "psycopg2-binary>=2.9.12",  # pd.read_sql() requer psycopg2 pra ler Postgres
 ]
 
 [dependency-groups]
 dev = [
+  "isort>=8.0.1",
+  "pre-commit>=4.6.0",
   "prefect-docker>=0.6.5",
   "ruff>=0.15.6",
   "taskipy>=1.14.1",
@@ -31,6 +38,11 @@ exclude-newer = "1 week"
 
 [tool.prefect]
 logging.level = "INFO"
+
+[tool.isort]
+profile = "black"
+line_length = 90
+indent = 2
 
 [tool.ruff]
 line-length = 90
@@ -48,5 +60,6 @@ line-ending = "lf"
 skip-magic-trailing-comma = true
 
 [tool.taskipy.tasks]
-lint = "ruff check --no-fix . && ruff format --check ."
-lint-autofix = "ruff check --fix . && ruff format ."
+isort = "isort ."
+lint = "echo 'isort'; isort . --check; echo '\nruff lint'; ruff check --no-fix .; echo '\nruff format'; ruff format --check ."
+lint-autofix = "echo 'isort'; isort .; echo '\nruff lint'; ruff check --fix .; echo '\nruff format'; ruff format ."

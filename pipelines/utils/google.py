@@ -9,15 +9,14 @@ from typing import Iterator, List, Literal
 import gspread
 import pandas as pd
 import requests
-
-from google.oauth2 import service_account
 from google.auth.transport import requests as google_requests
 from google.cloud import storage
 from google.cloud.storage.blob import Blob
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
-from pipelines.utils.cleanup import prettify_byte_size, cleanup_columns_for_bigquery
+from pipelines.utils.cleanup import cleanup_columns_for_bigquery, prettify_byte_size
 from pipelines.utils.datetime import from_relative_date
 from pipelines.utils.infisical import get_credentials_from_env
 from pipelines.utils.io import create_tmp_data_folder
@@ -38,11 +37,11 @@ def download_google_sheets_task(
   um arquivo CSV local.
 
   Args:
-          url(str): URL da planilha a ser baixada
-          file_path(str): Caminho de destino do arquivo
-          file_name(str): Nome do arquivo local que será criado
-          gsheets_sheet_name(str): Nome da planilha (aba) a ser baixada
-          csv_delimiter(str?): Delimitador a ser usado no CSV, ";" por padrão
+    url(str): URL da planilha a ser baixada
+    file_path(str): Caminho de destino do arquivo
+    file_name(str): Nome do arquivo local que será criado
+    gsheets_sheet_name(str): Nome da planilha (aba) a ser baixada
+    csv_delimiter(str?): Delimitador a ser usado no CSV, ";" por padrão
   """
   if not file_name.endswith(".csv"):
     file_name = file_name + ".csv"
@@ -68,11 +67,11 @@ def download_google_sheets_task(
   gspread_client = gspread.authorize(credentials)
   # Cria dataframe a partir da planilha
   dataframe = pd.DataFrame(
-		gspread_client
-		.open_by_url(url)
-		.worksheet(gsheets_sheet_name)
-		.get_values()
-	)  # fmt: skip
+    gspread_client
+    .open_by_url(url)
+    .worksheet(gsheets_sheet_name)
+    .get_values()
+  )  # fmt: skip
   # Primeira linha contém cabeçalho
   new_header = dataframe.iloc[0]
   # Remove cabeçalho dos dados
@@ -99,12 +98,12 @@ def download_path_from_bucket(
   Baixa arquivos do Google Cloud Storage para um caminho especificado
 
   Args:
-          path (str): Caminho local para onde baixar os arquivos
-          bucket_name (str): Nome do bucket do Google Cloud Storage
-          blob_prefix (str?): Prefixo dos blobs para baixar. Por padrão, é `None`
+    path (str): Caminho local para onde baixar os arquivos
+    bucket_name (str): Nome do bucket do Google Cloud Storage
+    blob_prefix (str?): Prefixo dos blobs para baixar. Por padrão, é `None`
 
   Returns:
-          out (list[str]): Lista com caminho local de cada arquivo baixado
+    out (list[str]): Lista com caminho local de cada arquivo baixado
   """
   client = storage.Client()
   bucket = client.get_bucket(bucket_name)
@@ -214,17 +213,17 @@ def upload_to_cloud_storage(
   Faz upload de arquivo ou pasta para o Google Cloud Storage
 
   Args:
-          path (str):
-                  Caminho do arquivo ou pasta a ser enviado.
-          bucket_name (str):
-                  Nome do bucket no Google Cloud Storage.
-          blob_prefix (str?):
-                  Caminho no bucket para o arquivo. Por padrão, é `None`.
-          if_exists (str?):
-                  O que fazer se o dado já existir no GCS: `"raise"` dispara erro de conflito;
-                  `"replace"` substitui o dado; `"pass"` não faz nada. Por padrão, é `"replace"`.
+    path (str):
+      Caminho do arquivo ou pasta a ser enviado.
+    bucket_name (str):
+      Nome do bucket no Google Cloud Storage.
+    blob_prefix (str?):
+      Caminho no bucket para o arquivo. Por padrão, é `None`.
+    if_exists (str?):
+      O que fazer se o dado já existir no GCS: `"raise"` dispara erro de conflito;
+      `"replace"` substitui o dado; `"pass"` não faz nada. Por padrão, é `"replace"`.
   """
-  log(f"Fazendo upload de '{path}' para 'gs://{bucket_name}/{blob_prefix}'")
+  log(f"Fazendo upload de '{path}' para 'gs://{bucket_name}/{blob_prefix or ''}'")
   client = storage.Client()
   bucket = client.get_bucket(bucket_name)
 
@@ -291,15 +290,15 @@ def upload_to_cloud_storage_task(
   Faz upload de arquivo ou pasta para o Google Cloud Storage
 
   Args:
-          path (str):
-                  Caminho do arquivo ou pasta a ser enviado.
-          bucket_name (str):
-                  Nome do bucket no Google Cloud Storage.
-          blob_prefix (str?):
-                  Caminho no bucket para o arquivo. Por padrão, é `None`.
-          if_exists (str?):
-                  O que fazer se o dado já existir no GCS: `"raise"` dispara erro de conflito;
-                  `"replace"` substitui o dado; `"pass"` não faz nada. Por padrão, é `"replace"`.
+    path (str):
+      Caminho do arquivo ou pasta a ser enviado.
+    bucket_name (str):
+      Nome do bucket no Google Cloud Storage.
+    blob_prefix (str?):
+      Caminho no bucket para o arquivo. Por padrão, é `None`.
+    if_exists (str?):
+      O que fazer se o dado já existir no GCS: `"raise"` dispara erro de conflito;
+      `"replace"` substitui o dado; `"pass"` não faz nada. Por padrão, é `"replace"`.
   """
   return upload_to_cloud_storage(
     path, bucket_name, blob_prefix=blob_prefix, if_exists=if_exists
@@ -311,11 +310,11 @@ def build_bucket_name(bucket_name: str, environment: str) -> str:
   Monta o nome final do bucket com base no ambiente.
 
   Args:
-          bucket_name (str): Nome base do bucket.
-          environment (str): Ambiente atual da execução.
+    bucket_name (str): Nome base do bucket.
+    environment (str): Ambiente atual da execução.
 
   Returns:
-          str: Nome final do bucket.
+    str: Nome final do bucket.
   """
   if environment in ["prod", "local-prod"]:
     resolved_bucket_name = bucket_name
@@ -351,12 +350,12 @@ def list_google_drive_files(
   Lista arquivos de uma pasta do Google Drive, incluindo subpastas.
 
   Args:
-          folder_id (str): ID da pasta raiz no Google Drive.
-          last_modified_date (str, optional): Data mínima de modificação para filtrar arquivos.
-          last_modified_end_date (str, optional): Data máxima de modificação para filtrar arquivos.
+    folder_id (str): ID da pasta raiz no Google Drive.
+    last_modified_date (str, optional): Data mínima de modificação para filtrar arquivos.
+    last_modified_end_date (str, optional): Data máxima de modificação para filtrar arquivos.
 
   Returns:
-          List[dict[str, str]]: Lista de arquivos encontrados com metadados básicos.
+    List[dict[str, str]]: Lista de arquivos encontrados com metadados básicos.
   """
   service = get_google_drive_service()
   modified_since = from_relative_date(last_modified_date)
@@ -444,11 +443,11 @@ def download_google_drive_file(file_id: str, destination_path: str = None) -> st
   Baixa um arquivo do Google Drive para um caminho local.
 
   Args:
-          file_id (str): ID do arquivo no Google Drive.
-          destination_path (str, optional): Caminho local do arquivo ou pasta de destino.
+    file_id (str): ID do arquivo no Google Drive.
+    destination_path (str, optional): Caminho local do arquivo ou pasta de destino.
 
   Returns:
-          str: Caminho final do arquivo baixado.
+    str: Caminho final do arquivo baixado.
   """
   service = get_google_drive_service()
   file_metadata = (
@@ -488,10 +487,10 @@ def get_access_token(scopes: list[str] = None) -> str:
   Obtém um access token OAuth2 para autenticar chamadas na API do Cloud SQL.
 
   Args:
-          scopes (list[str], optional): Escopos OAuth2 usados na autenticação.
+    scopes (list[str], optional): Escopos OAuth2 usados na autenticação.
 
   Returns:
-          str: Access token válido para autenticação na API.
+    str: Access token válido para autenticação na API.
   """
   if scopes is None:
     scopes = ["https://www.googleapis.com/auth/cloud-platform"]
@@ -510,13 +509,13 @@ def call_cloudsql_api(
   Faz uma chamada autenticada para a API Admin do Cloud SQL.
 
   Args:
-          method (str): Método HTTP da requisição (GET, POST, DELETE, etc).
-          path (str): Caminho da API relativo ao projeto (ex: instances, instances/{instance}).
-          payload (dict, optional): Corpo JSON enviado na requisição.
-          api_base_url (str, optional): URL base da API. Se não informado, usa o padrão.
+    method (str): Método HTTP da requisição (GET, POST, DELETE, etc).
+    path (str): Caminho da API relativo ao projeto (ex: instances, instances/{instance}).
+    payload (dict, optional): Corpo JSON enviado na requisição.
+    api_base_url (str, optional): URL base da API. Se não informado, usa o padrão.
 
   Returns:
-          dict | list | None: Resposta JSON parseada, quando houver conteúdo.
+    dict | list | None: Resposta JSON parseada, quando houver conteúdo.
   """
   if api_base_url is None:
     api_base_url = "https://sqladmin.googleapis.com/sql/v1beta4/projects/rj-sms-dev"
@@ -553,12 +552,9 @@ def wait_for_operations(
   Aguarda até que a operação mais recente de uma instância Cloud SQL termine.
 
   Args:
-          instance_name (str): Nome da instância Cloud SQL.
-          max_attempts (int, optional): Número máximo de tentativas de polling.
-          sleep_seconds (int, optional): Intervalo em segundos entre tentativas.
-
-  Returns:
-          None
+    instance_name (str): Nome da instância Cloud SQL.
+    max_attempts (int, optional): Número máximo de tentativas de polling.
+    sleep_seconds (int, optional): Intervalo em segundos entre tentativas.
   """
   log(
     f"(wait_for_operations) aguardando operações do Cloud SQL para a "
@@ -601,10 +597,10 @@ def get_instance_status(instance_name: str) -> dict:
   Obtém o status atual de uma instância Cloud SQL.
 
   Args:
-          instance_name (str): Nome da instância Cloud SQL.
+    instance_name (str): Nome da instância Cloud SQL.
 
   Returns:
-          dict: Estado atual e activation policy da instância.
+    dict: Estado atual e activation policy da instância.
   """
   log(
     f"(get_instance_status) consultando status da instância Cloud SQL '{instance_name}'"
@@ -629,10 +625,10 @@ def ensure_instance_running(instance_name: str) -> None:
   Garante que uma instância Cloud SQL esteja ligada.
 
   Args:
-          instance_name (str): Nome da instância Cloud SQL.
+    instance_name (str): Nome da instância Cloud SQL.
 
   Returns:
-          None
+    None
   """
   status = get_instance_status(instance_name)
   if status["activation_policy"] == "ALWAYS" and status["state"] != "STOPPED":
@@ -689,11 +685,8 @@ def delete_database(instance_name: str, database_name: str) -> None:
   Remove uma database de uma instância Cloud SQL.
 
   Args:
-          instance_name (str): Nome da instância Cloud SQL.
-          database_name (str): Nome da database a ser removida.
-
-  Returns:
-          None
+    instance_name (str): Nome da instância Cloud SQL.
+    database_name (str): Nome da database a ser removida.
   """
   log(
     f"(delete_database) deletando database '{database_name}' "
@@ -720,12 +713,9 @@ def import_backup_to_database(
   Importa um arquivo de backup do GCS para uma database do Cloud SQL.
 
   Args:
-          instance_name (str): Nome da instância Cloud SQL.
-          source_uri (str): URI `gs://` do arquivo de backup.
-          database_name (str): Nome da database de destino.
-
-  Returns:
-          None
+    instance_name (str): Nome da instância Cloud SQL.
+    source_uri (str): URI `gs://` do arquivo de backup.
+    database_name (str): Nome da database de destino.
   """
   log(
     f"(import_backup_to_database) importando backup '{source_uri}' "

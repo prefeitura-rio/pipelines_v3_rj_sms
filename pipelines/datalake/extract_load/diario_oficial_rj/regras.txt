@@ -1,0 +1,24 @@
+Queremos:
+* Atos do Prefeito
+    > Decretos N
+* Secretaria Municipal de Saúde
+    > Resolução N
+* Controladoria Geral do Municípo
+    > Resolução N
+        (excluir pasta Despachos)
+    > Comissão de Qualificação de Organizações Sociais
+* Tribunal de Contas do Municípo
+    > Resolução N
+        (excluir pasta Despachos)
+    > Outros
+        (excluir pasta Despachos)
+* Aviso Editais e Termos de Contratos
+    > Secretaria Municipal de Saúde
+        > Avisos
+        > Outros
+    > Controladoria Geral do Municípo
+        > Resolução N
+            (excluir pasta Despachos)
+    > Tribunal de Contas do Municípo
+        > Outros
+            (excluir pasta Despachos)

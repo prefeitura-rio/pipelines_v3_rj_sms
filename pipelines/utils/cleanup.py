@@ -1,11 +1,25 @@
 # -*- coding: utf-8 -*-
 import re
-from typing import List, Optional
 import unicodedata
+from typing import List, Optional
+
 import pandas as pd
 
 
-def cleanup_bigquery_name(name: str) -> str:
+def remove_accents(text: str) -> str:
+  """
+  Remove acentos e marcas (ex. Á -> A; Ç -> C) de um texto
+  """
+  return "".join(
+    [
+      char
+      for char in unicodedata.normalize("NFKD", text)
+      if not unicodedata.combining(char)
+    ]
+  )
+
+
+def cleanup_bigquery_name(name: str, lowercase: bool = False) -> str:
   """
   Limpa nome de colunas ou tabelas no BigQuery
   - Remove acentos de letras
@@ -14,7 +28,7 @@ def cleanup_bigquery_name(name: str) -> str:
   stripped = str(name).strip()
   if not name or len(stripped) <= 0:
     raise ValueError("Nome não pode ser nulo ou vazio!")
-  # Normaliza: Á -> A´ -> A
+  # Normaliza Á -> A´ -> A, remove caracteres não-ASCII
   normalized = (
     # Separa acentos das letras
     unicodedata.normalize("NFKD", stripped)
@@ -24,6 +38,8 @@ def cleanup_bigquery_name(name: str) -> str:
   )
   # Troca símbolos, espaços, etc por '_'
   only_alphanumeric = re.sub(r"[^A-Za-z0-9_]", "_", normalized)
+  if lowercase:
+    only_alphanumeric = only_alphanumeric.lower()
   # Remove underlines excessivos i.e. 'a_______b___' -> 'a__b'
   no_excessive_underlines = re.sub(r"_{3,}", "__", only_alphanumeric).strip("_")
   if len(no_excessive_underlines) <= 0:
@@ -36,7 +52,10 @@ def cleanup_bigquery_name(name: str) -> str:
 
 
 def cleanup_columns_for_bigquery(
-  df: pd.DataFrame, lowercase: bool = False, raise_on_repeats: bool = False
+  df: pd.DataFrame,
+  lowercase: bool = False,
+  raise_on_repeats: bool = False,
+  ignore_empty: bool = False,
 ) -> pd.DataFrame:
   """
   Remove acentos e outras marcas (p.ex. cedilha) de colunas de um DataFrame,
@@ -44,21 +63,26 @@ def cleanup_columns_for_bigquery(
   isto é, as colunas do DataFrame passado serão modificadas pela função.
   De qualquer forma, a função retorna o DataFrame modificado.
 
-  Caso seja desejado, nomes de colunas podem ser convertidos para lowercase
-  via `lowercase=True`. Por padrão, não há conversão nenhuma.
-
-  Em caso de colunas com nomes repetidos pós tratamento, por padrão,
-  a função irá adicionar "_1" à duplicata (incrementando em caso de mais
-  repetições). Para, ao invés disso, disparar um erro, passe
-  `raise_on_repeats=True`.
+  Args:
+    df(DataFrame):
+    lowercase(bool?):
+      Converte nomes de colunas para lowercase se `True`. Por padrão, não há
+      conversão.
+    raise_on_repeats(bool?):
+      Em caso de colunas com nomes repetidos pós tratamento, por padrão,
+      a função irá adicionar "_1" à duplicata (incrementando em caso de mais
+      repetições). Para, ao invés disso, disparar um erro, passe
+      `raise_on_repeats=True`.
+    ignore_empty(bool?):
+      Se `True`, descarta colunas sem nome; por padrão, dá erro.
   """
   column_mapping = dict()
   existing_columns = set()
+  if ignore_empty:
+    df = df.loc[:, df.columns.str.strip() != ""]
   for col in df.columns:
     # Limpa nome da coluna
-    clean_col = cleanup_bigquery_name(col)
-    if lowercase:
-      clean_col = clean_col.lower()
+    clean_col = cleanup_bigquery_name(col, lowercase=lowercase)
     # Se o nome da coluna já estiver em uso, adiciona
     # sufixo '_1', '_2', ... progressivamente até não
     # haver mais repetições
@@ -105,20 +129,20 @@ def jsonify_dataframe(
   essa função se você precisa acessar algum valor original posteriormente.
 
   Args:
-          df (pd.DataFrame):
-                  Dataframe original.
-          keep_columns (List[str] | str?):
-                  Lista opcional de nomes de colunas para não incluir no JSON.
-                  Se não especificado, o dataframe resultante terá uma única
-                  coluna, `json`. Se a string `"s"` é passada ao invés de uma lista,
-                  isso será equivalente a `keep_columns=["s"]`. Se todas as
-                  colunas do dataframe original estiverem na lista passada para
-                  `keep_columns`, uma coluna `"json"` de strings vazias será
-                  adicionada ao dataframe.
+    df (pd.DataFrame):
+      Dataframe original.
+    keep_columns (List[str] | str?):
+      Lista opcional de nomes de colunas para não incluir no JSON.
+      Se não especificado, o dataframe resultante terá uma única
+      coluna, `json`. Se a string `"s"` é passada ao invés de uma lista,
+      isso será equivalente a `keep_columns=["s"]`. Se todas as
+      colunas do dataframe original estiverem na lista passada para
+      `keep_columns`, uma coluna `"json"` de strings vazias será
+      adicionada ao dataframe.
 
   Returns:
-          df (DataFrame):
-                  Modified dataframe.
+    df (DataFrame):
+      Modified dataframe.
 
   Exemplo de uso:
   >>> a = pd.DataFrame({'col1': [1, 2, 3], 'col2': [4, 5, 6], 'col3': [7, 8, 9]})

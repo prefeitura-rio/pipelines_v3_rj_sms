@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime, timedelta
 from typing import List, Literal, Optional, TypedDict
-from datetime import timedelta, datetime
 
 from prefect.schedules import Interval
 
@@ -26,18 +26,22 @@ def restrict_int_interval(value, min: int, max: int, default: int = 0):
 
 class ScheduleConfig(TypedDict):
   month: Optional[int]
+  """Mês do ano; só se aplica em schedules de frequência anual"""
   weekday: Literal[
-		"monday",    "segunda",
-		"tuesday",   "terça",
-		"wednesday", "quarta",
-		"thursday",  "quinta",
-		"friday",    "sexta",
-		"saturday",  "sábado",
-		"sunday",    "domingo",
-	]  # fmt: skip
+    "monday",    "segunda",
+    "tuesday",   "terça",
+    "wednesday", "quarta",
+    "thursday",  "quinta",
+    "friday",    "sexta",
+    "saturday",  "sábado",
+    "sunday",    "domingo",
+  ]  # fmt: skip
   day: Optional[int]
+  """Dia do mês; só se aplica em schedules de frequência mensal ou anual"""
   hour: Optional[int]
+  """Hora do dia; é par de `minute` para definir o horário da execução"""
   minute: Optional[int]
+  """Minuto da hora; é par de `hour` para definir o horário da execução"""
 
 
 def create_schedule_list(
@@ -61,57 +65,57 @@ def create_schedule(
   config: ScheduleConfig = None,
 ):
   """
-	Cria schedule para um flow com o intervalo requisitado.
+  Cria schedule para um flow com o intervalo requisitado.
 
-	Args:
-		parameters(dict):
-			Parâmetros a serem passados para o flow nesse schedule.
-		interval(str):
-			Frequência a grosso modo do schedule. Espera um de alguns valores
-			pré-definidos: \
-			* `"hourly"`: flow executa a cada hora;
-			* `"12-hours"`: flow executa a cada 12 horas;
-			* `"daily"`: flow executa todos os dias, 1x por dia;
-			* `"weekly"`: flow executa 1x por semana;
-			* `"monthly"`: flow executa 1x por mês;
-			* `"semiannual"`: flow executa 1x a cada 6 meses
-		config(dict?):
-			Objeto especificando em maior granularidade a frequência.
-			Propriedades utilizáveis são:\
-			* `"minute"` int([0-59]) —
-				Minuto em que o flow executa
-			* `"hour"` int([0-23]) —
-				Hora em que o flow executa
-			* `"day"`: int([1-28]) —
-				Dia do mês em que o flow executa, limitado ao dia 28; só usado em flows mensais
-			* `"weekday"`: str({ "monday", "segunda", "tuesday", "terça", ... }) —
-				Dia da semana em que o flow executa; só usado com `interval="weekly"`
-			* `"month"`: int([1-12]) —
-				Mês da primeira execução do flow (a segunda será mês + 6); só usado com `interval="semiannual"`
+  Args:
+    parameters(dict):
+      Parâmetros a serem passados para o flow nesse schedule.
+    interval(str):
+      Frequência a grosso modo do schedule. Espera um de alguns valores
+      pré-definidos: \
+      * `"hourly"`: flow executa a cada hora;
+      * `"12-hours"`: flow executa a cada 12 horas;
+      * `"daily"`: flow executa todos os dias, 1x por dia;
+      * `"weekly"`: flow executa 1x por semana;
+      * `"monthly"`: flow executa 1x por mês;
+      * `"semiannual"`: flow executa 1x a cada 6 meses
+    config(dict?):
+      Objeto especificando em maior granularidade a frequência.
+      Propriedades utilizáveis são:\
+      * `"minute"` int([0-59]) —
+        Minuto em que o flow executa
+      * `"hour"` int([0-23]) —
+        Hora em que o flow executa
+      * `"day"`: int([1-28]) —
+        Dia do mês em que o flow executa, limitado ao dia 28; só usado em flows mensais
+      * `"weekday"`: str({ "monday", "segunda", "tuesday", "terça", ... }) —
+        Dia da semana em que o flow executa; só usado com `interval="weekly"`
+      * `"month"`: int([1-12]) —
+        Mês da primeira execução do flow (a segunda será mês + 6); só usado com `interval="semiannual"`
 
-	Exemplos:
-	```python
-	# Uma vez por hora, no minuto 30 (i.e. 9:30, 10:30, ...)
-	create_schedule(
-		parameters={ ... },
-		interval="hourly",
-		config={ "minute": 30 },
-	)
-	# Todo dia 5 do mês, às 14:21
-	create_schedule(
-		parameters={ ... },
-		interval="monthly",
-		config={ "day": 5, "hour": 14, "minute": 21 }
-	)
-	# Toda terça às 9:50
-	create_schedule(
-		parameters={ ... },
-		interval="weekly",
-		config={ "weekday": "tuesday", "hour": 9, "minute": 50 }
-		# ou "weekday": "terça"
-	)
-	```
-	"""
+  Exemplos:
+  ```python
+  # Uma vez por hora, no minuto 30 (i.e. 9:30, 10:30, ...)
+  create_schedule(
+    parameters={ ... },
+    interval="hourly",
+    config={ "minute": 30 },
+  )
+  # Todo dia 5 do mês, às 14:21
+  create_schedule(
+    parameters={ ... },
+    interval="monthly",
+    config={ "day": 5, "hour": 14, "minute": 21 }
+  )
+  # Toda terça às 9:50
+  create_schedule(
+    parameters={ ... },
+    interval="weekly",
+    config={ "weekday": "tuesday", "hour": 9, "minute": 50 }
+    # ou "weekday": "terça"
+  )
+  ```
+  """
   month = 1
   weekday = "monday"
   day = 1
@@ -122,17 +126,17 @@ def create_schedule(
     month = restrict_int_interval(config.get("month"), 1, 12, default=1)
     _processed_weekday = str(config.get("weekday", "")).lower().strip()
     weekday = (
-			"monday"
-			if _processed_weekday not in (
-				"tuesday",   "terça",
-				"wednesday", "quarta",
-				"thursday",  "quinta",
-				"friday",    "sexta",
-				"saturday",  "sábado",
-				"sunday",    "domingo",
-			)
-			else _processed_weekday
-		)  # fmt: skip
+      "monday"
+      if _processed_weekday not in (
+        "tuesday",   "terça",
+        "wednesday", "quarta",
+        "thursday",  "quinta",
+        "friday",    "sexta",
+        "saturday",  "sábado",
+        "sunday",    "domingo",
+      )
+      else _processed_weekday
+    )  # fmt: skip
     day = restrict_int_interval(config.get("day"), 1, 28, default=1)
     hour = restrict_int_interval(config.get("hour"), 0, 23)
     minute = restrict_int_interval(config.get("minute"), 0, 59)
@@ -183,6 +187,8 @@ def create_schedule(
     )
 
   if interval == "monthly":
+    # TODO: investigar se, por ser '30 dias' e não '1 mês', o
+    #       schedule não vai gradualmente desviar da data desejada
     return Interval(
       timedelta(days=30),
       anchor_date=datetime(2026, 1, day, hour, minute, tzinfo=constants.TIMEZONE.value),

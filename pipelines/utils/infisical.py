@@ -4,18 +4,19 @@ import json
 import os
 from typing import List
 
-from .logger import log
+import basedosdados as bd
+from google.oauth2 import service_account
+
+# from infisical import InfisicalClient
+from infisical_sdk import InfisicalSDKClient as InfisicalClient
+from prefect import task
+
 from .env import (
   get_current_environment,
   get_google_project_for_environment,
   getenv_or_action,
 )
-
-import basedosdados as bd
-
-# from infisical import InfisicalClient
-from infisical_sdk import InfisicalSDKClient as InfisicalClient
-from google.oauth2 import service_account
+from .logger import log
 
 
 def get_project():
@@ -37,14 +38,14 @@ def get_secret(secret_name: str, environment: str = None, path: str = "/") -> di
   Obtém o secret no Infisical com nome e caminho especificados
 
   Args:
-          secret_name (str): Nome do secret
-          environment (str?):
-                  Environment em que se deve buscar o secret. Por padrão, valor da
-                  variável de ambiente `environment`
-          path (str?): Caminho do secret; valor padrão "/"
+    secret_name (str): Nome do secret
+    environment (str?):
+      Environment em que se deve buscar o secret. Por padrão, valor da
+      variável de ambiente `environment`
+    path (str?): Caminho do secret; valor padrão "/"
 
   Returns:
-          str: Valor do secret
+    str: Valor do secret
   """
   client = get_infisical_client()
   environment = environment or get_current_environment()
@@ -59,16 +60,38 @@ def get_secret(secret_name: str, environment: str = None, path: str = "/") -> di
   return secret_value
 
 
+@task  # (1) Não podemos usar authenticated_task porque ela depende de funções definidas aqui
+def get_secret_task(secret_name: str, environment: str = None, path: str = "/") -> dict:
+  """
+  Obtém o secret no Infisical com nome e caminho especificados
+
+  Args:
+    secret_name (str): Nome do secret
+    environment (str?):
+      Environment em que se deve buscar o secret. Por padrão, valor da
+      variável de ambiente `environment`
+    path (str?): Caminho do secret; valor padrão "/"
+
+  Returns:
+    str: Valor do secret
+  """
+  # (2) Então fazemos a authenticated_task manualmente
+  env = get_current_environment()
+  inject_bd_credentials(environment=env)
+
+  return get_secret(secret_name=secret_name, environment=environment, path=path)
+
+
 def inject_env(secret_name: str, environment: str = None, path: str = "/") -> None:
   """
   Carrega secret do Infisical em variável de ambiente de mesmo nome
 
   Args:
-          secret_name (str): Nome do secret
-          environment (str?):
-                  Environment em que se deve buscar o secret. Por padrão, valor da
-                  variável de ambiente `environment`
-          path (str?): Caminho do secret; valor padrão "/"
+    secret_name (str): Nome do secret
+    environment (str?):
+      Environment em que se deve buscar o secret. Por padrão, valor da
+      variável de ambiente `environment`
+    path (str?): Caminho do secret; valor padrão "/"
   """
   secret_value = get_secret(secret_name=secret_name, environment=environment, path=path)
   os.environ[secret_name] = secret_value
@@ -79,14 +102,14 @@ def inject_bd_credentials(environment: str = "dev", force_injection=False) -> No
   Carrega credenciais de Base dos Dados do Infisical em variáveis de ambiente.
 
   Args:
-          environment(str?):
-                  Ambiente do Infiscal onde estão as credenciais, p.ex. "dev"/"prod".
-                  Valor padrão de "dev".
-          force_injection(bool?):
-                  Caso todas as variáveis já estejam carregadas no ambiente, o servidor
-                  do Infisical não é contactado, a não ser que a função receba
-                  `force_injection=True`, situação em que elas são obtidas novamente.
-                  Valor padrão de False.
+    environment(str?):
+      Ambiente do Infiscal onde estão as credenciais, p.ex. "dev"/"prod".
+      Valor padrão de "dev".
+    force_injection(bool?):
+      Caso todas as variáveis já estejam carregadas no ambiente, o servidor
+      do Infisical não é contactado, a não ser que a função receba
+      `force_injection=True`, situação em que elas são obtidas novamente.
+      Valor padrão de False.
 
   """
   # Confere se todas as variáveis já foram obtidas

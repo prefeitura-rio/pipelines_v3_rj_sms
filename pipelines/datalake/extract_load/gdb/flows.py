@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from prefect.futures import wait
 from prefect.concurrency.sync import rate_limit
+from prefect.futures import wait
 
-from pipelines.constants import constants as global_consts
+from pipelines.constants import CIT
 from pipelines.utils.google import (
   dissect_gcs_uri,
   download_file_from_bucket_task,
@@ -14,16 +14,18 @@ from pipelines.utils.io import (
   zip_files_from_list_task,
 )
 from pipelines.utils.prefect import flow, flow_config
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .tasks import run_conversion, upload_csv_as_table
 
 
 @flow(
-  name="DataLake - Extração e Carga de Dados - GDB",
-  state_handlers=[handle_flow_state_change],
-  owners=[global_consts.AVELLAR_ID.value],
-  description="Converte arquivos GDB para CSV a partir de um URI de bucket GCS",
+  name="Extração: GDB",
+  owners=[CIT.AVELLAR_ID.value],
+  description=(
+    "Extrai tabelas de um backup GDB para CSVs, a partir de um URI de bucket GCS; "
+    "faz upload de ZIP com CSVs para o bucket e cria tabelas do BigQuery"
+  ),
+  tags=["CIT"],
 )
 def extract_gdb(
   # URI do GCS do arquivo a ser convertido

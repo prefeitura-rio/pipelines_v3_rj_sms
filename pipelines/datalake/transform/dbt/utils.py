@@ -5,9 +5,8 @@ import re
 from typing import List
 
 import pandas as pd
-
-from dbt.contracts.results import RunResult, SourceFreshnessResult, NodeResult
 from dbt.artifacts.resources import Time as DbtTime
+from dbt.contracts.results import NodeResult, RunResult, SourceFreshnessResult
 
 from pipelines.utils.io import create_tmp_data_folder
 from pipelines.utils.logger import log

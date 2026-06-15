@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from os import getenv
 import os
+from os import getenv
 from typing import Literal
 
 from prefect.context import FlowRunContext
@@ -70,24 +70,24 @@ def getenv_or_action(
   ou o executa uma determinada ação caso nenhum desses tenha sido definido
 
   Args:
-          key (str): O nome da variável de ambiente
-          default (str, optional):
-                  Valor padrão a ser usado caso a variável não tenha sido definida
-          action (str?):
-                  O nome da ação a executar caso nem a variável de ambiente exista, nem o
-                  valor padrão tenha sido definido. Valores possíveis são: `"raise"`,
-                  `"warn"` e `"ignore"`; o valor `"raise"` é o padrão
+    key (str): O nome da variável de ambiente
+    default (str, optional):
+      Valor padrão a ser usado caso a variável não tenha sido definida
+    action (str?):
+      O nome da ação a executar caso nem a variável de ambiente exista, nem o
+      valor padrão tenha sido definido. Valores possíveis são: `"raise"`,
+      `"warn"` e `"ignore"`; o valor `"raise"` é o padrão
 
   Raises:
-          ValueError:
-                  * Caso `action` não seja um dos valores permitidos;
-                  * Caso `action` seja `"raise"` e nem a variável de ambiente, nem
-                  o valor padrão tenham sido definidos
+    ValueError:
+    * Caso `action` não seja um dos valores permitidos;
+    * Caso `action` seja `"raise"` e nem a variável de ambiente, nem
+    o valor padrão tenham sido definidos
 
   Returns:
-          str:
-                  O valor da variável de ambiente, ou o valor padrão dado caso ela não
-                  tenha sido definida
+    str:
+      O valor da variável de ambiente, ou o valor padrão dado caso ela não
+      tenha sido definida
   """
   if action not in ["raise", "warn", "ignore"]:
     raise ValueError(f"Invalid action: '{action}'")
@@ -103,6 +103,19 @@ def getenv_or_action(
       pass
 
   return value
+
+
+def setenv_if_empty(key: str, value: str):
+  """
+  Se a variável de ambiente não estiver definida, cria ela
+  com o valor especificado e retorna False; caso contrário,
+  não faz nada, e retorna True.
+  """
+  current_value = getenv(key)
+  if current_value is None:
+    os.environ[key] = value
+    return False
+  return True
 
 
 def is_local_run():
