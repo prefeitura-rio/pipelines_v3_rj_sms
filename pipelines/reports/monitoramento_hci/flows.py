@@ -15,9 +15,7 @@ def report_uso_hci(
   #####################################
   # Tasks
   #####################################
-  data = get_data(
-    dataset_name=dataset_id, table_name=table_id, environment=environment
-  )
+  data = get_data(dataset_name=dataset_id, table_name=table_id, environment=environment)
   send_report(data=data, environment=environment)
 
 
