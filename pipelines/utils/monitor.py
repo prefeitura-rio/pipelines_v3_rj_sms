@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import os
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 import aiohttp
 from discord import AllowedMentions, Embed, File, Webhook
@@ -11,23 +11,17 @@ from pipelines.utils.env import get_current_environment, get_prefect_url
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.logger import log
 
-DISCORD_WEBHOOK_SLUGS = (
-  "custo_jobs",
-  "data-ingestion",
-  "dbt-runs",
-  "error",
-  "hci_status",
-  "warning",
-)
-
-DiscordWebhookSlug = Literal[*DISCORD_WEBHOOK_SLUGS]
+type DiscordWebhookSlug = Literal[
+  "custo_jobs", "data-ingestion", "dbt-runs", "error", "hci_status", "warning"
+]
 
 
 async def send_discord_webhook(
   slug: DiscordWebhookSlug,
-  text_content: str = None,
-  embed_content: List[Embed] = None,
-  file_path: str = None,
+  text_content: Optional[str] = None,
+  embed_content: Optional[List[Embed]] = None,
+  file_path: Optional[str] = None,
+  username: Optional[str] = None,
 ):
   """
   Envia mensagem para um webhook do Discord. Ainda que
@@ -43,6 +37,8 @@ async def send_discord_webhook(
       Conteúdo já formatado como `Embed`
     file_path(str?):
       Caminho de arquivo a anexar à mensagem; ex.: arquivo de logs em .txt
+    username(str?):
+      Nome de usuário da conta que envia a mensagem
   """
   if not slug:
     raise ValueError("É preciso informar um `slug`!")
@@ -66,6 +62,7 @@ async def send_discord_webhook(
     "content": text_content or "",
     "embeds": embed_content or [],
     "allowed_mentions": AllowedMentions(users=True),
+    "username": username,
   }
 
   if file_path:
@@ -90,22 +87,25 @@ async def send_discord_webhook(
       raise e
 
 
-def send_discord_embed(contents: List[Embed], slug: DiscordWebhookSlug):
+def send_discord_embed(
+  slug: DiscordWebhookSlug, contents: List[Embed], username: Optional[str] = None
+):
   """
   Envia um ou mais Embeds pré-formatados para o Discord
 
   Args:
     contents(list[Embed]): Conteúdo a ser enviado
     slug(str): Referência ao canal de destino
+    username(str?): Nome de usuário da conta que envia a mensagem
   """
-  asyncio.run(send_discord_webhook(slug=slug, embed_content=contents))
+  asyncio.run(send_discord_webhook(slug=slug, embed_content=contents, username=username))
 
 
 def send_discord_message(
   title: str,
   message: str,
   slug: DiscordWebhookSlug,
-  file_path: str = None,
+  file_path: Optional[str] = None,
   multiple_messages_ok: bool = False,
 ):
   """

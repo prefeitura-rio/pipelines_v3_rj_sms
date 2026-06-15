@@ -226,16 +226,14 @@ def send_report(data, environment: str):
   log(usage_report_str)
   asyncio.run(
     send_discord_webhook(
-      text_content=usage_report_str,
-      username="Monitoramento HCI",
-      monitor_slug="hci_status",
+      slug="hci_status", text_content=usage_report_str, username="Monitoramento HCI"
     )
   )
 
   if len(all_embeds) > 0:
     asyncio.run(
       send_discord_embed(
-        contents=all_embeds, username="Monitoramento HCI", monitor_slug="hci_status"
+        slug="hci_status", contents=all_embeds, username="Monitoramento HCI"
       )
     )
 
@@ -252,6 +250,6 @@ def send_report(data, environment: str):
     message += "\n".join(warnings)
     asyncio.run(
       send_discord_webhook(
-        text_content=message, username="Monitoramento HCI", monitor_slug="hci_status"
+        slug="hci_status", text_content=message, username="Monitoramento HCI"
       )
     )
