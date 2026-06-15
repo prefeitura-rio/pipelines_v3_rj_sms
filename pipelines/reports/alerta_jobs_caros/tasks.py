@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
-import requests
 from google.cloud import bigquery
 
-from pipelines.utils.datetime import from_relative_date
+from pipelines.utils.api import convert_usd_to_brl
 from pipelines.utils.monitor import send_discord_message
 from pipelines.utils.prefect import authenticated_task as task
 
@@ -14,34 +13,28 @@ def get_recent_bigquery_jobs(
 ):
   query = f"""
     SELECT
-        user.email,
-        creation_time,
-        user.name,
-        job_id,
-        destination.project_id,
-        destination.dataset_id,
-        destination.table_id,
-        billing_estimated_charge_in_usd as custo_dolar_estimado
+      user.email,
+      creation_time,
+      user.name,
+      job_id,
+      destination.project_id,
+      destination.dataset_id,
+      destination.table_id,
+      billing_estimated_charge_in_usd as custo_dolar_estimado
     FROM `rj-sms.dashboard_infraestrutura.queries`
     WHERE
-        creation_time >= DATE_SUB(CURRENT_TIMESTAMP(), INTERVAL {time_threshold} HOUR) and
-        billing_estimated_charge_in_usd > {cost_threshold} and
-        user.email not like 'prefect%'
+      creation_time >= DATE_SUB(CURRENT_TIMESTAMP(), INTERVAL {time_threshold} HOUR) and
+      billing_estimated_charge_in_usd > {cost_threshold} and
+      user.email not like 'prefect%'
     ORDER BY custo_dolar_estimado desc
     """
   client = bigquery.Client()
   query_job = client.query(query)
   results = query_job.result().to_dataframe()
 
-  ontem = from_relative_date("D-1").strftime("%m-%d-%Y")
-
-  response = requests.get(
-    url=f"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarDia(dataCotacao=@dataCotacao)?@dataCotacao='{ontem}'&$format=json"  # noqa: E501
+  results["custo_real_estimado"] = (
+    convert_usd_to_brl(usd=1) * results["custo_dolar_estimado"]
   )
-  response.raise_for_status()
-  usd_to_brl_rate = response.json()["value"][0]["cotacaoCompra"]
-
-  results["custo_real_estimado"] = results["custo_dolar_estimado"] * usd_to_brl_rate
 
   return results
 
