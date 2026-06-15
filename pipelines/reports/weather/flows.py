@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from pipelines.constants import CIT
 from pipelines.utils.prefect import flow, flow_config
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 from .tasks import fetch_weather, get_bairros, print_report, write_bairros_to_gcs
@@ -10,8 +9,8 @@ from .tasks import fetch_weather, get_bairros, print_report, write_bairros_to_gc
 @flow(
   name="Report: Previsão do Tempo",
   description="Prevê o tempo dado latitude/longitude :) Printa bairros do Rio também",
-  state_handlers=[handle_flow_state_change],
   owners=[CIT.AVELLAR_ID.value],
+  tags=["CIT", "teste"],
 )
 def weather_report(lat: float, lon: float, environment: str = "dev"):
   bairros = get_bairros()

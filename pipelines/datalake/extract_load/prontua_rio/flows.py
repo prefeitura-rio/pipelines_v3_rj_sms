@@ -15,7 +15,6 @@ from pipelines.datalake.extract_load.prontua_rio.tasks import (
   unpack_files,
 )
 from pipelines.utils.prefect import create_flow_run, flow, flow_config, rename_flow_run
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 
@@ -24,11 +23,7 @@ from .schedules import schedules
 ######################################################################################
 
 
-@flow(
-  name="DataLake - Extração e Carga de Dados - ProntuaRio OpenBase",
-  state_handlers=[handle_flow_state_change],
-  owners=[CIT.HERIAN_ID.value],
-)
+@flow(name="Extração: ProntuaRio OpenBase", owners=[CIT.HERIAN_ID.value], tags=["CIT"])
 def prontuario_openbase_operator(
   cnes: str,
   blob_path: str,
@@ -88,11 +83,7 @@ def prontuario_openbase_operator(
   )
 
 
-@flow(
-  name="DataLake - Extração e Carga de Dados - ProntuaRio Postgres",
-  state_handlers=[handle_flow_state_change],
-  owners=[CIT.HERIAN_ID.value],
-)
+@flow(name="Extração: ProntuaRio Postgres", owners=[CIT.HERIAN_ID.value], tags=["CIT"])
 def prontuario_postgres_operator(
   cnes: str,
   blob_path: str,
@@ -159,9 +150,9 @@ def prontuario_postgres_operator(
 
 
 @flow(
-  name="DataLake - Extração e Carga de Dados - ProntuaRio Backups (MANAGER)",
-  state_handlers=[handle_flow_state_change],
+  name="Extração: ProntuaRio Backups (MANAGER)",
   owners=[CIT.HERIAN_ID.value],
+  tags=["CIT"],
 )
 def prontuario_extraction_manager(
   environment: str = "dev",

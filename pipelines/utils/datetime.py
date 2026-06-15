@@ -26,6 +26,16 @@ def now(utc: bool = False) -> datetime.datetime:
   return datetime.datetime.now(tz=SAO_PAULO_TZ)
 
 
+def now_naive(utc: bool = False) -> datetime.datetime:
+  """
+  Retorna datetime.now() sem informação de timezone.
+
+  Por padrão, preserva o horário local BRT retornado por `now()` e remove
+  apenas o `tzinfo`.
+  """
+  return now(utc=utc).replace(tzinfo=None)
+
+
 def now_str() -> str:
   """Retorna data/hora atual (fuso BRT) como 'YYYY-MM-DD HH:MM:SS'"""
   return now().strftime("%Y-%m-%d %H:%M:%S")

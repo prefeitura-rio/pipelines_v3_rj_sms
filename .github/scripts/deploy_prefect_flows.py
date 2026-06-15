@@ -222,13 +222,24 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
       infra["volume_mounts"] = [{"name": "gcs-mount", "mountPath": "/mnt/gcs"}]
 
     #############
+    ## Região
+    region = flow_config.get("region")
+    # [Ref] https://docs.cloud.google.com/run/docs/locations
+    region_map = {"bra": "southamerica-east1"}
+    if region:
+      if region in region_map:
+        infra["region"] = region_map[region]
+      else:
+        logging.warning(f"Requisição de região '{region}' desconhecida!")
+
+    #############
     ## Deploy
     logging.debug(f"Requisitando deploy de (...)/{normalized_flow_name}")
     deploy_list.append(
       flow.adeploy(
         name=flow_name,
         description=flow.description,
-        tags=([] if environment == "prod" else ["staging"]),
+        tags=[*(["prod"] if environment == "prod" else ["staging"]), *(flow.tags or [])],
         work_pool_name=WORK_POOL_NAME,
         work_queue_name=("default" if environment == "prod" else "staging"),
         image=DockerImage(

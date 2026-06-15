@@ -2,17 +2,16 @@
 from pipelines.constants import CIT
 from pipelines.utils.google import build_bucket_name, list_google_drive_files
 from pipelines.utils.prefect import flow, flow_config
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .tasks import process_google_drive_file
 from .utils import build_execution_summary
 
 
 @flow(
-  name="Migrate - Google Drive to GCS",
-  state_handlers=[handle_flow_state_change],
-  owners=[CIT.CIT_ID.value],
+  name="Migração: Google Drive → GCS",
   description="Lista arquivos do Google Drive e faz upload para o GCS",
+  owners=[CIT.CIT_ID.value],
+  tags=["CIT"],
 )
 def gdrive_to_gcs(
   root_folder_id: str,

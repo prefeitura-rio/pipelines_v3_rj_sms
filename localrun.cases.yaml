@@ -1,58 +1,8 @@
 cases:
 
   ################################
-  #  REPORTS                     #
-  ################################
-
-  # [teste] Previsão do tempo
-  - case_slug: "test-weather-report"
-    flow_path: "pipelines.reports.weather.flows"
-    flow_name: "weather_report"
-    params:
-      environment: "dev"
-      lat: -22.9519
-      lon: -43.2105
-
-  # Informes de Segurança / Comunicação de CIDs
-  - case_slug: "report-informes-seguranca"
-    flow_path: "pipelines.reports.informes_seguranca.flows"
-    flow_name: "report_informes_seguranca"
-    params:
-      environment: dev
-      ## Quando date é nula, usa dia de ontem
-      date: null
-      # override_recipients: ...
-      ## Desenvolvendo local, não queremos enviar nada
-      skip_email: true
-
-  # CDI/Você Precisa Saber
-  ## Não consegui fazer executar create_flow_run localmente:
-  ## > prefect.exceptions.PrefectHTTPStatusError: ... {'detail': 'Deployment not found'}
-  - case_slug: "report----nao-roda-local----cdi-vps"
-    flow_path: "pipelines.reports.voce_precisa_saber.flows"
-    flow_name: "flow_voce_precisa_saber"
-    params:
-      environment: dev
-      # date: ...
-      # skip_to_email: ...
-      override_recipients: teste@example.local
-
-
-  ################################
   #  EXTRACT/LOAD                #
   ################################
-
-  # Extração Google Sheets (URL) -> tabela staging
-  - case_slug: "datalake-extract-google-sheets"
-    flow_path: "pipelines.datalake.extract_load.google_sheets.flows"
-    flow_name: "sms_dump_url"
-    params:
-      environment: dev
-      # url: https://docs.google.com/spreadsheets/d/...
-      # gsheets_sheet_name: ...
-      dataset_id: brutos_sheets
-      # table_id: ...
-      rename_flow: true
 
   # Extração de DBC/DBF (GCS) -> CSV (GCS)
   - case_slug: "datalake-extract-dbc"
@@ -111,6 +61,29 @@ cases:
       month: null
       year: null
 
+  # Extração VitaCare API
+  - case_slug: "datalake-extract-vitacare-api"
+    flow_path: "pipelines.datalake.extract_load.vitacare_api.flows"
+    flow_name: "vitacare_api"
+    params:
+      environment: dev
+      dataset_id: brutos_prontuario_vitacare_api_centralizadora
+      endpoint: posicao
+      rename_flow: true
+      skip_email: true
+      table_id_prefix: estoque_posicao
+      target_date: D-1
+
+  # Extração Exames Laboratoriais API
+  - case_slug: "exames_laboratoriais"
+    flow_path: "pipelines.datalake.extract_load.exames_laboratoriais.flows"
+    flow_name: "exames_laboratoriais"
+    params:
+      environment: dev
+      intervalo: "D-1"
+      hours_per_window: 1.5
+      dataset: brutos_exames_laboratoriais
+
   # Extração de tabela (banco relacional) -> tabela (BigQuery)
   - case_slug: "datalake-extract-relational-db"
     flow_path: "pipelines.datalake.extract_load.relational_db.flows"
@@ -141,6 +114,17 @@ cases:
       # source_table_list: ...
       # destination_dataset_name: ...
       # dbt_select_exp: ...
+    
+  # Clona tabelas com respostas de disparo do projeto Cegonha Digital
+  - case_slug: "test-cegonha-clone-chatbot"
+    flow_path: "pipelines.datalake.extract_load.clone_bigquery.flows"
+    flow_name: "clone_bigquery"
+    params:
+      environment: dev
+      source_project_name: "rj-crm-registry"
+      source_dataset_name: "rmi_conversas"
+      source_table_list: ["chatbot"]
+      destination_dataset_name: "brutos_iplanrio"
 
   # Extração de Diário Oficial da União (API) -> BigQuery
   - case_slug: "extract-dou-api"
@@ -152,7 +136,6 @@ cases:
       dou_section: "DO1 DO2 DO3"
       dataset_id: "brutos_diario_oficial"
 
-      
   # Extração de tabelas do Postgre do prontuaRio, via backup em blob storage 
   - case_slug: "prontuaRio_postgres"
     flow_path: "pipelines.datalake.extract_load.prontua_rio.flows"
@@ -213,7 +196,15 @@ cases:
       # case_id: ...
       dataset_id: brutos_diario_oficial
 
-  # Extração Sisreg API
+  # Extração do Sisreg (web)
+  - case_slug: "extract_sisreg_web"
+    flow_path: "pipelines.datalake.extract_load.sisreg_web.flows"
+    flow_name: "extract_sisreg_web"
+    params:
+      environment: dev
+      # ...
+
+  # Extração do Sisreg (API)
   - case_slug: "datalake-extract-sisreg-api"
     flow_path: "pipelines.datalake.extract_load.sisreg_api.flows"
     flow_name: "extract_sisreg_api"
@@ -226,7 +217,6 @@ cases:
       # dias_por_faixa: 7
       # dataset_id: brutos_sisreg_api_v2
       # table_id: solicitacoes
-
 
 
   ################################
@@ -242,6 +232,58 @@ cases:
       root_folder_id: "1VUdm8fixnUs_dJrcflsNvzXIGPX6e-2r"
       bucket_name: "vitacare_backups_gdrive"
       last_modified_date: 'M-0'
+
+  # Migração SQL Server (.BAK) -> Cloud SQL
+  - case_slug: "sqlserver_backup"
+    flow_path: "pipelines.migrate.sqlserver_backup.flows"
+    flow_name: "sqlserver_backup"
+    params:
+      environment: dev
+      # items: ...
+      # instance_name: ...
+
+  # Migração Google Sheets (URL) -> BigQuery (staging)
+  - case_slug: "migrate-google-sheets"
+    flow_path: "pipelines.datalake.migrate.google_sheets.flows"
+    flow_name: "migrate_google_sheets"
+    params:
+      environment: dev
+      rename_flow: false
+      # url: https://docs.google.com/spreadsheets/d/...
+      # gsheets_sheet_name: ...
+      dataset_id: brutos_sheets
+      # table_id: ...
+
+  # Migração tabela (banco relacional) -> tabela (BigQuery)
+  - case_slug: "migrate-relational-db"
+    flow_path: "pipelines.datalake.migrate.relational_db.flows"
+    flow_name: "relational_db"
+    params:
+      environment: dev
+      rename_flow: false
+      # db_url_infisical_key: ...
+      # db_url_infisical_path: ...
+      # target_dataset_id: ...
+      # target_table_id: ...
+      # source_schema_name: ...
+      # source_table_name: ...
+      ## Ou `source_datetime_column` + `relative_date`,
+      ## ou `extract_whole_table`
+      # source_datetime_column: ...
+      # relative_date: ...
+      # extract_whole_table: ...
+
+  # Clona tabelas do BigQuery, de um projeto qualquer para a SMS
+  - case_slug: "clone-bigquery-table"
+    flow_path: "pipelines.datalake.migrate.clone_bigquery.flows"
+    flow_name: "clone_bigquery"
+    params:
+      environment: dev
+      # source_project_name: ... # ex. "rj-smfp"
+      # source_dataset_name: ...
+      # source_table_list: ...
+      # destination_dataset_name: ...
+      # dbt_select_exp: ...
 
 
   ################################
@@ -261,3 +303,61 @@ cases:
       target: null
       rename_flow: false
       send_discord_report: false
+
+
+  ################################
+  #  REPORTS                     #
+  ################################
+
+  # [teste] Previsão do tempo
+  - case_slug: "test-weather-report"
+    flow_path: "pipelines.reports.weather.flows"
+    flow_name: "weather_report"
+    params:
+      environment: "dev"
+      lat: -22.9519
+      lon: -43.2105
+
+  # Informes de Segurança / Comunicação de CIDs
+  - case_slug: "report-informes-seguranca"
+    flow_path: "pipelines.reports.informes_seguranca.flows"
+    flow_name: "report_informes_seguranca"
+    params:
+      environment: dev
+      ## Quando date é nula, usa dia de ontem
+      date: null
+      # override_recipients: ...
+      ## Desenvolvendo local, não queremos enviar nada
+      skip_email: true
+
+  # CDI/Você Precisa Saber
+  ## Não consegui fazer executar create_flow_run localmente:
+  ## > prefect.exceptions.PrefectHTTPStatusError: ... {'detail': 'Deployment not found'}
+  - case_slug: "report----nao-roda-local----cdi-vps"
+    flow_path: "pipelines.reports.voce_precisa_saber.flows"
+    flow_name: "flow_voce_precisa_saber"
+    params:
+      environment: dev
+      # date: ...
+      # skip_to_email: ...
+      override_recipients: teste@example.local
+
+  # Alerta de Tabelas Desatualizadas
+  - case_slug: "report-atualizacao-tabelas"
+    flow_path: "pipelines.reports.alerta_atualizacao_tabelas.flows"
+    flow_name: "report_alerta_atualizacao_tabelas"
+    params:
+      environment: dev
+      table_ids: 
+        # Tabela atualizada (espera-se que esteja)
+        "rj-sms.projeto_whatsapp.telefones_validos": ["IplanRio - E Aí?"] 
+        # Tabela desatualizada
+        "rj-sms.projeto_gestacoes.temp_correlacao_prenatal_20250831_192404": ["S/SUBPAV/SAP - BI de Gestantes"] 
+  
+  # Alerta dos últimos episódios do HCI
+  - case_slug: "report-atualizacao-hci"
+    flow_path: "pipelines.reports.alerta_atualizacao_tabelas.flows"
+    flow_name: "report_alerta_atualizacao_hci"
+    params:
+      environment: dev
+
