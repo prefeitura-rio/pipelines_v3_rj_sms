@@ -3,7 +3,6 @@
 from pipelines.constants import CIT
 from pipelines.utils.git import download_gh_repo_task
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 from .tasks import (
@@ -16,11 +15,7 @@ from .tasks import (
 )
 
 
-@flow(
-  name="DataLake - Transformação - DBT",
-  state_handlers=[handle_flow_state_change],
-  owners=[CIT.CIT_ID.value],
-)
+@flow(name="Transformação: DBT", owners=[CIT.CIT_ID.value], tags=["CIT"])
 def sms_execute_dbt(
   command: str = "test",
   select: str | None = None,

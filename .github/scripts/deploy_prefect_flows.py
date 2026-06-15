@@ -239,7 +239,7 @@ def do_deploy(file_path: str, environment: str, env_vars: dict):
       flow.adeploy(
         name=flow_name,
         description=flow.description,
-        tags=([] if environment == "prod" else ["staging"]),
+        tags=[*(["prod"] if environment == "prod" else ["staging"]), *(flow.tags or [])],
         work_pool_name=WORK_POOL_NAME,
         work_queue_name=("default" if environment == "prod" else "staging"),
         image=DockerImage(

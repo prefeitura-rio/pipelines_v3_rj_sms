@@ -12,15 +12,12 @@ from pipelines.datalake.extract_load.diario_oficial_uniao.tasks import (
 )
 from pipelines.utils.datetime import parse_date_or_today
 from pipelines.utils.prefect import flow, flow_config
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 
 
 @flow(
-  name="Extração: Diário Oficial da União",
-  state_handlers=[handle_flow_state_change],
-  owners=[CIT.HERIAN_ID.value],
+  name="Extração: Diário Oficial da União", owners=[CIT.HERIAN_ID.value], tags=["CIT"]
 )
 def dou_extraction(
   environment: str = "dev",

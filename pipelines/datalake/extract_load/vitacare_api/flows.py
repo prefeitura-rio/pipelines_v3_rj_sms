@@ -15,14 +15,9 @@ from pipelines.datalake.extract_load.vitacare_api.tasks import (
 from pipelines.utils.datalake import upload_df_to_datalake_task
 from pipelines.utils.datetime import from_relative_date
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 
-@flow(
-  name="Extração: Vitacare API",
-  state_handlers=[handle_flow_state_change],
-  owners=[CIT.PEDRO_ID.value],
-)
+@flow(name="Extração: Vitacare API", owners=[CIT.PEDRO_ID.value], tags=["CIT"])
 def vitacare_api(
   environment: str = "dev",
   rename_flow: bool = False,

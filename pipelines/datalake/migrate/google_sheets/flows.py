@@ -4,17 +4,12 @@ from pipelines.utils.datalake import upload_to_datalake_task
 from pipelines.utils.google import download_google_sheets_task
 from pipelines.utils.io import create_data_folders_task
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 
 
-@flow(
-  name="DataLake - Extração e Carga de Dados - Google Sheets",
-  state_handlers=[handle_flow_state_change],
-  owners=[CIT.CIT_ID.value],
-)
-def sms_dump_url(
+@flow(name="Migração: Google Sheets → BigQuery", owners=[CIT.CIT_ID.value], tags=["CIT"])
+def migrate_google_sheets(
   # URL da planilha
   url: str,
   # Nome da aba na planilha; por padrão "Sheet1"
@@ -64,4 +59,4 @@ def sms_dump_url(
   )
 
 
-_flows = [flow_config(flow=sms_dump_url, schedules=schedules)]
+_flows = [flow_config(flow=migrate_google_sheets, schedules=schedules)]

@@ -5,7 +5,6 @@ from prefect.futures import PrefectFutureList
 
 from pipelines.constants import CIT
 from pipelines.utils.prefect import flow, flow_config
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .tasks import (
   get_article_contents,
@@ -17,9 +16,9 @@ from .tasks import (
 
 @flow(
   name="Extração: DO-RJ (Diário Oficial Municipal)",
-  state_handlers=[handle_flow_state_change],
-  owners=[CIT.AVELLAR_ID.value],
   description="Extrai dados relevantes à SMS do Diário Oficial Municipal",
+  owners=[CIT.AVELLAR_ID.value],
+  tags=["CIT"],
 )
 def extract_diario_oficial_rj(
   date: Optional[str] = None,

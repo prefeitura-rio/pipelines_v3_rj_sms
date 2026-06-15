@@ -23,9 +23,16 @@ from pipelines.utils.logger import log
 
 
 class Flow(OriginalFlow):
-  def __init__(self, *args, owners: Optional[List[str]] = None, **kwargs):
-    # Guarda a lista de owners como atributo
+  def __init__(
+    self,
+    *args,
+    owners: Optional[List[str]] = None,
+    tags: Optional[List[str]] = None,
+    **kwargs,
+  ):
+    # Guarda listas de owners, tags como atributos
     self.owners = owners or []
+    self.tags = tags or []
     # Continua chamando o __init__ do Flow original
     super().__init__(*args, **kwargs)
 
@@ -38,6 +45,7 @@ class FlowDecorator(OriginalFlowDecorator):
   description: str = ""
   state_handlers: List[Callable] = None
   owners: List[str] = None
+  tags: List[str] = None
   log_prints: bool = False
 
   def __init__(
@@ -47,13 +55,19 @@ class FlowDecorator(OriginalFlowDecorator):
     description: str = "",
     state_handlers: List[Callable] = None,
     owners: Optional[List[str]] = None,
+    tags: Optional[List[str]] = None,
     log_prints: bool = False,
     **kwargs,
   ):
     self.name = name
     self.description = description or ""
-    self.state_handlers = state_handlers or []
+
+    # Importação no meio do código porque senão dá erro de importação circular :(
+    from pipelines.utils.state_handlers import handle_flow_state_change
+
+    self.state_handlers = list(set([handle_flow_state_change, *(state_handlers or [])]))
     self.owners = owners or []
+    self.tags = tags or []
     self.log_prints = log_prints
 
   def __call__(self, *args, **kwargs):
@@ -62,6 +76,7 @@ class FlowDecorator(OriginalFlowDecorator):
       name=self.name,
       description=self.description,
       owners=self.owners,
+      tags=self.tags,
       log_prints=self.log_prints,
       on_completion=[*self.state_handlers],
       on_failure=[*self.state_handlers],

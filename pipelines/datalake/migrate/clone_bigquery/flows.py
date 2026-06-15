@@ -3,17 +3,16 @@ from pipelines.constants import CIT
 from pipelines.datalake.transform.dbt.flows import sms_execute_dbt
 from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.prefect import create_flow_run, flow, flow_config, rename_flow_run
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .schedules import schedules
 from .tasks import clone_bigquery_table
 
 
 @flow(
-  name="Extração: Clona BigQuery",
+  name="Migração: Clona BigQuery",
   description="Clona dataset de projeto no BigQuery para o nosso datalake",
-  state_handlers=[handle_flow_state_change],
   owners=[CIT.CIT_ID.value],
+  tags=["CIT"],
 )
 def clone_bigquery(
   source_project_name: str,  # ex. "rj-smfp"

@@ -20,17 +20,13 @@ from pipelines.utils.prefect import (
   flow_config,
   wait_for_flow_run_task,
 )
-from pipelines.utils.state_handlers import handle_flow_state_change
 
 from .constants import constants as flow_constants
+from .schedules import schedules
 from .tasks import build_email, fetch_tcm_cases, get_todays_tcm_from_gcs, send_email
 
 
-@flow(
-  name="Report: CDI–Você Precisa Saber",
-  state_handlers=[handle_flow_state_change],
-  owners=[CIT.AVELLAR_ID.value],
-)
+@flow(name="Report: CDI–Você Precisa Saber", owners=[CIT.AVELLAR_ID.value], tags=["CIT"])
 def flow_voce_precisa_saber(
   date: Optional[str] = None,
   skip_to_email: bool = False,
@@ -143,4 +139,4 @@ def flow_voce_precisa_saber(
   )
 
 
-_flows = [flow_config(flow=flow_voce_precisa_saber, schedules=[])]
+_flows = [flow_config(flow=flow_voce_precisa_saber, schedules=schedules)]
