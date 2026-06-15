@@ -19,8 +19,8 @@ from .schedules import schedules
 
 @flow(
   name="Extração: Exames Laboratoriais",
-  state_handlers=[handle_flow_state_change],
   owners=[CIT.DANIEL_ID.value],
+  tags=["CIT"],
 )
 def exames_laboratoriais(
   dataset: str = "brutos_exames_laboratoriais",

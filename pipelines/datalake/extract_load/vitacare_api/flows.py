@@ -20,8 +20,8 @@ from pipelines.utils.state_handlers import handle_flow_state_change
 
 @flow(
   name="Extração: Vitacare API",
-  state_handlers=[handle_flow_state_change],
   owners=[CIT.PEDRO_ID.value],
+  tags=["CIT"],
 )
 def vitacare_api(
   environment: str = "dev",

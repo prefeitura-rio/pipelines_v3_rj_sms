@@ -16,8 +16,8 @@ from pipelines.utils.state_handlers import handle_flow_state_change
 
 @flow(
   name="Report: Alerta Atualização de Tabelas",
-  state_handlers=[handle_flow_state_change],
   owners=[CIT.HERIAN_ID.value],
+  tags=["CIT"],
 )
 def report_alerta_atualizacao_tabelas(environment: str = "dev", table_ids: dict = {}):
   results = verify_tables_freshness(environment=environment, table_ids=table_ids)

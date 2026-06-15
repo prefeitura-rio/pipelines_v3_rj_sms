@@ -16,7 +16,7 @@ from .tasks import baixar_endpoint, file_to_dataframe, login
   name="Extração: Sisreg Web",
   description="Flow de extração de escalas profissionais do site do Sisreg",
   owners=[CIT.AVELLAR_ID.value],
-  state_handlers=[handle_flow_state_change],
+  tags=["CIT"],
 )
 def extract_sisreg_web(
   endpoint: Literal["escala"] = "escala",
