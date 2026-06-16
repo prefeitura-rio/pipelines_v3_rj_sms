@@ -3,8 +3,11 @@
 
 from __future__ import annotations
 
+import time
+
 from selenium.webdriver import Firefox
 from selenium.webdriver.common.by import By
+
 from pipelines.utils.logger import log
 
 from .driver import (
@@ -21,16 +24,14 @@ from .locators import (
   LUPA_LAUDO,
   MENU_EXAME,
   MENU_GERENCIAR_LAUDO,
-  OPCAO_FILTRO_DATA,
-  OPCAO_MUNICIPIO,
   OPCAO_EXAME_CITO_COLO,
   OPCAO_EXAME_CITO_MAMA,
   OPCAO_EXAME_HISTO_COLO,
   OPCAO_EXAME_HISTO_MAMA,
   OPCAO_EXAME_MAMO,
+  OPCAO_FILTRO_DATA,
+  OPCAO_MUNICIPIO,
 )
-
-import time
 
 
 def goto_laudo_page(driver: Firefox) -> None:

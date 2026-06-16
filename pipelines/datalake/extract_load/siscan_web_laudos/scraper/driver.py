@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import time
 from contextlib import suppress
 from typing import Any, Callable, TypeVar
 
@@ -23,8 +24,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from pipelines.utils.logger import log
 
 from .config import DIRETORIO_DOWNLOADS, HEADLESS_PADRAO, TEMPO_ESPERA_PADRAO
-
-import time
 
 _T = TypeVar("_T")
 
