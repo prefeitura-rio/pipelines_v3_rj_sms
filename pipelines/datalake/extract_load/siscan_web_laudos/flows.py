@@ -184,6 +184,9 @@ def sms_siscan_web_historical(
 # v1: manager/historical num_workers=6, memory_request="2Gi", memory_limit="2Gi"
 _flows = [
   flow_config(flow=sms_siscan_web_manager, schedules=schedules),
-  flow_config(flow=sms_siscan_web_operator),
+  flow_config(
+    flow=sms_siscan_web_operator,
+    dockerfile="./pipelines/datalake/extract_load/siscan_web_laudos/Dockerfile",
+  ),
   flow_config(flow=sms_siscan_web_historical),
 ]
