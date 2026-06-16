@@ -4,119 +4,226 @@ import posixpath
 import shutil
 import zipfile
 
-from pipelines.utils.google import download_google_drive_file, upload_to_cloud_storage
-from pipelines.utils.io import create_tmp_data_folder, list_files_in_folder, unzip_file
+from prefect.context import FlowRunContext
+
+from pipelines.utils.datalake import update_logs_to_datalake
+from pipelines.utils.datetime import now, parse_date_or_today
+from pipelines.utils.env import get_prefect_url
+from pipelines.utils.google import (
+  download_google_drive_file,
+  list_google_drive_files,
+  upload_to_cloud_storage,
+)
+from pipelines.utils.io import create_tmp_data_folder
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
-from .utils import build_gdrive_to_gcs_result, normalize_blob_path
+
+@task
+def list_files(
+  folder_id: str, start_date: str = None, end_date: str = None
+) -> list[dict]:
+  return list_google_drive_files(
+    folder_id=folder_id, start_date=start_date, end_date=end_date
+  )
 
 
 @task
-def process_google_drive_file(item: dict, bucket_name: str) -> dict:
-  """
-  Processa um arquivo do Google Drive e envia seu conteúdo para o GCS.
-
-  Args:
-          item (dict): Metadados do arquivo retornados pela listagem do Drive.
-          bucket_name (str): Nome do bucket de destino no GCS.
-
-  Returns:
-          dict: Resultado do processamento do arquivo.
-  """
-  relative_path = item.get("relative_path") or item.get("name")
-  if not relative_path:
-    return build_gdrive_to_gcs_result(
-      item=item, status="failed", error_detail="Item sem 'relative_path' ou 'name'."
+def download_file(file: dict) -> dict:
+  tmp_path = None
+  try:
+    source_path = file.get("relative_path") or file.get("name")
+    tmp_path = create_tmp_data_folder(prefix="gdrive")
+    destination_path = os.path.join(tmp_path, source_path)
+    local_path = download_google_drive_file(
+      file_id=file["id"], destination_path=destination_path
     )
+    return {
+      "file": file,
+      "local_path": local_path,
+      "tmp_path": tmp_path,
+      "status": "success",
+      "error_message": None,
+    }
+  except Exception as exc:
+    source_path = file.get("relative_path") or file.get("name")
+    log(f"Erro baixando arquivo '{source_path}': {repr(exc)}", level="error")
+    return {
+      "file": file,
+      "local_path": None,
+      "tmp_path": tmp_path,
+      "status": "failed",
+      "error_message": str(exc),
+    }
 
-  if not item.get("id"):
-    return build_gdrive_to_gcs_result(
-      item=item, status="failed", error_detail="Item sem 'id'."
-    )
 
-  tmp_root = create_tmp_data_folder(prefix="gdrive_to_gcs_")
-  uploaded_paths = []
-  inner_file_paths = []
+@task
+def prepare_files_for_upload(downloaded_file: dict) -> list[dict]:
+  file = downloaded_file["file"]
+  source_path = file.get("relative_path") or file.get("name")
+  source_file_name = file.get("name")
+
+  if downloaded_file["status"] == "failed":
+    return [
+      {
+        "source_path": source_path,
+        "source_file_name": source_file_name,
+        "local_path": None,
+        "gcs_blob_path": None,
+        "gcs_uri": None,
+        "status": "failed",
+        "error_message": downloaded_file["error_message"],
+      }
+    ]
+
+  local_path = downloaded_file["local_path"]
+
+  if not source_file_name.lower().endswith(".zip"):
+    return [
+      {
+        "source_path": source_path,
+        "source_file_name": source_file_name,
+        "local_path": local_path,
+        "gcs_blob_path": source_path,
+        "gcs_uri": None,
+        "status": "ready",
+        "error_message": None,
+      }
+    ]
 
   try:
-    # Baixa o arquivo para a área temporária local
-    download_path = os.path.join(tmp_root, relative_path)
-    log(f"Baixando arquivo do Google Drive para '{download_path}'")
-    downloaded_file = download_google_drive_file(
-      file_id=item["id"], destination_path=download_path
-    )
+    extracted_dir = f"{local_path}_extracted"
 
-    # Se for ZIP, extrai e envia os arquivos sem incluir o nome do ZIP no caminho final
-    if downloaded_file.lower().endswith(".zip"):
-      try:
-        with zipfile.ZipFile(downloaded_file, "r") as zip_ref:
-          inner_file_paths = [
-            info.filename for info in zip_ref.infolist() if not info.is_dir()
-          ]
-      except Exception as exc:  # pylint: disable=broad-except
-        log(
-          f"Não foi possível inspecionar conteúdo do ZIP '{relative_path}': {repr(exc)}",
-          level="warning",
-        )
-        inner_file_paths = []
+    with zipfile.ZipFile(local_path, "r") as zip_file:
+      inner_files = [info for info in zip_file.infolist() if not info.is_dir()]
+      zip_file.extractall(extracted_dir)
 
-      extracted_dir = os.path.join(tmp_root, "extracted")
-      unzip_file(filepath=downloaded_file, output_path=extracted_dir)
+    prepared_files = []
+    zip_parent_path = posixpath.dirname(source_path)
 
-      files_to_upload = list_files_in_folder(extracted_dir, recursive=True)
-      source_parent = posixpath.dirname(relative_path)
+    for inner_file in inner_files:
+      inner_path = inner_file.filename.replace("\\", "/").strip("/")
+      local_inner_path = os.path.join(extracted_dir, *inner_path.split("/"))
+      # Arquivos internos sobem sem incluir o nome do ZIP no caminho do GCS.
+      gcs_blob_path = posixpath.join(zip_parent_path, inner_path)
 
-      for file_path in files_to_upload:
-        extracted_relative_path = os.path.relpath(file_path, extracted_dir).replace(
-          "\\", "/"
-        )
-        blob_path = normalize_blob_path(source_parent, extracted_relative_path)
-        blob_dir = posixpath.dirname(blob_path) or None
-
-        upload_to_cloud_storage(
-          path=file_path, bucket_name=bucket_name, blob_prefix=blob_dir
-        )
-        uploaded_paths.append(f"gs://{bucket_name}/{blob_path}")
-
-    else:
-      blob_path = normalize_blob_path(relative_path)
-      blob_dir = posixpath.dirname(blob_path) or None
-
-      upload_to_cloud_storage(
-        path=downloaded_file, bucket_name=bucket_name, blob_prefix=blob_dir
+      prepared_files.append(
+        {
+          "source_path": posixpath.join(source_path, inner_path),
+          "source_file_name": posixpath.basename(inner_path),
+          "local_path": local_inner_path,
+          "gcs_blob_path": gcs_blob_path,
+          "gcs_uri": None,
+          "status": "ready",
+          "error_message": None,
+        }
       )
-      uploaded_paths.append(f"gs://{bucket_name}/{blob_path}")
 
-    return build_gdrive_to_gcs_result(
-      item=item,
-      status="success",
-      uploaded_paths=uploaded_paths,
-      inner_file_paths=inner_file_paths,
-    )
+    return prepared_files
 
   except zipfile.BadZipFile as exc:
-    log(f"Arquivo ZIP corrompido em '{relative_path}': {repr(exc)}", level="error")
-    return build_gdrive_to_gcs_result(
-      item=item,
-      status="failed",
-      error_detail=f"Arquivo ZIP corrompido: {exc}",
-      uploaded_paths=uploaded_paths,
-      inner_file_paths=inner_file_paths,
+    log(f"ZIP corrompido '{source_path}': {repr(exc)}", level="error")
+    return [
+      {
+        "source_path": source_path,
+        "source_file_name": source_file_name,
+        "local_path": local_path,
+        "gcs_blob_path": None,
+        "gcs_uri": None,
+        "status": "failed",
+        "error_message": f"ZIP corrompido: {exc}",
+      }
+    ]
+
+  except Exception as exc:
+    log(f"Erro extraindo ZIP '{source_path}': {repr(exc)}", level="error")
+    return [
+      {
+        "source_path": source_path,
+        "source_file_name": source_file_name,
+        "local_path": local_path,
+        "gcs_blob_path": None,
+        "gcs_uri": None,
+        "status": "failed",
+        "error_message": str(exc),
+      }
+    ]
+
+
+@task
+def upload_file(prepared_file: dict, bucket_name: str) -> dict:
+  if prepared_file["status"] == "failed":
+    timestamp = now().isoformat()
+    prepared_file["started_at"] = timestamp
+    prepared_file["finished_at"] = timestamp
+    return prepared_file
+
+  prepared_file["started_at"] = now().isoformat()
+
+  try:
+    blob_prefix = posixpath.dirname(prepared_file["gcs_blob_path"]) or None
+    upload_to_cloud_storage(
+      path=prepared_file["local_path"], bucket_name=bucket_name, blob_prefix=blob_prefix
     )
 
-  except Exception as exc:  # pylint: disable=broad-except
-    log(f"Erro processando arquivo '{relative_path}': {repr(exc)}", level="error")
-    return build_gdrive_to_gcs_result(
-      item=item,
-      status="failed",
-      error_detail=str(exc),
-      uploaded_paths=uploaded_paths,
-      inner_file_paths=inner_file_paths,
+    prepared_file["status"] = "success"
+    prepared_file["gcs_uri"] = f"gs://{bucket_name}/{prepared_file['gcs_blob_path']}"
+    prepared_file["finished_at"] = now().isoformat()
+    return prepared_file
+
+  except Exception as exc:
+    log(
+      f"Erro enviando arquivo '{prepared_file['source_path']}': {repr(exc)}",
+      level="error",
+    )
+    prepared_file["status"] = "failed"
+    prepared_file["error_message"] = str(exc)
+    prepared_file["finished_at"] = now().isoformat()
+    return prepared_file
+
+
+@task
+def cleanup_downloaded_file(downloaded_file: dict) -> None:
+  tmp_path = downloaded_file.get("tmp_path")
+
+  if tmp_path and os.path.exists(tmp_path):
+    log(f"Apagando arquivos temporários em '{tmp_path}'")
+    shutil.rmtree(tmp_path, ignore_errors=True)
+
+
+@task
+def write_log(
+  log_items: list[dict], dataset_id: str, table_id: str, environment: str
+) -> dict:
+  if not log_items:
+    return {"inserted_rows": 0}
+
+  flow_run_id = None
+  flow_run_url = None
+  flow_run_context = FlowRunContext.get()
+
+  if flow_run_context:
+    flow_run_id = str(flow_run_context.flow_run.id)
+    flow_run_url = f"{get_prefect_url()}/runs/flow-run/{flow_run_id}"
+
+  fallback_timestamp = now().isoformat()
+  rows = []
+  for log_item in log_items:
+    timestamp = log_item.get("finished_at") or fallback_timestamp
+    rows.append(
+      {
+        "flow_run_id": flow_run_id,
+        "flow_run_url": flow_run_url,
+        "source_path": log_item["source_path"],
+        "source_file_name": log_item["source_file_name"],
+        "gcs_uri": log_item["gcs_uri"],
+        "status": log_item["status"],
+        "error_message": log_item["error_message"],
+        "timestamp": timestamp,
+        "data_particao": parse_date_or_today(timestamp).date().isoformat(),
+      }
     )
 
-  finally:
-    # Limpa os arquivos temporários ao final do processamento
-    if os.path.exists(tmp_root):
-      log(f"Apagando arquivos temporários em '{tmp_root}'")
-      shutil.rmtree(tmp_root, ignore_errors=True)
+  return update_logs_to_datalake(
+    logs=rows, dataset_id=dataset_id, table_id=table_id, environment=environment
+  )
