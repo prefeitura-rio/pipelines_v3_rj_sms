@@ -68,6 +68,7 @@ def create_schedule_list(
       Se 0, todos os flows serão programados para executar
       ao mesmo tempo, o que pode esbarrar em rate limiting etc
   """
+  config = config or dict()
   start_minute = int(config["minute"] or 0 if "minute" in config else 0)
   start_hour = int(config["hour"] or 0 if "hour" in config else 0)
   return [
