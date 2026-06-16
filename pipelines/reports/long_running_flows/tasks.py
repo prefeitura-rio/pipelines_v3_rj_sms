@@ -1,103 +1,84 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
 
+from pipelines.utils.cleanup import prettify_duration
+from pipelines.utils.env import get_prefect_url
 from pipelines.utils.logger import log
 from pipelines.utils.monitor import send_discord_message
 from pipelines.utils.prefect import authenticated_task as task
-from pipelines.utils.prefect import cancel_flow_run, get_flow_runs_with_state, run_query
+from pipelines.utils.prefect import get_flow_runs_with_state
 
 
 @task
-def detect_running_flows(environment: str) -> pd.DataFrame:
+def detect_running_flows() -> pd.DataFrame:
   """
-  Detects and retrieves information about long-running flow runs for a specific project.
-  This function queries a GraphQL API to fetch flow runs that are currently in the "Running"
-  state for a given project. The results are then processed into a pandas DataFrame with
-  relevant details.
-  Returns:
-    pd.DataFrame: A DataFrame containing details of the long-running flow runs, including:
-      - id: The ID of the flow run.
-      - name: The name of the flow run.
-      - state: The current state of the flow run.
-      - labels: Labels associated with the flow run.
-      - scheduled_start_time: The scheduled start time of the flow run.
-      - version: The version of the flow run.
-      - flow_name: The name of the flow.
-      - flow_id: The ID of the flow.
+  Obtém lista de flows em execução, e filtra por aqueles que estão
+  em execução há pelo menos 5 minutos. Retorna DataFrame com dados
+  sobre os flows.
   """
   flow_runs = get_flow_runs_with_state(states=["PENDING", "RUNNING"])
-
-  query = """
-    query UpcomingFlowRuns($projectId: uuid) {
-    flow_run(
-      where: {flow: {project_id: {_eq: $projectId}}, state: {_in: ["Running", "Submitted"]}}
-      order_by: [{scheduled_start_time: asc}, {flow: {name: asc}}]
-    ) {
-      id
-      name
-      state
-      labels
-      scheduled_start_time
-      version
-      flow {
-        id
-        name
+  data = []
+  for obj in flow_runs:
+    flow_run = obj["flow_run"]
+    flow = obj["flow"]
+    data.append(
+      {
+        "id": str(flow_run.id),
+        "name": flow_run.name,
+        "state": flow_run.state_name,
+        "start_time": flow_run.expected_start_time,
+        "version": flow_run.deployment_version,
+        "flow_id": str(flow.id),
+        "flow_name": flow.name,
       }
-      __typename
-    }
-  }
-  """
-  data = run_query.run(
-    query=query, variables={"projectId": get_prefect_project(environment=environment)}
-  )
-  if len(data["data"]["flow_run"]) == 0:
+    )
+
+  if len(data) == 0:
     return None
 
-  result = pd.DataFrame(data["data"]["flow_run"])
+  result = pd.DataFrame(data)
 
-  # Data processing
-  result["flow_name"] = result["flow"].apply(lambda x: x["name"])
-  result["flow_id"] = result["flow"].apply(lambda x: x["id"])
   result["composed_name"] = result["flow_name"] + " -> " + result["name"]
-  result["expected_start_time"] = pd.to_datetime(
-    result["expected_start_time"], format="mixed"
-  )  # noqa
-  result["expected_start_time"] = result["expected_start_time"].dt.tz_convert(
-    "America/Sao_Paulo"
-  )
-  result["beginning_datetime"] = result["expected_start_time"].apply(
+  result["start_time"] = pd.to_datetime(
+    result["start_time"], format="mixed"
+  ).dt.tz_convert("America/Sao_Paulo")
+  result["beginning_datetime"] = result["start_time"].apply(
     lambda x: x.strftime("%d/%m/%Y %H:%M:%S")
   )
-  result["duration_minutes"] = result["expected_start_time"].apply(
-    lambda x: (pd.Timestamp.now(tz="America/Sao_Paulo") - x).total_seconds() / 60
-  )
-  result["flow_run_url"] = result["id"].apply(
-    lambda x: f"https://pipelines.dados.rio/flow-run/{x}"
+  result["duration_seconds"] = result["start_time"].apply(
+    lambda x: (pd.Timestamp.now(tz="America/Sao_Paulo") - x).total_seconds()
   )
 
-  # Classification Type
-  def classify(duration):
-    if duration > 24 * 60:
+  URL = get_prefect_url()
+  result["flow_run_url"] = result["id"].apply(lambda x: f"{URL}/runs/flow-run/{x}")
+
+  def classify(duration_seconds):
+    if duration_seconds > 24 * 60 * 60:
       return "long"
-    elif duration > 12 * 60:
+    if duration_seconds > 12 * 60 * 60:
       return "warning"
-    else:
+    if duration_seconds >= 5 * 60:
       return "normal"
+    # Não temos interesse em flows em execução há menos de 5min
+    return "deleteme"
 
-  result["classification_type"] = result["duration_minutes"].apply(classify)
+  result["classification_type"] = result["duration_seconds"].apply(classify)
+  # Apaga todos os flows com <5min de duração
+  result.drop(result[result["classification_type"] == "deleteme"].index, inplace=True)
+  # Aqui é bastante possível que tenhamos filtrado todos os flows
+  # encontrados; então novamente confere o tamanho do DataFrame e
+  # retorna None caso esteja vazio
+  if result.size == 0:
+    return None
 
-  #  Classification Emoji
-  def classify_emoji(duration):
-    if duration > 24 * 60:
+  def classify_emoji(duration_seconds):
+    if duration_seconds > 24 * 60 * 60:
       return "☠️"
-    elif duration > 12 * 60:
+    if duration_seconds > 12 * 60 * 60:
       return "⚠️"
-    else:
-      return ""
+    return ""
 
-  result["classification_emoji"] = result["duration_minutes"].apply(classify_emoji)
-
-  result.drop(columns="flow", inplace=True)
+  result["classification_emoji"] = result["duration_seconds"].apply(classify_emoji)
 
   return result
 
@@ -105,33 +86,36 @@ def detect_running_flows(environment: str) -> pd.DataFrame:
 @task
 def report_flows(running_flows: pd.DataFrame):
   """
-  Logs information about long-running flow runs.
-
-  This function iterates over each row in the provided DataFrame and logs a message
-  containing the flow run ID, flow name, and the scheduled start time.
-
-  Args:
-    long_running_flows (pd.DataFrame): A DataFrame containing information about long-running
-      flow runs. Expected columns are:
-      - 'id': The unique identifier of the flow run.
-      - 'flow_name': The name of the flow.
-      - 'scheduled_start_time': The scheduled start time of the flow run.
+  Envia mensagem para o Discord com informações sobre
+  flows em execução há muito tempo
   """
   if running_flows is None:
-    log("No long running flows detected.")
+    log("Nenhum flow de longa duração encontrado")
+    send_discord_message(
+      title="✅ Execuções em Andamento",
+      message="Nenhum flow em execução há mais de 5min",
+      slug="warning",
+    )
     return
 
-  running_flows.sort_values(by="scheduled_start_time", ascending=True, inplace=True)
+  running_flows.sort_values(by="start_time", ascending=True, inplace=True)
 
-  content = [f"Detectamos {running_flows.shape[0]} flow runs:"]
+  flow_count = running_flows.shape[0]
+  content = [
+    (
+      f"Foi detectado {flow_count} flow run:"
+      if flow_count < 2
+      else f"Foram detectados {flow_count} flow runs:"
+    )
+  ]
   for _, flow_run in running_flows.iterrows():
     name = flow_run["composed_name"]
     url = flow_run["flow_run_url"]
-    duration_minutes = flow_run["duration_minutes"]
+    duration = prettify_duration(flow_run["duration_seconds"] * 1000)
     beginning_datetime = flow_run["beginning_datetime"]
     emoji = flow_run["classification_emoji"]
     content.append(
-      f"- {emoji} [**{name}**]({url}) :: {duration_minutes:.1f} minutos desde {beginning_datetime}."  # noqa
+      f"- {emoji} [**{name}**]({url}) :: {duration} desde {beginning_datetime}."
     )
 
   full_message = "\n".join(content)
@@ -156,28 +140,28 @@ def cancel_flows(running_flows: pd.DataFrame):
   Returns:
     None
   """
+  log("TODO: Não implementado", level="warning")
+  # if running_flows is None:
+  #   log("No running flows detected.")
+  #   return
 
-  if running_flows is None:
-    log("No running flows detected.")
-    return
+  # long_running_flows = running_flows[running_flows["classification_type"] == "long"]
+  # if long_running_flows.shape[0] == 0:
+  #   log("No long running flows detected.")
+  #   return
 
-  long_running_flows = running_flows[running_flows["classification_type"] == "long"]
-  if long_running_flows.shape[0] == 0:
-    log("No long running flows detected.")
-    return
+  # log(f"Cancelling {long_running_flows.shape[0]} long running flows.")
 
-  log(f"Cancelling {long_running_flows.shape[0]} long running flows.")
+  # full_message = [f"São {long_running_flows.shape[0]} execuções longas em cancelamento:"]
 
-  full_message = [f"São {long_running_flows.shape[0]} execuções longas em cancelamento:"]
+  # for _, flow_run in long_running_flows.iterrows():
+  #   success = cancel_flow_run.run(flow_run_id=flow_run["id"])
+  #   success_emoji = "✅" if success else "❌"
+  #   message = f"- [**{flow_run['composed_name']}**]({flow_run['flow_run_url']}) de {flow_run['duration_seconds']:.1f} minutos :: Sucesso {success_emoji}"  # noqa
+  #   full_message.append(message)
+  #   log(message)
 
-  for _, flow_run in long_running_flows.iterrows():
-    success = cancel_flow_run.run(flow_run_id=flow_run["id"])
-    success_emoji = "✅" if success else "❌"
-    message = f"- [**{flow_run['composed_name']}**]({flow_run['flow_run_url']}) de {flow_run['duration_minutes']:.1f} minutos :: Sucesso {success_emoji}"  # noqa
-    full_message.append(message)
-    log(message)
-
-  send_discord_message(
-    title="☠️ Execuções Canceladas", message="\n".join(full_message), slug="warning"
-  )
+  # send_discord_message(
+  #   title="☠️ Execuções Canceladas", message="\n".join(full_message), slug="warning"
+  # )
   return

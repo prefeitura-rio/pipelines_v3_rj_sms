@@ -230,3 +230,39 @@ def prettify_byte_size(byte_size: int, precision: int = 1):
   return [
     size for size in size_list if not (size.startswith("0.") or size.startswith("0 "))
   ][-1]
+
+
+def prettify_duration(ms: int):
+  """
+  Converte uma duração em milissegundos para uma string
+  mais legível
+
+  >>> prettify_duration(10)
+  '10ms'
+  >>> prettify_duration(1000)
+  '1s'
+  >>> prettify_duration(1_000_000)
+  '16min 40s'
+  >>> dur = 10*60*60*1000 + 28*60*1000 + 43*1000 + 10
+  37723010
+  >>> prettify_duration(dur)
+  '10h 28min 43s 10ms'
+  >>> prettify_duration(15*24*60*60*1000)
+  '15d'
+  """
+  days, remainder = divmod(int(ms), 24 * 60 * 60 * 1000)
+  hours, remainder = divmod(remainder, 60 * 60 * 1000)
+  minutes, remainder = divmod(remainder, 60 * 1000)
+  seconds, milliseconds = divmod(remainder, 1000)
+  parts = []
+  if days > 0:
+    parts.append(f"{days}d")
+  if hours > 0:
+    parts.append(f"{hours}h")
+  if minutes > 0:
+    parts.append(f"{minutes}min")
+  if seconds > 0:
+    parts.append(f"{seconds}s")
+  if milliseconds > 0 or not parts:
+    parts.append(f"{milliseconds}ms")
+  return " ".join(parts)

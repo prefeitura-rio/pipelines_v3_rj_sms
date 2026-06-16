@@ -3,7 +3,7 @@ import asyncio
 import re
 import time
 import unicodedata
-from typing import Any, Callable, List, Literal, Optional, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Union
 from uuid import UUID
 
 from prefect import Task, get_client
@@ -399,8 +399,12 @@ def get_flow_runs_with_state(
       "CANCELLING",
     ]
   ],
-) -> List[FlowRun]:
+) -> List[Dict[str, Union[FlowRun, Flow]]]:
   with get_client(sync_client=True) as client:
-    return client.read_flow_runs(
+    flow_runs = client.read_flow_runs(
       flow_run_filter=FlowRunFilter(state={"type": {"any_": states}})
     )
+    return [
+      {"flow_run": flow_run, "flow": client.read_flow(flow_run.flow_id)}
+      for flow_run in flow_runs
+    ]
