@@ -213,6 +213,45 @@ cases:
       environment: dev
       # ...
 
+  # Extração do SISCAN Web - Laudos (operator)
+  - case_slug: "extract_siscan_web_laudos_operator"
+    flow_path: "pipelines.datalake.extract_load.siscan_web_laudos.flows"
+    flow_name: "sms_siscan_web_operator"
+    params:
+      environment: dev
+      opcao_exame: mamografia
+      data_inicial: "01/01/2025"
+      data_final: "31/01/2025"
+      bq_dataset: brutos_siscan_web
+      bq_table: laudos_mamografia
+
+  # Extração do SISCAN Web - Laudos (manager)
+  - case_slug: "extract_siscan_web_laudos_manager"
+    flow_path: "pipelines.datalake.extract_load.siscan_web_laudos.flows"
+    flow_name: "sms_siscan_web_manager"
+    params:
+      environment: dev
+      relative_date: D-1
+      range: 1
+      rename_flow: true
+      opcao_exame: mamografia
+      bq_dataset: brutos_siscan_web
+      bq_table: laudos_mamografia
+
+  # Extração do SISCAN Web - Laudos histórico
+  - case_slug: "extract_siscan_web_laudos_historical"
+    flow_path: "pipelines.datalake.extract_load.siscan_web_laudos.flows"
+    flow_name: "sms_siscan_web_historical"
+    params:
+      environment: dev
+      range: 1
+      rename_flow: true
+      start_date: "01/01/2025"
+      end_date: "31/01/2025"
+      opcao_exame: mamografia
+      bq_dataset: brutos_siscan_web
+      bq_table: laudos_mamografia
+
   # Extração do Sisreg (API)
   - case_slug: "datalake-extract-sisreg-api"
     flow_path: "pipelines.datalake.extract_load.sisreg_api.flows"
@@ -385,4 +424,3 @@ cases:
     flow_name: "report_uso_hci"
     params:
       environment: "dev"
-
