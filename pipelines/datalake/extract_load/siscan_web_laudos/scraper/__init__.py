@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from prefeitura_rio.pipelines_utils.logging import log
+from pipelines.utils.logger import log
 
 
 class ScraperError(RuntimeError):

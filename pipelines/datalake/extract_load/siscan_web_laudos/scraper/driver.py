@@ -19,9 +19,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from webdriver_manager.firefox import GeckoDriverManager
 
-from prefeitura_rio.pipelines_utils.logging import log
+from pipelines.utils.logger import log
 
 from .config import DIRETORIO_DOWNLOADS, HEADLESS_PADRAO, TEMPO_ESPERA_PADRAO
 

@@ -21,6 +21,7 @@ dependencies = [
   "pandas>=3.0.1",
   "prefect>=3.6",
   "psycopg2-binary>=2.9.12",  # pd.read_sql() requer psycopg2 pra ler Postgres
+  "selenium>=4.39.0",  # Scraper do SISCAN Web
 ]
 
 [dependency-groups]

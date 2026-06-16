@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from selenium.webdriver import Firefox
 from selenium.webdriver.common.by import By
-from prefeitura_rio.pipelines_utils.logging import log
+from pipelines.utils.logger import log
 
 from .driver import (
     clicar_com_retry,
