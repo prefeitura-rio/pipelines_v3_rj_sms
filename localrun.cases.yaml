@@ -103,6 +103,15 @@ cases:
       # relative_date: ...
       # extract_whole_table: ...
 
+  # Extração Vitacare Histórico (Cloud SQL) -> BigQuery
+  - case_slug: "datalake-extract-vitacare-historico"
+    flow_path: "pipelines.datalake.extract_load.vitacare_historico.flows"
+    flow_name: "vitacare_historico"
+    params:
+      environment: dev
+      # cnes: "2280310"
+      # table_name: "ATENDIMENTOS"
+
   # Clona tabelas do BigQuery, de um projeto qualquer para a SMS
   - case_slug: "datalake-clone-bigquery-table"
     flow_path: "pipelines.datalake.extract_load.clone_bigquery.flows"
@@ -225,13 +234,15 @@ cases:
 
   # Migração Google Drive -> GCS
   - case_slug: "gdrive-to-gcs"
-    flow_path: "pipelines.migrate.gdrive_to_gcs.flows"
+    flow_path: "pipelines.datalake.migrate.gdrive_to_gcs.flows"
     flow_name: "gdrive_to_gcs"
     params:
       environment: dev
       root_folder_id: "1VUdm8fixnUs_dJrcflsNvzXIGPX6e-2r"
       bucket_name: "vitacare_backups_gdrive"
-      last_modified_date: 'M-0'
+      table_id: "log_gdrive_to_gcs"
+      start_date: "M-0"
+      end_date: "D-0"
 
   # Migração SQL Server (.BAK) -> Cloud SQL
   - case_slug: "sqlserver_backup"
