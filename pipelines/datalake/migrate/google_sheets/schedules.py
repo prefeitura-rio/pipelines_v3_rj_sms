@@ -43,7 +43,6 @@ hourly_parameters = [
     "gsheets_sheet_name": "Controle de Demandas - Equipe Individual",
     "table_id": "equipe_tutela_individual_2026",
     "url": "https://docs.google.com/spreadsheets/d/1iZ8z5HSy7OXRRBk5MhlzYpk1mP1y6A-4r2vzgPi-0k4",
-    "url_type": "google_sheet",
   },
   {
     "dataset_id": "brutos_cdi",
@@ -51,7 +50,6 @@ hourly_parameters = [
     "gsheets_sheet_name": "Controle de Demandas - Equipe Coletiva",
     "table_id": "equipe_tutela_coletiva_2025",
     "url": "https://docs.google.com/spreadsheets/d/1JirkDMgtYUIiJ7z5Zcxnn3sCUAneWwVfgT6u-M3QHE8",
-    "url_type": "google_sheet",
   },
   {
     "dataset_id": "brutos_cdi",
@@ -59,7 +57,6 @@ hourly_parameters = [
     "gsheets_sheet_name": "Controle de Demandas - Equipe Coletiva",
     "table_id": "equipe_tutela_coletiva_2026",
     "url": "https://docs.google.com/spreadsheets/d/1iZ8z5HSy7OXRRBk5MhlzYpk1mP1y6A-4r2vzgPi-0k4",
-    "url_type": "google_sheet",
   },
 ]
 # /hourly_parameters
