@@ -111,7 +111,7 @@ def report_flows(running_flows: pd.DataFrame):
   for _, flow_run in running_flows.iterrows():
     name = flow_run["composed_name"]
     url = flow_run["flow_run_url"]
-    duration = prettify_duration(flow_run["duration_seconds"] * 1000)
+    duration = prettify_duration(flow_run["duration_seconds"] * 1000, precision="s")
     beginning_datetime = flow_run["beginning_datetime"]
     emoji = flow_run["classification_emoji"]
     content.append(
