@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime, timedelta
 
-from pipelines.utils.schedules import create_schedule, create_schedule_list
+from prefect.schedules import Interval
+
+from pipelines.constants import constants as global_constants
+from pipelines.utils.schedules import create_schedule_list
 
 EXAM_PARAMETERS = [
   {"opcao_exame": "mamografia", "bq_table": "laudos_mamografia"},
@@ -37,10 +41,11 @@ schedules = [
     interval_minutes=0,
   ),
   *[
-    create_schedule(
+    Interval(
+      timedelta(weeks=4),
+      anchor_date=datetime(2025, 8, 6, 20, 0, tzinfo=global_constants.TIMEZONE.value),
+      timezone=global_constants.TIMEZONE_NAME.value,
       parameters=parameters,
-      interval="monthly",
-      config={"day": 6, "hour": 20, "minute": 0},
     )
     for parameters in monthly_manager_parameters
   ],
