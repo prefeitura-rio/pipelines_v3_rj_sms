@@ -9,6 +9,8 @@ from pipelines.utils.schedules import create_schedule_list
 EXAM_PARAMETERS = [
   {"opcao_exame": "mamografia", "bq_table": "laudos_mamografia"},
   {"opcao_exame": "histo_mama", "bq_table": "laudos_histo_mama"},
+  # "cito_mama" tem poucos resultados; "cito_colo" e "histo_colo"
+  # ficam fora porque, por enquanto, o pipeline trabalha apenas com mama.
 ]
 
 daily_manager_parameters = [
