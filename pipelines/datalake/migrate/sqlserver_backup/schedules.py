@@ -7,14 +7,14 @@ flow_parameters = [
     "bucket_name": "vitacare_backups_gdrive",
     "instance_name": "vitacare",
     "file_pattern": "HISTÓRICO_PEPVITA_RJ/AP*/vitacare_historic_*_*_*.bak",
-    "environment": "dev",
+    "environment": "prod",
   },
   {
     "backup_type": "rnds_vaccine",
     "bucket_name": "vitacare_backups_gdrive",
     "instance_name": "vitacare",
     "file_pattern": "HISTÓRICO_PEPVITA_RJ/RNDS/RNDS_Vaccine_Historic_*.bak",
-    "environment": "dev",
+    "environment": "prod",
   },
 ]
 
