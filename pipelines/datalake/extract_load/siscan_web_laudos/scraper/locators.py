@@ -28,8 +28,8 @@ BOTAO_PESQUISAR = (By.ID, "form:botaoPesquisarLaudo")
 # Tabela
 LUPA_LAUDO = (By.CSS_SELECTOR, "a[title='Detalhar Laudo']")
 BOTAO_PROXIMO = (
-    By.XPATH,
-    "//td[contains(@class,'rich-datascr')][span[normalize-space()='Próximo']]",
+  By.XPATH,
+  "//td[contains(@class,'rich-datascr')][span[normalize-space()='Próximo']]",
 )
 
 # Detalhes ----

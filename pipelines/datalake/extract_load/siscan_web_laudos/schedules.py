@@ -3,14 +3,8 @@
 from pipelines.utils.schedules import create_schedule, create_schedule_list
 
 EXAM_PARAMETERS = [
-  {
-    "opcao_exame": "mamografia",
-    "bq_table": "laudos_mamografia",
-  },
-  {
-    "opcao_exame": "histo_mama",
-    "bq_table": "laudos_histo_mama",
-  },
+  {"opcao_exame": "mamografia", "bq_table": "laudos_mamografia"},
+  {"opcao_exame": "histo_mama", "bq_table": "laudos_histo_mama"},
 ]
 
 daily_manager_parameters = [

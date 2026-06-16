@@ -20,11 +20,7 @@ def _format_date(value: date | datetime) -> str:
 
 @task(retries=5, retry_delay_seconds=3 * 60)
 def extract_siscan_laudos(
-  email: str,
-  password: str,
-  opcao_exame: str,
-  start_date: str,
-  end_date: str,
+  email: str, password: str, opcao_exame: str, start_date: str, end_date: str
 ) -> pd.DataFrame:
   """
   Executa o scraper do SISCAN para coletar laudos em um intervalo de datas.
@@ -60,9 +56,7 @@ def parse_date(value: str) -> datetime:
 
 @task
 def generate_extraction_windows(
-  start_date: date | datetime,
-  end_date: date | datetime | None,
-  interval: int,
+  start_date: date | datetime, end_date: date | datetime | None, interval: int
 ) -> list[tuple[str, str]]:
   if interval < 1:
     raise ValueError("interval deve ser maior ou igual a 1")

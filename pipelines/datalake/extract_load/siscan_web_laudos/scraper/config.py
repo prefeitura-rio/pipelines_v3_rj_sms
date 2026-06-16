@@ -9,9 +9,9 @@ from pathlib import Path
 from selenium.webdriver.common.by import By
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%d/%m/%Y %H:%M:%S",
+  level=logging.INFO,
+  format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+  datefmt="%d/%m/%Y %H:%M:%S",
 )
 
 # Configurações gerais                                                        #
