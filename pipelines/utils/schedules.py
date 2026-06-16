@@ -49,11 +49,38 @@ def create_schedule_list(
   interval: Literal[
     "hourly", "12-hours", "daily", "weekly", "monthly", "semiannual"
   ] = "daily",
-  config: ScheduleConfig = None,
+  config: ScheduleConfig | None = None,
+  interval_minutes: int = 5,
 ):
+  """
+  Args:
+    parameters_list(list[dict]):
+      Lista de parâmetros, representando execuções distintas
+      de um flow
+    interval(str):
+      Frequência de execução, de modo geral, do schedule
+    config(dict?):
+      Objeto especificando em maior granularidade a frequência
+      de execução
+    interval_minutes(int?):
+      Intervalo em minutos entre os schedules. Esse valor
+      é somado ao schedule definido para cada flow.
+      Se 0, todos os flows serão programados para executar
+      ao mesmo tempo, o que pode esbarrar em rate limiting etc
+  """
+  start_minute = int(config["minute"] or 0 if "minute" in config else 0)
+  start_hour = int(config["hour"] or 0 if "hour" in config else 0)
   return [
-    create_schedule(parameters=params, interval=interval, config=config)
-    for params in parameters_list
+    create_schedule(
+      parameters=params,
+      interval=interval,
+      config={
+        **config,
+        "minute": ((start_minute + i * interval_minutes) % 60),
+        "hour": (start_hour + (start_minute + i * interval_minutes) // 60) % 24,
+      },
+    )
+    for i, params in enumerate(parameters_list)
   ]
 
 
