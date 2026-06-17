@@ -112,7 +112,7 @@ def vitacare_historico(
 
       cnes_item = pending_cnes.pop()
       flow_run = create_flow_run(
-        flow_=vitacare_historico_cnes,
+        flow=vitacare_historico_cnes,
         flow_run_name=f"{environment} - vitacare_historico - {cnes_item}",
         parameters={
           "environment": environment,
