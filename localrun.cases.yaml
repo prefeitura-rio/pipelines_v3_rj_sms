@@ -386,3 +386,10 @@ cases:
     params:
       environment: "dev"
 
+  # Flows de longa duração
+  - case_slug: "long_running_flows"
+    flow_path: "pipelines.reports.long_running_flows.flows"
+    flow_name: "report_long_running_flows"
+    params:
+      environment: "dev"
+

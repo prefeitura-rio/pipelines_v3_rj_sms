@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 import unicodedata
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 import pandas as pd
 
@@ -230,3 +230,52 @@ def prettify_byte_size(byte_size: int, precision: int = 1):
   return [
     size for size in size_list if not (size.startswith("0.") or size.startswith("0 "))
   ][-1]
+
+
+def prettify_duration(ms: int, precision: Literal["ms", "s", "min", "h", "d"] = "ms"):
+  """
+  Converte uma duração em milissegundos para uma string
+  mais legível. Opcionalmente recebe um parâmetro `precision`
+  que diz até qual componente da duração mostrar.
+  >>> prettify_duration(10)
+  '10ms'
+  >>> prettify_duration(1000)
+  '1s'
+  >>> prettify_duration(1_000_000)
+  '16min 40s'
+  >>> dur = 32*60*60*1000 + 28*60*1000 + 43*1000 + 10
+  >>> prettify_duration(dur)
+  '1d 8h 28min 43s 10ms'
+  >>> prettify_duration(dur, precision="ms")
+  '1d 8h 28min 43s 10ms'
+  >>> prettify_duration(dur, precision="s")
+  '1d 8h 28min 43s'
+  >>> prettify_duration(dur, precision="min")
+  '1d 8h 28min'
+  >>> prettify_duration(dur, precision="h")
+  '1d 8h'
+  >>> prettify_duration(dur, precision="d")
+  '1d'
+  """
+  days, remainder = divmod(int(ms), 24 * 60 * 60 * 1000)
+  hours, remainder = divmod(remainder, 60 * 60 * 1000)
+  minutes, remainder = divmod(remainder, 60 * 1000)
+  seconds, milliseconds = divmod(remainder, 1000)
+  parts = []
+  prec_idx = ["ms", "s", "min", "h", "d"].index(precision)
+  # idx==4
+  if days > 0 or (not parts and prec_idx >= 4):
+    parts.append(f"{days}d")
+  # idx==3
+  if prec_idx < 4 and (hours > 0 or (not parts and prec_idx >= 3)):
+    parts.append(f"{hours}h")
+  # idx==2
+  if prec_idx < 3 and (minutes > 0 or (not parts and prec_idx >= 2)):
+    parts.append(f"{minutes}min")
+  # idx==1
+  if prec_idx < 2 and (seconds > 0 or (not parts and prec_idx >= 1)):
+    parts.append(f"{seconds}s")
+  # idx==0
+  if prec_idx < 1 and (milliseconds > 0 or not parts):
+    parts.append(f"{milliseconds}ms")
+  return " ".join(parts)
