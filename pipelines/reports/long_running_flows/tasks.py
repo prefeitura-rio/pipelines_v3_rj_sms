@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
+from prefect.client.schemas import StateType
 
 from pipelines.utils.cleanup import prettify_duration
 from pipelines.utils.env import get_prefect_url
 from pipelines.utils.logger import log
 from pipelines.utils.monitor import send_discord_message
 from pipelines.utils.prefect import authenticated_task as task
-from pipelines.utils.prefect import get_flow_runs_with_state
+from pipelines.utils.prefect import get_flow_runs_with_state, set_flow_run_state
 
 
 @task
@@ -80,6 +81,11 @@ def detect_running_flows() -> pd.DataFrame:
 
   result["classification_emoji"] = result["duration_seconds"].apply(classify_emoji)
 
+  # Duração legível
+  result["duration"] = result["duration_seconds"].apply(
+    lambda x: prettify_duration(x * 1000, precision="s")
+  )
+
   return result
 
 
@@ -111,7 +117,7 @@ def report_flows(running_flows: pd.DataFrame):
   for _, flow_run in running_flows.iterrows():
     name = flow_run["composed_name"]
     url = flow_run["flow_run_url"]
-    duration = prettify_duration(flow_run["duration_seconds"] * 1000, precision="s")
+    duration = flow_run["duration"]
     beginning_datetime = flow_run["beginning_datetime"]
     emoji = flow_run["classification_emoji"]
     content.append(
@@ -123,45 +129,50 @@ def report_flows(running_flows: pd.DataFrame):
   send_discord_message(
     title="⌛ Execuções em Andamento", message=full_message, slug="warning"
   )
-  return
 
 
 @task
 def cancel_flows(running_flows: pd.DataFrame):
   """
-  Cancels a list of long-running flow runs.
-  This function takes a list of dictionaries, where each dictionary represents
-  a flow run with at least an 'id' key. It attempts to cancel each flow run
-  and logs the progress and results.
-  Args:
-    running_flows (list[dict]): A list of dictionaries, each containing
-                     information about a long-running flow run.
-                     Each dictionary must have an 'id' key.
-  Returns:
-    None
+  Requisita o cancelamento de flows em execução há muito tempo
   """
-  log("TODO: Não implementado", level="warning")
-  # if running_flows is None:
-  #   log("No running flows detected.")
-  #   return
+  if running_flows is None:
+    log("Nenhum flow de longa duração")
+    return
 
-  # long_running_flows = running_flows[running_flows["classification_type"] == "long"]
-  # if long_running_flows.shape[0] == 0:
-  #   log("No long running flows detected.")
-  #   return
+  long_running_flows = running_flows[running_flows["classification_type"] == "long"]
+  long_flows_count = long_running_flows.shape[0]
+  if long_flows_count <= 0:
+    log("Nenhum flow de longa duração")
+    return
 
-  # log(f"Cancelling {long_running_flows.shape[0]} long running flows.")
+  log(f"Cancelando {long_flows_count} flow(s) de longa duração")
 
-  # full_message = [f"São {long_running_flows.shape[0]} execuções longas em cancelamento:"]
+  full_message = [
+    f"É {long_flows_count} execução longa em cancelamento:"
+    if long_flows_count < 2
+    else f"São {long_flows_count} execuções longas em cancelamento:"
+  ]
 
-  # for _, flow_run in long_running_flows.iterrows():
-  #   success = cancel_flow_run.run(flow_run_id=flow_run["id"])
-  #   success_emoji = "✅" if success else "❌"
-  #   message = f"- [**{flow_run['composed_name']}**]({flow_run['flow_run_url']}) de {flow_run['duration_seconds']:.1f} minutos :: Sucesso {success_emoji}"  # noqa
-  #   full_message.append(message)
-  #   log(message)
+  for _, flow_run in long_running_flows.iterrows():
+    result = set_flow_run_state(
+      flow_run_id=flow_run["id"],
+      state=StateType.CANCELLING,
+      message="Flow em execução há mais de 24h",
+    )
+    name = flow_run["composed_name"]
+    url = flow_run["flow_run_url"]
+    duration = flow_run["duration"]
+    status = result["status"]
+    # Status aqui é um de ACCEPT, REJECT, ABORT ou WAIT
+    status_emoji = "✅" if status == "ACCEPT" else "❗"
+    message = (
+      f"- [**{name}**]({url}) de {duration} "
+      f":: {status_emoji} ({status}/{result['details']})"
+    )
+    log(message)
+    full_message.append(message)
 
-  # send_discord_message(
-  #   title="☠️ Execuções Canceladas", message="\n".join(full_message), slug="warning"
-  # )
-  return
+  send_discord_message(
+    title="☠️ Execuções Canceladas", message="\n".join(full_message), slug="warning"
+  )

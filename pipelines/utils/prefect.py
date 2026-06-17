@@ -6,8 +6,8 @@ import unicodedata
 from typing import Any, Callable, Dict, List, Literal, Optional, Union
 from uuid import UUID
 
-from prefect import Task, get_client
-from prefect.client.schemas import FlowRun
+from prefect import State, Task, get_client
+from prefect.client.schemas import FlowRun, StateType
 from prefect.client.schemas.filters import FlowRunFilter
 from prefect.context import FlowRunContext
 from prefect.deployments.flow_runs import run_deployment
@@ -408,3 +408,31 @@ def get_flow_runs_with_state(
       {"flow_run": flow_run, "flow": client.read_flow(flow_run.flow_id)}
       for flow_run in flow_runs
     ]
+
+
+def set_flow_run_state(
+  flow_run_id: str, state: StateType, message: Optional[str] = None
+) -> dict:
+  """
+  Requisita a mudança de estado de uma flow run, a partir de seu ID.
+  Retorna um dicionário com chaves "status" e "details". Uso:
+  ```python
+  set_flow_run_state(
+    flow_run_id=str(flow_run_uuid),
+    state=StateType.CANCELLING,
+    message="Flow cancelado programaticamente",
+  )
+  # Deve retornar algo como:
+  #  {'status': 'ACCEPT', 'details': 'accept_details'}
+  # O flow run em si terá logs como:
+  #  INFO | Running hook 'handle_flow_state_change' in response to entering state 'Cancelling'
+  #  INFO | [handle_flow_state_change] '...' (...) -> Cancelling
+  ```
+  """
+  with get_client(sync_client=True) as client:
+    result = client.set_flow_run_state(
+      flow_run_id=flow_run_id, state=State(type=state, message=message)
+    )
+    reason = result.details.reason if hasattr(result.details, "reson") else ""
+    reason = "" if not reason else f": {reason}"
+    return {"status": result.status.value, "details": f"{result.details.type}{reason}"}
