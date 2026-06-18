@@ -55,7 +55,7 @@ def login(username: str, password: str):
   return cookies_dict
 
 
-@task(retries=3, retry_delay_seconds=5 * 60)
+@task(retries=2, retry_delay_seconds=10 * 60)
 def baixar_endpoint(endpoint: str, cookies: dict):
   URL = constants.URL.value
   USER_AGENT = constants.USER_AGENT.value
