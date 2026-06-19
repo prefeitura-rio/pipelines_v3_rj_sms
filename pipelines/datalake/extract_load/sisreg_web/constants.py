@@ -21,7 +21,7 @@ class constants(Enum):
         "radioFiltro": "cpf",
         "etapa": "EXPORTAR_ESCALAS",
         "ibge": "330455",
-        "qtd_itens_pag": "50",
+        "qtd_itens_pag": "50",  # Limite ignorado no "EXPORTAR_ESCALAS"
         "clas_lista": "ASC",
         "dataInicial": "",
         "dataFinal": "",

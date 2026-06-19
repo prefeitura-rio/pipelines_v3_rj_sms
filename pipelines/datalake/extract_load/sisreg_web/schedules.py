@@ -10,6 +10,6 @@ schedules = [
       "table_id": "escala",
     },
     interval="daily",
-    config={"hour": 6},
+    config={"hour": 22},
   )
 ]
