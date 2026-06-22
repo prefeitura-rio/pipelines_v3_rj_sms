@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import time
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
@@ -16,17 +16,18 @@ from pipelines.utils.datetime import (
 )
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
+from prefect import task as unauthenticated_task
 
 from .constants import constants as flow_constants
 from .utils import build_ES_query, connect_ES
 
 
-@task
+@unauthenticated_task
 def gerar_faixas_de_data(
   data_inicio: Optional[str] = None,
   data_fim: Optional[str] = None,
   dias_por_faixa: int = 1,
-):
+) -> List[Tuple[str, str]]:
   """
   Gera uma lista de tuplas (inicio, fim) dividindo o intervalo
   entre data_inicial e data_final em blocos de tamanho 'dias_por_faixa'.
