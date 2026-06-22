@@ -101,6 +101,7 @@ def extract_from_api(
 
   ###
 
+  log("Conectando ao ElasticSearch...")
   es = connect_ES(flow_constants.API_URL.value, user, password)
   query = build_ES_query(page_size, data_inicio, data_fim)
 
