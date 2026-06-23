@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from typing import Literal, Optional
 
-from prefect.concurrency.sync import rate_limit
 from prefect.futures import wait
 
 from pipelines.constants import CIT, SUBGERAL
@@ -75,7 +74,7 @@ def extract_sisreg_api(
     data_inicio=data_inicio, data_fim=data_fim, dias_por_faixa=dias_por_faixa
   )
 
-  # 1) Extrai e salva cada lote em disco, retorna caminho do parquet
+  # 1) Extrai e salva cada lote em disco, retorna dataframe
   extraction_futures = []
   for inicio, fim in faixas:
     extraction_futures.append(
@@ -91,6 +90,7 @@ def extract_sisreg_api(
   wait(extraction_futures)
   dataframes = [future.result() for future in extraction_futures]
 
+  # 2) Faz upload dos dataframes como tabelas
   # Sem .submit(), são uploads sequenciais/bloqueantes
   for df in dataframes:
     upload_df_to_datalake(
@@ -104,4 +104,4 @@ def extract_sisreg_api(
   # TODO: validação de quais uploads foram bem sucedidos, quais não
 
 
-_flows = [flow_config(flow=extract_sisreg_api, schedules=schedules, memory="medium")]
+_flows = [flow_config(flow=extract_sisreg_api, schedules=schedules, memory="large")]

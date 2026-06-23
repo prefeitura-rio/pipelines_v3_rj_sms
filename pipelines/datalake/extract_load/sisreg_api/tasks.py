@@ -6,6 +6,7 @@ from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 import pandas as pd
+from prefect import task as unauthenticated_task
 
 from pipelines.utils.cleanup import cleanup_columns_for_bigquery
 from pipelines.utils.datetime import (
@@ -16,7 +17,6 @@ from pipelines.utils.datetime import (
 )
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
-from prefect import task as unauthenticated_task
 
 from .constants import constants as flow_constants
 from .utils import build_ES_query, connect_ES
@@ -102,111 +102,101 @@ def extract_from_api(
 
   ###
 
-  log("Conectando ao ElasticSearch...")
+  log(f"[{data_inicio} : {data_fim}] Conectando ao ElasticSearch...")
   es = connect_ES(flow_constants.API_URL.value, user, password)
   query = build_ES_query(page_size, data_inicio, data_fim)
 
-  ####
-  ####  Primeira consulta
-  ####
-
-  retries = 0
-  max_retries = 5
-  while True:
-    # Consulta API
-    # TODO: migrar para paginação com "search_after" ao invés de scrolls
-    resposta: dict = es.search(
-      index=index_name, body=query, scroll=flow_constants.SCROLL_TIMEOUT.value
-    )
-    # Se conseguiu obter os dados, sai
-    if not resposta.get("timed_out", False):
-      break
-    # Caso contrário, retenta até `max_retries` vezes
-    retries += 1
-    if retries > max_retries:
-      raise RuntimeError("Timeout repetido na consulta inicial.")
-
-    log(f"({retries}/{max_retries}) Timeout na consulta; retentando em 10s")
-    time.sleep(10)
-
-  # Confere metadados
-  # '_shards': {'total': x, 'successful': x, 'skipped': x, 'failed': x}
-  shards: dict = resposta.get("_shards", {})
-  if shards.get("failed", 0) > 0 or shards.get("skipped", 0) > 0:
-    raise RuntimeError(f"Consulta com falhas em shards: {shards}")
-
-  # Identificador do estado dos dados quando a requisição foi feita
-  # É necessário para que dados de páginas seguintes sejam consistentes
-  # e não tenham sofrido alterações entre requisições
-  scroll_id: str = resposta["_scroll_id"]  # é um ID de ~1.5kB :s
-  # 'hits': {
-  #   'total': {'value': x, 'relation': 'eq'},
-  #   'max_score': x,
-  #   'hits': [ ... ]   # Dados de verdade estão aqui
-  # }
-  total_obj: dict = resposta["hits"]["total"]
-  total_registros = total_obj["value"] if total_obj.get("relation") == "eq" else None
-
-  hits: List[dict] = resposta["hits"]["hits"]
-  if total_registros == 0 or not hits:
-    log(f"Nenhum registro no intervalo {data_inicio} a {data_fim}.")
-    return None
-  log(f"Total de registros encontrados ({data_inicio} a {data_fim}): {total_registros}")
-
-  # 'hits': [
-  #   {
-  #     '_index': 'xxx',  # Nome do endpoint; ex. 'solicitacao-ambulatorial'
-  #     '_type': '_doc',
-  #     '_id': 'xxx',
-  #     '_score': x,
-  #     '_source': {
-  #       ... # Dados de verdade (agora é sério)
-  #     },
-  #   },
-  #   ...
-  # ]
-  # Dados de verdade ficam no '_source', é um dicionário enorme
+  # Lista de IDs a serem limpados posteriormente
+  latest_scroll_id = None
+  scroll_ids = []
   dados: List[dict] = []
-  for registro in hits:
-    dado: dict = registro.get("_source", None)
-    if not dado:
-      continue
-    data_solicitacao = dado.get("data_solicitacao")
-    dado["data_particao"] = (
-      datetime.fromisoformat(data_solicitacao)
-      .astimezone(ZoneInfo("America/Sao_Paulo"))
-      .date()
-      .replace(day=1)
-      .isoformat()
-      if data_solicitacao
-      else today().replace(day=1).isoformat()
-    )
-    dados.append(dado)
-  log(f"Processados {len(dados)}/{total_registros} registros (lote inicial)")
 
-  ####
-  ####  Próximas páginas
-  ####
+  # Loop externo de consumo
+  for i in range(2):
+    # Loop interno de conexão com a API;
+    # retenta `max_retries` vezes até desistir
+    retries = 0
+    max_retries = 5
+    while True:
+      # TODO: migrar para paginação com "search_after" ao invés de scrolls
+      if i == 0:
+        resposta: dict = es.search(
+          index=index_name, body=query, scroll=flow_constants.SCROLL_TIMEOUT.value
+        )
+      else:
+        resposta = es.scroll(
+          scroll_id=latest_scroll_id, scroll=flow_constants.SCROLL_TIMEOUT.value
+        )
 
-  scroll_ids = [scroll_id]
-  while True:
-    resposta = es.scroll(scroll_id=scroll_id, scroll=flow_constants.SCROLL_TIMEOUT.value)
+      # Se conseguiu obter os dados, sai do loop interno
+      if not resposta.get("timed_out", False):
+        break
+      # Caso contrário, retenta até `max_retries` vezes
+      retries += 1
+      if retries > max_retries:
+        raise RuntimeError(
+          f"[{data_inicio} : {data_fim}] Timeout repetido na consulta inicial."
+        )
 
-    # Atualiza o scroll_id caso ele seja novo
+      log(
+        f"[{data_inicio} : {data_fim}] Timeout na consulta; retentando em 10s ({retries}/{max_retries})"
+      )
+      time.sleep(10)
+
+    # Atualiza o scroll_id caso ele seja novo; scroll_id é
+    # identificador do estado dos dados quando a requisição foi feita
+    # É necessário para que dados de páginas seguintes sejam consistentes
+    # e não tenham sofrido alterações entre requisições
     new_scroll_id = resposta.get("_scroll_id")
-    if new_scroll_id and scroll_id != new_scroll_id:
+    if new_scroll_id and latest_scroll_id != new_scroll_id:
       scroll_ids.append(new_scroll_id)
-      scroll_id = new_scroll_id
+      latest_scroll_id = new_scroll_id
 
+    # Confere metadados
     # '_shards': {'total': x, 'successful': x, 'skipped': x, 'failed': x}
     shards: dict = resposta.get("_shards", {})
     if shards.get("failed", 0) > 0 or shards.get("skipped", 0) > 0:
-      raise RuntimeError(f"Busca inicial com falhas em shards: {shards}")
+      raise RuntimeError(
+        f"[{data_inicio} : {data_fim}] Consulta com falhas em shards: {shards}"
+      )
 
-    hits = resposta["hits"]["hits"]
-    if not hits:
-      break
+    hits: List[dict] = resposta["hits"]["hits"]
+    # O total de registros não muda, então só precisamos pegá-lo
+    # na resposta da primeira página
+    if i == 0:
+      # 'hits': {
+      #   'total': {'value': x, 'relation': 'eq'},
+      #   'max_score': x,
+      #   'hits': [ ... ]   # Dados de verdade estão aqui
+      # }
+      total_obj: dict = resposta["hits"]["total"]
+      total_registros = total_obj["value"] if total_obj.get("relation") == "eq" else None
 
+      if total_registros == 0 or not hits:
+        log(f"[{data_inicio} : {data_fim}] Nenhum registro no intervalo.")
+        return None
+      log(
+        f"[{data_inicio} : {data_fim}] Total de registros encontrados: {total_registros}"
+      )
+    # Em páginas seguintes, precisamos conferir se ainda recebemos resultados
+    # Caso contrário, a extração terminou
+    else:
+      if not hits:
+        break
+
+    # 'hits': [
+    #   {
+    #     '_index': 'xxx',  # Nome do endpoint; ex. 'solicitacao-ambulatorial'
+    #     '_type': '_doc',
+    #     '_id': 'xxx',
+    #     '_score': x,
+    #     '_source': {
+    #       ... # Dados de verdade (agora é sério)
+    #     },
+    #   },
+    #   ...
+    # ]
+    # Dados de verdade ficam no '_source', é um dicionário enorme
     for registro in hits:
       dado: dict = registro.get("_source", None)
       if not dado:
@@ -222,7 +212,9 @@ def extract_from_api(
         else today().replace(day=1).isoformat()
       )
       dados.append(dado)
-    log(f"Processados {len(dados)}/{total_registros} registros")
+    log(
+      f"[{data_inicio} : {data_fim}] Processados {len(dados)}/{total_registros} registros"
+    )
 
   # Scrolls em aberto consomem memória do servidor de API;
   # limpa os scrolls porque somos educados
@@ -234,6 +226,7 @@ def extract_from_api(
   # Permite até 5% de diferença
   if total_registros > 0 and abs(diff / total_registros) > 0.05:
     raise ValueError(
+      f"[{data_inicio} : {data_fim}] "
       f"Divergência na contagem de registros processados. "
       f"Esperado: {total_registros}, Obtido: {total_obtido}"
     )
