@@ -112,7 +112,10 @@ def extract_from_api(
   dados: List[dict] = []
 
   # Loop externo de consumo
-  for i in range(2):
+  i = -1
+  while True:
+    i += 1
+
     # Loop interno de conexão com a API;
     # retenta `max_retries` vezes até desistir
     retries = 0
