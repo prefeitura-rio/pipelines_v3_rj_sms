@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Literal, Optional
 
+from prefect.concurrency.sync import rate_limit
 from prefect.futures import wait
 
 from pipelines.constants import CIT, SUBGERAL
@@ -77,6 +78,7 @@ def extract_sisreg_api(
   # 1) Extrai e salva cada lote em disco, retorna dataframe
   extraction_futures = []
   for inicio, fim in faixas:
+    rate_limit("meio-por-segundo")
     extraction_futures.append(
       extract_from_api.submit(
         user=username,
