@@ -75,9 +75,9 @@ def extract_sisreg_api(
     data_inicio=data_inicio, data_fim=data_fim, dias_por_faixa=dias_por_faixa
   )
 
-  # 1) Extrai e salva cada lote em disco, retorna caminho do parquet
+  # 1) Extrai e salva cada lote em disco, retorna dataframe
   extraction_futures = []
-  for data_inicio, data_fim in faixas:
+  for inicio, fim in faixas:
     rate_limit("meio-por-segundo")
     extraction_futures.append(
       extract_from_api.submit(
@@ -85,13 +85,14 @@ def extract_sisreg_api(
         password=password,
         index_name=es_index,
         page_size=page_size,
-        data_inicio=data_inicio,
-        data_fim=data_fim,
+        data_inicio=inicio,
+        data_fim=fim,
       )
     )
   wait(extraction_futures)
   dataframes = [future.result() for future in extraction_futures]
 
+  # 2) Faz upload dos dataframes como tabelas
   # Sem .submit(), são uploads sequenciais/bloqueantes
   for df in dataframes:
     upload_df_to_datalake(
@@ -105,4 +106,4 @@ def extract_sisreg_api(
   # TODO: validação de quais uploads foram bem sucedidos, quais não
 
 
-_flows = [flow_config(flow=extract_sisreg_api, schedules=schedules, memory="medium")]
+_flows = [flow_config(flow=extract_sisreg_api, schedules=schedules, memory="large")]

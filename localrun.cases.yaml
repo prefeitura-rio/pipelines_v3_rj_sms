@@ -214,7 +214,7 @@ cases:
       # ...
 
   # Extração do Sisreg (API)
-  - case_slug: "datalake-extract-sisreg-api"
+  - case_slug: "extract_sisreg_api"
     flow_path: "pipelines.datalake.extract_load.sisreg_api.flows"
     flow_name: "extract_sisreg_api"
     params:
