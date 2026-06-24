@@ -8,6 +8,7 @@ from uuid import UUID
 
 from prefect import State, Task, get_client
 from prefect.client.schemas import FlowRun, StateType
+from prefect.client.schemas.actions import GlobalConcurrencyLimitUpdate
 from prefect.client.schemas.filters import FlowRunFilter
 from prefect.context import FlowRunContext
 from prefect.deployments.flow_runs import run_deployment
@@ -465,7 +466,9 @@ def set_flow_run_state(
 def clear_concurrency_limit(limit: str):
   try:
     with get_client(sync_client=True) as client:
-      client.reset_concurrency_limit_by_tag(tag=limit)
-    log(f"[clear_concurrency_limit] Limite '{limit}' resetado")
+      client.update_global_concurrency_limit(
+        name=limit, concurrency_limit=GlobalConcurrencyLimitUpdate(active_slots=0)
+      )
+    print(f"[clear_concurrency_limit] Limite '{limit}' resetado")
   except ObjectNotFound:
-    log(f"[clear_concurrency_limit] Limite '{limit}' não encontrado!", level="warning")
+    print(f"[clear_concurrency_limit] Limite '{limit}' não encontrado!", level="warning")

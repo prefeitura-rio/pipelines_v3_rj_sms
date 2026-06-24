@@ -15,15 +15,16 @@ from .tasks import extract_from_api, gerar_faixas_de_data
 from .utils import table_name_from_resource
 
 
+def clear_sisreg_limit():
+  limit = f"tag:{flow_constants.CONCURRENCY_LIMIT_TAG.value}"
+  clear_concurrency_limit(limit)
+
+
 @flow(
   name="Extração: Sisreg API",
   owners=[CIT.AVELLAR_ID.value, SUBGERAL.MILOSKI_ID.value],
   tags=["CIT", "SUBGERAL"],
-  on_crashed=[
-    lambda *args, **kwargs: clear_concurrency_limit(
-      f"tag:{flow_constants.CONCURRENCY_LIMIT_TAG.value}"
-    )
-  ],
+  on_crashed=[clear_sisreg_limit],
   log_prints=True,
 )
 def extract_sisreg_api(
