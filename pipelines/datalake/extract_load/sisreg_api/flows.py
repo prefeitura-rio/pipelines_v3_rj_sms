@@ -15,7 +15,7 @@ from .tasks import extract_from_api, gerar_faixas_de_data
 from .utils import table_name_from_resource
 
 
-def clear_sisreg_limit():
+def clear_sisreg_limit(*args, **kwargs):
   limit = f"tag:{flow_constants.CONCURRENCY_LIMIT_TAG.value}"
   clear_concurrency_limit(limit)
 
