@@ -21,9 +21,10 @@ from .utils import table_name_from_resource
   tags=["CIT", "SUBGERAL"],
   on_crashed=[
     lambda *args, **kwargs: clear_concurrency_limit(
-      flow_constants.CONCURRENCY_LIMIT_TAG.value
+      f"tag:{flow_constants.CONCURRENCY_LIMIT_TAG.value}"
     )
   ],
+  log_prints=True,
 )
 def extract_sisreg_api(
   es_index: Literal[
