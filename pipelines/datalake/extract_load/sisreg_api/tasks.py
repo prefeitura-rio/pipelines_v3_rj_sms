@@ -72,7 +72,9 @@ def gerar_faixas_de_data(
   return faixas
 
 
-@task(retries=5, retry_delay_seconds=30, tags=["sisreg-extracao-paralela"])
+@task(
+  retries=5, retry_delay_seconds=30, tags=[flow_constants.CONCURRENCY_LIMIT_TAG.value]
+)
 def extract_from_api(
   user: str,
   password: str,
