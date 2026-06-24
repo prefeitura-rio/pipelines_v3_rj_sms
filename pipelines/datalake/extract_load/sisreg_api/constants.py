@@ -12,3 +12,9 @@ class constants(Enum):
   Essa constante é a duração pela qual requisitamos que esse
   'congelamento' seja persistido.
   """
+
+  CONCURRENCY_LIMIT_TAG = "sisreg-extracao-paralela"
+  """
+  Nome da tag do Prefect, configurada via UI, que limita execuções
+  concorrentes da task de extração
+  """

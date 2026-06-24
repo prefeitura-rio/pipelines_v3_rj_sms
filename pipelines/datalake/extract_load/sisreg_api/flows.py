@@ -7,8 +7,9 @@ from prefect.futures import wait
 from pipelines.constants import CIT, SUBGERAL
 from pipelines.utils.datalake import upload_df_to_datalake
 from pipelines.utils.infisical import get_secret_task
-from pipelines.utils.prefect import flow, flow_config
+from pipelines.utils.prefect import clear_concurrency_limit, flow, flow_config
 
+from .constants import constants as flow_constants
 from .schedules import schedules
 from .tasks import extract_from_api, gerar_faixas_de_data
 from .utils import table_name_from_resource
@@ -18,6 +19,11 @@ from .utils import table_name_from_resource
   name="Extração: Sisreg API",
   owners=[CIT.AVELLAR_ID.value, SUBGERAL.MILOSKI_ID.value],
   tags=["CIT", "SUBGERAL"],
+  on_crashed=[
+    lambda *args, **kwargs: clear_concurrency_limit(
+      flow_constants.CONCURRENCY_LIMIT_TAG.value
+    )
+  ],
 )
 def extract_sisreg_api(
   es_index: Literal[

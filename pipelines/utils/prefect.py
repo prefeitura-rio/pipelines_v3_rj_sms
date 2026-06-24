@@ -11,6 +11,7 @@ from prefect.client.schemas import FlowRun, StateType
 from prefect.client.schemas.filters import FlowRunFilter
 from prefect.context import FlowRunContext
 from prefect.deployments.flow_runs import run_deployment
+from prefect.exceptions import ObjectNotFound
 from prefect.flows import Flow as OriginalFlow
 from prefect.flows import FlowDecorator as OriginalFlowDecorator
 from prefect.schedules import Schedule
@@ -45,7 +46,11 @@ class Flow(OriginalFlow):
 class FlowDecorator(OriginalFlowDecorator):
   name: str = None
   description: str = ""
+
   state_handlers: List[Callable] = None
+  on_crashed: List[Callable] = None
+  # ...
+
   owners: List[str] = None
   tags: List[str] = None
   log_prints: bool = False
@@ -53,14 +58,31 @@ class FlowDecorator(OriginalFlowDecorator):
   def __init__(
     self,
     *args,
-    name: str = None,
+    name: Optional[str] = None,
     description: str = "",
-    state_handlers: List[Callable] = None,
+    state_handlers: Optional[List[Callable]] = None,
+    on_crashed: Optional[List[Callable]] = None,
     owners: Optional[List[str]] = None,
     tags: Optional[List[str]] = None,
     log_prints: bool = False,
     **kwargs,
   ):
+    """
+    Args:
+      name(str?): Nome do flow, aparece na UI
+      description(str?): Descrição do flow, aparece (escondido) na UI
+      state_handlers(List[Callable]?):
+        Funções que executam em toda transição de estado do flow
+      on_crashed(List[Callable]?):
+        Funções que executam quando o flow entra em estado 'Crashed'
+      owners(List[str]?):
+        Lista de IDs do Discord de 'donos' do flow
+      tags(List[str]?):
+        Tags para melhor categorizar os flows
+      log_prints(bool?):
+        Parâmetro do @flow original, supostamente redireciona print()s
+        comuns aos logs da execução; acho que não funciona :3
+    """
     self.name = name
     self.description = description or ""
 
@@ -68,6 +90,8 @@ class FlowDecorator(OriginalFlowDecorator):
     from pipelines.utils.state_handlers import handle_flow_state_change
 
     self.state_handlers = list(set([handle_flow_state_change, *(state_handlers or [])]))
+    self.on_crashed = list(set([*(on_crashed or []), *self.state_handlers]))
+
     self.owners = owners or []
     self.tags = tags or []
     self.log_prints = log_prints
@@ -83,7 +107,7 @@ class FlowDecorator(OriginalFlowDecorator):
       on_completion=[*self.state_handlers],
       on_failure=[*self.state_handlers],
       on_cancellation=[*self.state_handlers],
-      on_crashed=[*self.state_handlers],
+      on_crashed=[*self.on_crashed],
       on_running=[*self.state_handlers],
       validate_parameters=False,
       **kwargs,
@@ -436,3 +460,12 @@ def set_flow_run_state(
     reason = result.details.reason if hasattr(result.details, "reson") else ""
     reason = "" if not reason else f": {reason}"
     return {"status": result.status.value, "details": f"{result.details.type}{reason}"}
+
+
+def clear_concurrency_limit(limit: str):
+  try:
+    with get_client(sync_client=True) as client:
+      client.reset_concurrency_limit_by_tag(tag=limit)
+    log(f"[clear_concurrency_limit] Limite '{limit}' resetado")
+  except ObjectNotFound:
+    log(f"[clear_concurrency_limit] Limite '{limit}' não encontrado!", level="warning")
