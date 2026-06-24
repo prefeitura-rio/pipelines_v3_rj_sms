@@ -120,4 +120,4 @@ def extract_sisreg_api(
   # TODO: validação de quais uploads foram bem sucedidos, quais não
 
 
-_flows = [flow_config(flow=extract_sisreg_api, schedules=schedules, memory="small")]
+_flows = [flow_config(flow=extract_sisreg_api, schedules=schedules, memory="large")]
