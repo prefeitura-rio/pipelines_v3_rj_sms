@@ -50,6 +50,7 @@ class FlowDecorator(OriginalFlowDecorator):
 
   state_handlers: List[Callable] = None
   on_crashed: List[Callable] = None
+  on_cancellation: List[Callable] = None
   # ...
 
   owners: List[str] = None
@@ -63,6 +64,7 @@ class FlowDecorator(OriginalFlowDecorator):
     description: str = "",
     state_handlers: Optional[List[Callable]] = None,
     on_crashed: Optional[List[Callable]] = None,
+    on_cancellation: Optional[List[Callable]] = None,
     owners: Optional[List[str]] = None,
     tags: Optional[List[str]] = None,
     log_prints: bool = False,
@@ -76,6 +78,8 @@ class FlowDecorator(OriginalFlowDecorator):
         Funções que executam em toda transição de estado do flow
       on_crashed(List[Callable]?):
         Funções que executam quando o flow entra em estado 'Crashed'
+      on_cancellation(List[Callable]?):
+        Funções que executam quando o flow é cancelado
       owners(List[str]?):
         Lista de IDs do Discord de 'donos' do flow
       tags(List[str]?):
@@ -92,6 +96,7 @@ class FlowDecorator(OriginalFlowDecorator):
 
     self.state_handlers = list(set([handle_flow_state_change, *(state_handlers or [])]))
     self.on_crashed = list(set([*(on_crashed or []), *self.state_handlers]))
+    self.on_cancellation = list(set([*(on_cancellation or []), *self.state_handlers]))
 
     self.owners = owners or []
     self.tags = tags or []
@@ -107,7 +112,7 @@ class FlowDecorator(OriginalFlowDecorator):
       log_prints=self.log_prints,
       on_completion=[*self.state_handlers],
       on_failure=[*self.state_handlers],
-      on_cancellation=[*self.state_handlers],
+      on_cancellation=[*self.on_cancellation],
       on_crashed=[*self.on_crashed],
       on_running=[*self.state_handlers],
       validate_parameters=False,
@@ -469,6 +474,7 @@ def clear_concurrency_limit(limit: str):
       client.update_global_concurrency_limit(
         name=limit, concurrency_limit=GlobalConcurrencyLimitUpdate(active_slots=0)
       )
-    print(f"[clear_concurrency_limit] Limite '{limit}' resetado")
+    # Em estado Crashed, esses logs não aparecem :\
+    log(f"[clear_concurrency_limit] Limite '{limit}' resetado")
   except ObjectNotFound:
-    print(f"[clear_concurrency_limit] Limite '{limit}' não encontrado!", level="warning")
+    log(f"[clear_concurrency_limit] Limite '{limit}' não encontrado!", level="warning")

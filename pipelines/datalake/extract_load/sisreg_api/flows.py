@@ -15,6 +15,12 @@ from .tasks import extract_from_api, gerar_faixas_de_data
 from .utils import table_name_from_resource
 
 
+# A tag de limite de concorrência pra task de extração do Sisreg
+# não tem "slot decay" configurado; em caso de crash/cancelamento de flow,
+# os slots não são desocupados. O Prefect tem, em teoria, algum sistema
+# de GC que deveria reabrir os slots, mas eu nunca vi acontecendo.
+# Então colocamos hooks pra 'manualmente' reabrir os slots caso
+# o flow seja interrompido
 def clear_sisreg_limit(*args, **kwargs):
   limit = f"tag:{flow_constants.CONCURRENCY_LIMIT_TAG.value}"
   clear_concurrency_limit(limit)
@@ -25,7 +31,7 @@ def clear_sisreg_limit(*args, **kwargs):
   owners=[CIT.AVELLAR_ID.value, SUBGERAL.MILOSKI_ID.value],
   tags=["CIT", "SUBGERAL"],
   on_crashed=[clear_sisreg_limit],
-  log_prints=True,
+  on_cancellation=[clear_sisreg_limit],
 )
 def extract_sisreg_api(
   es_index: Literal[
