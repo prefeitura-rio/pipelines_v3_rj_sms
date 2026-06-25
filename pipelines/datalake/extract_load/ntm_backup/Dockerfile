@@ -21,6 +21,13 @@ COPY ./pipelines /opt/prefect/pipelines_v3_rj_sms/pipelines
 #####################
 RUN apt-get update && \
   apt install -y --no-install-recommends \
-  default-mysql-client gzip ca-certificates && \
-  update-ca-certificates && \
+    wget lsb-release gnupg \
+    gzip ca-certificates && \
+    update-ca-certificates
+
+RUN wget https://dev.mysql.com/get/mysql-apt-config_0.8.39-1_all.deb && \
+  DEBIAN_FRONTEND=noninteractive dpkg -i mysql-apt-config_0.8.39-1_all.deb && \
+  apt-get update && \
+  apt-get install -y --no-install-recommends mysql-client && \
+  rm -f mysql-apt-config_0.8.39-1_all.deb && \
   rm -rf /var/lib/apt/lists/*
