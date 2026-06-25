@@ -30,6 +30,8 @@ def dump_task(
     f"--port={port}",
     f"--user={user}",
     f"--password={password}",
+    "--ssl-mode=VERIFY_CA",
+    "--ssl-ca=/etc/ssl/certs/ca-certificates.crt",
     "--single-transaction",
     "--routines",
     "--triggers",
