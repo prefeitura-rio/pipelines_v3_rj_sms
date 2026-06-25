@@ -47,7 +47,7 @@ def ntm_backup_mysql(keep_old_files: bool = False, environment: str = "dev"):
     environment=environment,
     path="/ntm",
   )
-  with open(flow_consts.NTM_CREDENTIALS_PATH, "w") as f:
+  with open(flow_consts.NTM_CREDENTIALS_PATH.value, "w") as f:
     f.write(CREDENTIALS)
 
   daily_filename = generate_filename("daily", DB_NAME)

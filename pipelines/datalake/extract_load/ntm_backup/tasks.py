@@ -58,11 +58,11 @@ def dump_task(
 
 @unauthenticated_task
 def upload_daily_to_gcs(bucket_name: str, filepath: str):
-  gcs_prefix = flow_consts.GCS_PREFIX["daily"]
+  gcs_prefix = flow_consts.GCS_PREFIX.value["daily"]
   filename = os.path.basename(filepath)
   blob_name = f"{gcs_prefix}/{filename}"
 
-  client = storage.Client.from_service_account_json(flow_consts.NTM_CREDENTIALS_PATH)
+  client = storage.Client.from_service_account_json(flow_consts.NTM_CREDENTIALS_PATH.value)
 
   log(f"Iniciando upload para gs://{bucket_name}/{blob_name}")
   bucket = client.bucket(bucket_name)
@@ -78,10 +78,10 @@ def copy_daily_gcs_as_weekly(from_uri: str, filename: str):
   bucket_name = uri["bucket"]
   source_blob_name = uri["blob"]
 
-  gcs_prefix = flow_consts.GCS_PREFIX["weekly"]
+  gcs_prefix = flow_consts.GCS_PREFIX.value["weekly"]
   destination_blob_name = f"{gcs_prefix}/{filename}"
 
-  client = storage.Client.from_service_account_json(flow_consts.NTM_CREDENTIALS_PATH)
+  client = storage.Client.from_service_account_json(flow_consts.NTM_CREDENTIALS_PATH.value)
 
   log(
     "Iniciando cópia de "
@@ -99,13 +99,13 @@ def copy_daily_gcs_as_weekly(from_uri: str, filename: str):
 @unauthenticated_task
 def cleanup_old_gcs_files(bucket_name: str, dry_run: bool = False):
   log("Iniciando limpeza do bucket...")
-  limite = now() - timedelta(days=flow_consts.RETENCAO_DIAS)
+  limite = now() - timedelta(days=flow_consts.RETENCAO_DIAS.value)
   removidos = 0
 
-  client = storage.Client.from_service_account_json(flow_consts.NTM_CREDENTIALS_PATH)
+  client = storage.Client.from_service_account_json(flow_consts.NTM_CREDENTIALS_PATH.value)
   bucket = client.bucket(bucket_name)
 
-  for blob in bucket.list_blobs(prefix=flow_consts.GCS_PREFIX["daily"]):
+  for blob in bucket.list_blobs(prefix=flow_consts.GCS_PREFIX.value["daily"]):
     if blob.updated < limite:
       if not dry_run:
         blob.delete()
