@@ -20,4 +20,7 @@ COPY ./pipelines /opt/prefect/pipelines_v3_rj_sms/pipelines
 ## MySQL
 #####################
 RUN apt-get update && \
-  apt install -y --no-install-recommends default-mysql-client gzip
+  apt install -y --no-install-recommends \
+  default-mysql-client gzip ca-certificates && \
+  update-ca-certificates && \
+  rm -rf /var/lib/apt/lists/*
