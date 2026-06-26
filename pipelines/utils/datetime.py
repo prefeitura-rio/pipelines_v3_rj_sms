@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import datetime
 import re
-from typing import Optional
+from typing import Literal, Optional
 from zoneinfo import ZoneInfo
 
 from dateutil import parser
@@ -54,6 +54,29 @@ def today_str() -> str:
 def current_year() -> int:
   """Retorna o ano atual (fuso BRT)"""
   return now().year
+
+
+def current_weekday(format: Literal["en", "pt", "int"] = "int") -> int | str:
+  """
+  Retorna o dia da semana atual (`now().weekday()`).
+
+  Se `format="int"` (padrão), retorna 0 (=seg), 1 (=ter), ..., 6 (=dom).\n
+  Se `format="en"`, retorna "monday", "tuesday", ..., "sunday"\n
+  Se `format="pt"`, retorna "segunda", "terça", ..., "domingo"
+  """
+  weekday = now().weekday()
+  if format == "int":
+    return weekday
+
+  if format == "en":
+    return ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"][
+      weekday
+    ]
+
+  if format == "pt":
+    return ["segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"][weekday]
+
+  raise NotImplementedError(f"Formato {format} não implementado!")
 
 
 def from_relative_date(
