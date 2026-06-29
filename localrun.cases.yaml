@@ -227,6 +227,15 @@ cases:
       # dataset_id: brutos_sisreg_api_v2
       # table_id: solicitacoes
 
+  # Extração 1746 (web)
+  - case_slug: "1746_web"
+    flow_path: "pipelines.datalake.extract_load.1746_web.flows"
+    flow_name: "extract_1746_web"
+    params:
+      environment: dev
+      target_date: today
+      rename_flow: true
+
 
   ################################
   #  MIGRATE                     #
@@ -349,9 +358,20 @@ cases:
     flow_name: "flow_voce_precisa_saber"
     params:
       environment: dev
-      # date: ...
-      # skip_to_email: ...
-      override_recipients: teste@example.local
+      # url: https://docs.google.com/spreadsheets/d/...
+      # gsheets_sheet_name: ...
+      dataset_id: brutos_sheets
+      # table_id: ...
+      rename_flow: true
+  
+  # Extração Google Sheets (URL) -> tabela staging
+  - case_slug: "1746_web"
+    flow_path: "pipelines.datalake.extract_load.1746_web.flows"
+    flow_name: "extract_1746_web"
+    params:
+      environment: dev
+      target_date: today
+      rename_flow: true
 
   # Alerta de Tabelas Desatualizadas
   - case_slug: "report-atualizacao-tabelas"
