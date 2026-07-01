@@ -79,7 +79,7 @@ def upload_daily_to_gcs(bucket_name: str, filepath: str):
 def copy_daily_gcs_as_weekly(from_uri: str, filename: str):
   uri = dissect_gcs_uri(from_uri)
   bucket_name = uri["bucket"]
-  source_blob_name = uri["blob"]
+  source_blob_name = uri["full_path"]
 
   gcs_prefix = flow_consts.GCS_PREFIX.value["weekly"]
   destination_blob_name = f"{gcs_prefix}/{filename}"
