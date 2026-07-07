@@ -252,16 +252,14 @@ def delete_old_files(
     # Lista todos os arquivos na pasta, calcula data/hora limite de criação
     blobs = bucket.list_blobs(prefix=PATH, match_glob="**.parquet")
     threshold_date = now() - timedelta(hours=12)
-    log(
-      f"Conferindo arquivos antigos (>12h) no mês {current_year}-{current_month:02}..."
-    )
+    log(f"Conferindo arquivos antigos (>12h) no mês {current_year}-{current_month:02}...")
     # Lista de arquivos a serem apagados
     to_delete = []
     for blob in blobs:
       if blob.time_created < threshold_date:
         log(
           f"Encontrado {blob.name} "
-          f"(criado em {datetime(blob.time_created).strftime('%Y-%m-%d %H:%M:%S')})"
+          f"(criado em {blob.time_created.strftime('%Y-%m-%d %H:%M:%S')})"
         )
         to_delete.append(blob)
     log(f"Deletando {len(to_delete)} arquivo(s)")
