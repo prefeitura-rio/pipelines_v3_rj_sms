@@ -6,20 +6,17 @@ from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 import pandas as pd
+from google.cloud import storage
 from prefect import task as unauthenticated_task
 
 from pipelines.utils.cleanup import cleanup_columns_for_bigquery
-from pipelines.utils.datetime import (
-  is_valid_YYYYMMDD,
-  now_str,
-  parse_date_or_today,
-  today,
-)
+from pipelines.utils.datetime import is_valid_YYYYMMDD, now, now_str, today
+from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
 from .constants import constants as flow_constants
-from .utils import build_ES_query, connect_ES
+from .utils import build_ES_query, connect_ES, normalize_dates
 
 
 @unauthenticated_task
@@ -31,26 +28,8 @@ def gerar_faixas_de_data(
   """
   Gera uma lista de tuplas (inicio, fim) dividindo o intervalo
   entre data_inicial e data_final em blocos de tamanho 'dias_por_faixa'.
-  * Caso `data_inicio` seja None, será `data_fim` subtraída de 1 ano.
-  * Caso `data_fim` seja None, será o dia de hoje.
   """
-  dt_fim = parse_date_or_today(data_fim).date()
-
-  if not data_inicio:
-    try:
-      # Tentamos pegar o mesmo dia 1 ano atrás
-      dt_inicio = dt_fim.replace(year=dt_fim.year - 1)
-    except ValueError:
-      # Se deu ValueError, é possível e provável que a data seja 29/fev
-      # Então tentamos subtrair um dia também
-      dt_inicio = dt_fim.replace(year=dt_fim.year - 1, day=dt_fim.day - 1)
-  else:
-    dt_inicio = datetime.fromisoformat(data_inicio).date()
-
-  if dt_inicio > dt_fim:
-    raise ValueError(
-      f"Data inicial '{dt_inicio}' não pode ser posterior à data final '{dt_fim}'!"
-    )
+  dt_inicio, dt_fim = normalize_dates(data_inicio, data_fim)
 
   log("Gerando faixas de datas para processamento em lotes")
   faixas = []
@@ -241,6 +220,59 @@ def extract_from_api(
   df["_run_id"] = str(uuid4())
   df["_extracted_at"] = now_str()
   return df
+
+
+@task()
+def delete_old_files(
+  data_inicio: Optional[str], data_fim: Optional[str], dataset_id: str, table_id: str
+):
+  # Esse flow é executado com frequência, e dados antigos acabam acumulando
+  # Por isso, forçamos a extração de meses inteiros (dia 1 a último dia)
+  # e aqui apagamos arquivos antigos de um mesmo mês
+  dt_inicio, dt_fim = normalize_dates(data_inicio, data_fim)
+  dt_fim = dt_fim.replace(day=1)
+
+  client = storage.Client()
+  project_name = get_google_project_for_environment()
+  bucket = client.bucket(project_name)
+
+  current_year = dt_inicio.year
+  current_month = dt_inicio.month
+
+  # Itera por todos os meses entre data início e fim
+  while (current_year, current_month) <= (dt_fim.year, dt_fim.month):
+    # Calculamos o caminho da pasta de partição referente
+    PATH = (
+      f"staging/{dataset_id}/"
+      f"{table_id}/"
+      f"ano_particao={current_year}/"
+      f"mes_particao={current_month:02}/"
+      f"data_particao={current_year}-{current_month:02}-01/"
+    )
+    # Lista todos os arquivos na pasta, calcula data/hora limite de criação
+    blobs = bucket.list_blobs(prefix=PATH, match_glob="**.parquet")
+    threshold_date = now() - timedelta(hours=12)
+    log(f"Conferindo arquivos antigos (>12h) no mês {current_year}-{current_month:02}...")
+    # Lista de arquivos a serem apagados
+    to_delete = []
+    for blob in blobs:
+      if blob.time_created < threshold_date:
+        log(
+          f"Encontrado {blob.name} "
+          f"(criado em {blob.time_created.strftime('%Y-%m-%d %H:%M:%S')})"
+        )
+        to_delete.append(blob)
+    log(f"Deletando {len(to_delete)} arquivo(s)")
+    bucket.delete_blobs(to_delete)
+
+    # Calcula mês seguinte a ser conferido
+    if current_month == 12:
+      current_month = 1
+      current_year += 1
+    else:
+      current_month += 1
+
+  return
 
 
 # @task()

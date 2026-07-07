@@ -1,8 +1,46 @@
 # -*- coding: utf-8 -*-
+from datetime import date, datetime, timedelta
+from typing import Optional, Tuple
+
 from elasticsearch import Elasticsearch, exceptions
 
 from pipelines.utils.cleanup import cleanup_bigquery_name
+from pipelines.utils.datetime import parse_date_or_today
 from pipelines.utils.logger import log
+
+
+def normalize_dates(
+  data_inicio: Optional[str], data_fim: Optional[str]
+) -> Tuple[date, date]:
+  """
+  Recebe dois objetos, ou strings de data ou None, e retorna `date()`s equivalentes.
+  * Caso `data_inicio` seja None, será `data_fim` subtraída de 1 ano.
+  * Caso `data_fim` seja None, será o dia de hoje.
+  Importante: a data início será SEMPRE o dia 1º do mês, e a data fim será sempre
+  o último dia do mês. Essa decisão tem como objetivo facilitar a limpeza de partições
+  repetidas posteriormente. Ex.:
+  >>> normalize_dates(data_inicio='2025-06-20', data_fim='2026-01-04')
+  ( date(2025, 6, 1), date(2026, 1, 31) )
+  """
+  dt_fim = parse_date_or_today(data_fim).date()
+  # Calcula último dia do mês
+  dt_fim = (
+    date(dt_fim.year, 12, 31)
+    if dt_fim.month == 12
+    else (date(dt_fim.year, dt_fim.month + 1, 1) - timedelta(days=1))
+  )
+
+  if not data_inicio:
+    dt_inicio = dt_fim.replace(year=dt_fim.year - 1, day=1)
+  else:
+    dt_inicio = datetime.fromisoformat(data_inicio).date().replace(day=1)
+
+  if dt_inicio > dt_fim:
+    raise ValueError(
+      f"Data inicial '{dt_inicio}' não pode ser posterior à data final '{dt_fim}'!"
+    )
+
+  return (dt_inicio, dt_fim)
 
 
 def connect_ES(url: str, user: str, password: str) -> Elasticsearch:

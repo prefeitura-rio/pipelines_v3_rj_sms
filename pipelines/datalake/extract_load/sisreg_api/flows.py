@@ -11,7 +11,7 @@ from pipelines.utils.prefect import clear_concurrency_limit, flow, flow_config
 
 from .constants import constants as flow_constants
 from .schedules import schedules
-from .tasks import extract_from_api, gerar_faixas_de_data
+from .tasks import delete_old_files, extract_from_api, gerar_faixas_de_data
 from .utils import table_name_from_resource
 
 
@@ -40,7 +40,7 @@ def extract_sisreg_api(
   data_inicio: Optional[str] = None,
   data_fim: Optional[str] = None,
   page_size: int = 10_000,
-  dias_por_faixa: int = 1,
+  dias_por_faixa: int = 7,
   dataset_id: str = "brutos_sisreg_api_v2",
   table_id: Optional[str] = None,
   environment: str = "dev",
@@ -64,7 +64,7 @@ def extract_sisreg_api(
       Quantos dias cada task deve processar
     dataset_id(str?):
       Nome do dataset onde os dados devem ser inseridos.
-      Por padrão, 'brutos_sisreg_api'.
+      Por padrão, 'brutos_sisreg_api_v2'.
     table_id(str?):
       Nome da tabela onde os dados devem ser inseridos.
       Se None (padrão), é inferido de 'es_index': por exemplo,
@@ -111,12 +111,21 @@ def extract_sisreg_api(
   for df in dataframes:
     upload_df_to_datalake(
       df=df,
-      dataset_id=dataset_id,
+      dataset_id=(dataset_id if dataset_id else "brutos_sisreg_api_v2"),
       table_id=(table_id if table_id else table_name_from_resource(es_index)),
       dump_mode="append",
       source_format="parquet",
       date_partition_column="data_particao",
     )
+    del df  # Apaga referência ao dataframe
+
+  delete_old_files(
+    data_inicio=data_inicio,
+    data_fim=data_fim,
+    dataset_id=(dataset_id if dataset_id else "brutos_sisreg_api_v2"),
+    table_id=(table_id if table_id else table_name_from_resource(es_index)),
+  )
+
   # TODO: validação de quais uploads foram bem sucedidos, quais não
 
 
