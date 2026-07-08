@@ -12,7 +12,13 @@ from pipelines.utils.infisical import get_secret
 from pipelines.utils.logger import log
 
 type DiscordWebhookSlug = Literal[
-  "custo_jobs", "data-ingestion", "dbt-runs-sms", "error", "hci_status", "warning", "dbt-runs"
+  "custo_jobs",
+  "data-ingestion",
+  "dbt-runs-sms",
+  "error",
+  "hci_status",
+  "warning",
+  "dbt-runs",
 ]
 
 

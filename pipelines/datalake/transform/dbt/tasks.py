@@ -198,47 +198,41 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
     if status == "pass":  # Passou em teste, não gera report
       continue
 
-    domain_model = command_result.node.meta.get('dominio')
-    model_owners = command_result.node.meta.get('owner')
-    
+    domain_model = command_result.node.meta.get("dominio")
+    model_owners = command_result.node.meta.get("owner")
+
     # Verifica se tem mais de um dominio e se o cit está na lista
     if isinstance(domain_model, list):
-      if 'cit' in domain_model:
-        slug = 'dbt-runs'
+      if "cit" in domain_model:
+        slug = "dbt-runs"
       else:
-        slug = 'dbt-runs-sms'
+        slug = "dbt-runs-sms"
     else:
-      if domain_model == 'cit':
-        slug = 'dbt-runs'
+      if domain_model == "cit":
+        slug = "dbt-runs"
       else:
-        slug = 'dbt-runs-sms'
+        slug = "dbt-runs-sms"
 
-    owner_tags = ''
+    owner_tags = ""
 
     if isinstance(model_owners, list):
       for name in model_owners:
         if name in dbt_constants.OWNERS.value:
-          owner_tags += f'<@{name}> '
+          owner_tags += f"<@{name}> "
     else:
-      owner_tags += f'<@{model_owners}>'
+      owner_tags += f"<@{model_owners}>"
 
     log(owner_tags)
 
     if status == "fail":
       is_successful = False
-      general_report.append(
-        f"- 🛑 FAIL {owner_tags} {summarizer(command_result)}"
-      )
+      general_report.append(f"- 🛑 FAIL {owner_tags} {summarizer(command_result)}")
     elif status == "error":
       is_successful = False
-      general_report.append(
-        f"- ❌ ERROR {owner_tags} {summarizer(command_result)}"
-      )
+      general_report.append(f"- ❌ ERROR {owner_tags} {summarizer(command_result)}")
     elif status == "warn":
       has_warnings = True
-      general_report.append(
-        f"- ⚠️ WARN {owner_tags} {summarizer(command_result)}"
-      )
+      general_report.append(f"- ⚠️ WARN {owner_tags} {summarizer(command_result)}")
 
   cost_report = f"**Custo da Execução**: R${estimated_total_cost:.2f}"
   log(cost_report)
