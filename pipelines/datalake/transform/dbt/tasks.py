@@ -209,6 +209,9 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
       model_name = command_result.node.refs[0].name
       model_team = owners_model[model_name]["team"]
       model_owners = owners_model[model_name]["owner"]
+    else:
+      model_team = ""
+      model_owners = "modelo sem dono"
 
     if isinstance(model_team, list):
       if "cit" in model_team:
@@ -227,6 +230,9 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
       for name in model_owners:
         if name in dbt_constants.OWNERS.value:
           owner_tags += f"<@{dbt_constants.OWNERS.value[name.lower()]}> "
+      else:
+        if not owner_tags:
+          owner_tags += f"<@{dbt_constants.OWNERS.value['cit']}>"
     else:
       if model_owners in dbt_constants.OWNERS.value:
         owner_tags += f"<@{dbt_constants.OWNERS.value[model_owners.lower()]}>"
