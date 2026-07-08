@@ -210,19 +210,19 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
       model_team = owners_model[model_name]["team"]
       model_owners = owners_model[model_name]["owner"]
     else:
-      model_team = ""
+      model_team = "cit"
       model_owners = "modelo sem dono"
 
     if isinstance(model_team, list):
       if "cit" in model_team:
-        slug = "dbt-runs"
-      else:
         slug = "dbt-runs-sms"
+      else:
+        slug = "dbt-runs"
     else:
       if model_team == "cit":
-        slug = "dbt-runs"
-      else:
         slug = "dbt-runs-sms"
+      else:
+        slug = "dbt-runs"
 
     owner_tags = ""
 
