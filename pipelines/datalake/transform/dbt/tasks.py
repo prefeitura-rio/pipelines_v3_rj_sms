@@ -202,21 +202,21 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
     model_name = command_result.node.name
 
     if command_result.node.meta:
-      domain_model = command_result.node.meta.get("dominio")
+      model_team = command_result.node.meta.get("team")
       model_owners = command_result.node.meta.get("owner")
-      owners_model[model_name] = {"domain": domain_model, "owner": model_owners}
+      owners_model[model_name] = {"team": model_team, "owner": model_owners}
     elif command_result.node.refs:
       model_name = command_result.node.refs[0].name
-      domain_model = owners_model[model_name]["domain"]
+      model_team = owners_model[model_name]["team"]
       model_owners = owners_model[model_name]["owner"]
 
-    if isinstance(domain_model, list):
-      if "cit" in domain_model:
+    if isinstance(model_team, list):
+      if "cit" in model_team:
         slug = "dbt-runs"
       else:
         slug = "dbt-runs-sms"
     else:
-      if domain_model == "cit":
+      if model_team == "cit":
         slug = "dbt-runs"
       else:
         slug = "dbt-runs-sms"
@@ -235,13 +235,13 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
 
     if status == "fail":
       is_successful = False
-      general_report.append(f"- 🛑 FAIL: {summarizer(command_result)} -{owner_tags}")
+      general_report.append(f"- 🛑 FAIL: {summarizer(command_result)} {owner_tags}")
     elif status == "error":
       is_successful = False
-      general_report.append(f"- ❌ ERROR: {summarizer(command_result)} - {owner_tags}")
+      general_report.append(f"- ❌ ERROR: {summarizer(command_result)} {owner_tags}")
     elif status == "warn":
       has_warnings = True
-      general_report.append(f"- ⚠️ WARN: {summarizer(command_result)} - {owner_tags}")
+      general_report.append(f"- ⚠️ WARN: {summarizer(command_result)} {owner_tags}")
 
   cost_report = f"**Custo da Execução**: R${estimated_total_cost:.2f}"
   log(cost_report)
