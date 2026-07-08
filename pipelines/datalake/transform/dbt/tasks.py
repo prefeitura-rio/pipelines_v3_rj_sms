@@ -198,33 +198,46 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
     if status == "pass":  # Passou em teste, não gera report
       continue
 
-    model_owner_name = command_result.node.meta.get("owner")
-    model_owner = dbt_constants.OWNERS.value.get(model_owner_name or "")
-    # Se modelo sem dono, marca CIT
-    no_owner = not model_owner_name or not dbt_constants.OWNERS.value.get(
-      model_owner_name
-    )
-    if no_owner:
-      model_owner = dbt_constants.OWNERS.value["cit"]
+    domain_model = command_result.node.meta.get('dominio')
+    model_owners = command_result.node.meta.get('owner')
+    
+    # Verifica se tem mais de um dominio e se o cit está na lista
+    if isinstance(domain_model, list):
+      if 'cit' in domain_model:
+        slug = 'dbt-runs'
+      else:
+        slug = 'dbt-runs-sms'
+    else:
+      if domain_model == 'cit':
+        slug = 'dbt-runs'
+      else:
+        slug = 'dbt-runs-sms'
 
-    model_owner_tag = f"<@{model_owner}>"
-    owner_ctx_str = ", modelo sem dono!" if no_owner else ""
-    model_owner_name = "CIT" if no_owner else model_owner_name
+    owner_tags = ''
+
+    if isinstance(model_owners, list):
+      for name in model_owners:
+        if name in dbt_constants.OWNERS.value:
+          owner_tags += f'<@{name}> '
+    else:
+      owner_tags += f'<@{model_owners}>'
+
+    log(owner_tags)
 
     if status == "fail":
       is_successful = False
       general_report.append(
-        f"- 🛑 FAIL ({model_owner_tag}{owner_ctx_str}): {summarizer(command_result)}"
+        f"- 🛑 FAIL {owner_tags} {summarizer(command_result)}"
       )
     elif status == "error":
       is_successful = False
       general_report.append(
-        f"- ❌ ERROR ({model_owner_tag}{owner_ctx_str}): {summarizer(command_result)}"
+        f"- ❌ ERROR {owner_tags} {summarizer(command_result)}"
       )
     elif status == "warn":
       has_warnings = True
       general_report.append(
-        f"- ⚠️ WARN (@{model_owner_name}{owner_ctx_str}): {summarizer(command_result)}"
+        f"- ⚠️ WARN {owner_tags} {summarizer(command_result)}"
       )
 
   cost_report = f"**Custo da Execução**: R${estimated_total_cost:.2f}"
@@ -259,7 +272,7 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
     title=f"{emoji} Execução `dbt {command}` finalizada {complement}",
     message=message,
     file_path=log_path,
-    slug="dbt-runs",
+    slug=slug,
     multiple_messages_ok=True,
   )
 
