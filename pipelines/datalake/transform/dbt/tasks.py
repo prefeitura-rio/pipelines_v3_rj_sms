@@ -191,6 +191,7 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
   summarizer = Summarizer()
 
   is_successful, has_warnings = True, False
+  owners_model = {}
 
   general_report = []
   for command_result in running_results:
@@ -198,10 +199,17 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
     if status == "pass":  # Passou em teste, não gera report
       continue
 
-    domain_model = command_result.node.meta.get("dominio")
-    model_owners = command_result.node.meta.get("owner")
+    model_name = command_result.node.name
 
-    # Verifica se tem mais de um dominio e se o cit está na lista
+    if command_result.node.meta:
+      domain_model = command_result.node.meta.get("dominio")
+      model_owners = command_result.node.meta.get("owner")
+      owners_model[model_name] = {"domain": domain_model, "owner": model_owners}
+    elif command_result.node.refs:
+      model_name = command_result.node.refs[0].name
+      domain_model = owners_model[model_name]["domain"]
+      model_owners = owners_model[model_name]["owner"]
+
     if isinstance(domain_model, list):
       if "cit" in domain_model:
         slug = "dbt-runs"
@@ -218,21 +226,22 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
     if isinstance(model_owners, list):
       for name in model_owners:
         if name in dbt_constants.OWNERS.value:
-          owner_tags += f"<@{name}> "
+          owner_tags += f"<@{dbt_constants.OWNERS.value[name.lower()]}> "
     else:
-      owner_tags += f"<@{model_owners}>"
-
-    log(owner_tags)
+      if model_owners in dbt_constants.OWNERS.value:
+        owner_tags += f"<@{dbt_constants.OWNERS.value[model_owners.lower()]}>"
+      else:
+        owner_tags += f"<@{dbt_constants.OWNERS.value['cit']}>"
 
     if status == "fail":
       is_successful = False
-      general_report.append(f"- 🛑 FAIL {owner_tags} {summarizer(command_result)}")
+      general_report.append(f"- 🛑 FAIL: {summarizer(command_result)} -{owner_tags}")
     elif status == "error":
       is_successful = False
-      general_report.append(f"- ❌ ERROR {owner_tags} {summarizer(command_result)}")
+      general_report.append(f"- ❌ ERROR: {summarizer(command_result)} - {owner_tags}")
     elif status == "warn":
       has_warnings = True
-      general_report.append(f"- ⚠️ WARN {owner_tags} {summarizer(command_result)}")
+      general_report.append(f"- ⚠️ WARN: {summarizer(command_result)} - {owner_tags}")
 
   cost_report = f"**Custo da Execução**: R${estimated_total_cost:.2f}"
   log(cost_report)
