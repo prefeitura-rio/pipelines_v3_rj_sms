@@ -207,8 +207,8 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
       owners_model[model_name] = {"team": model_team, "owner": model_owners}
     elif command_result.node.refs:
       model_name = command_result.node.refs[0].name
-      model_team = owners_model[model_name]["team"]
-      model_owners = owners_model[model_name]["owner"]
+      model_team = owners_model.get(model_name, "").get("team", "cit")
+      model_owners = owners_model.get(model_name, "").get("owner", "modelo sem dono")
     else:
       model_team = "cit"
       model_owners = "modelo sem dono"
