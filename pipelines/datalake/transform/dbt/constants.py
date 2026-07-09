@@ -14,7 +14,7 @@ class constants(Enum):
     "cit": CIT.CIT_ID.value,
     "avellar": CIT.AVELLAR_ID.value,
     "herian": CIT.HERIAN_ID.value,
-    "daniellira": CIT.DANIEL_ID.value,
+    "daniel": CIT.DANIEL_ID.value,
     "karen": CIT.KAREN_ID.value,
     "pedro": CIT.PEDRO_ID.value,
     ## Outros

@@ -190,7 +190,12 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
   log_path = log_to_file(logs)
   summarizer = Summarizer()
 
+  cit_report = []
+  sms_report = []
+  reports = {"dbt-runs": cit_report, "dbt-runs-sms": sms_report}
+
   is_successful, has_warnings = True, False
+  owners_model = {}
 
   general_report = []
   for command_result in running_results:
@@ -198,41 +203,56 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
     if status == "pass":  # Passou em teste, não gera report
       continue
 
-    model_owner_name = command_result.node.meta.get("owner")
-    model_owner = dbt_constants.OWNERS.value.get(model_owner_name or "")
-    # Se modelo sem dono, marca CIT
-    no_owner = not model_owner_name or not dbt_constants.OWNERS.value.get(
-      model_owner_name
-    )
-    if no_owner:
-      model_owner = dbt_constants.OWNERS.value["cit"]
+    model_name = command_result.node.name
 
-    model_owner_tag = f"<@{model_owner}>"
-    owner_ctx_str = ", modelo sem dono!" if no_owner else ""
-    model_owner_name = "CIT" if no_owner else model_owner_name
+    if command_result.node.meta:
+      model_team = command_result.node.meta.get("team")
+      model_owners = command_result.node.meta.get("owner")
+      owners_model[model_name] = {"team": model_team, "owner": model_owners}
+    elif command_result.node.refs:
+      model_name = command_result.node.refs[0].name
+      model_team = owners_model.get(model_name, {}).get("team", "cit")
+      model_owners = owners_model.get(model_name, {}).get("owner", "modelo sem dono")
+    else:
+      model_team = "cit"
+      model_owners = "modelo sem dono"
+
+    owner_tags = ""
+
+    if isinstance(model_owners, list):
+      for name in model_owners:
+        if name in dbt_constants.OWNERS.value:
+          owner_tags += f"<@{dbt_constants.OWNERS.value[name.lower()]}> "
+      else:
+        if not owner_tags:
+          owner_tags += f"<@{dbt_constants.OWNERS.value['cit']}>"
+    else:
+      if model_owners in dbt_constants.OWNERS.value:
+        owner_tags += f"<@{dbt_constants.OWNERS.value[model_owners.lower()]}>"
+      else:
+        owner_tags += f"<@{dbt_constants.OWNERS.value['cit']}>"
 
     if status == "fail":
       is_successful = False
-      general_report.append(
-        f"- 🛑 FAIL ({model_owner_tag}{owner_ctx_str}): {summarizer(command_result)}"
-      )
+      if model_team == "cit":
+        cit_report.append(f"- 🛑 FAIL: {summarizer(command_result)} {owner_tags}")
+      else:
+        sms_report.append(f"- 🛑 FAIL: {summarizer(command_result)} {owner_tags}")
     elif status == "error":
       is_successful = False
-      general_report.append(
-        f"- ❌ ERROR ({model_owner_tag}{owner_ctx_str}): {summarizer(command_result)}"
-      )
+      if model_team == "cit":
+        cit_report.append(f"- ❌ ERROR: {summarizer(command_result)} {owner_tags}")
+      else:
+        sms_report.append(f"- ❌ ERROR: {summarizer(command_result)} {owner_tags}")
     elif status == "warn":
       has_warnings = True
-      general_report.append(
-        f"- ⚠️ WARN (@{model_owner_name}{owner_ctx_str}): {summarizer(command_result)}"
-      )
+      if model_team == "cit":
+        cit_report.append(f"- ⚠️ WARN: {summarizer(command_result)} {owner_tags}")
+      else:
+        sms_report.append(f"- ⚠️ WARN: {summarizer(command_result)} {owner_tags}")
 
   cost_report = f"**Custo da Execução**: R${estimated_total_cost:.2f}"
   log(cost_report)
-
-  general_report = sorted(general_report, reverse=True)
-  general_report = "**Resumo**:\n" + "\n".join(general_report)
-  log(general_report)
 
   # Parâmetros do flow
   param_report = ["**Parametros**:"]
@@ -244,27 +264,34 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
       param_report.append(f"- {key}: `{value}`")
   param_report = "\n".join(param_report) + " \n"
 
-  include_report = has_warnings or (not is_successful)
-
   # Envia arquivo de logs para o Discord
   command = run_params.get("command")
-  emoji = "❌" if not is_successful else "✅"
-  complement = "com Erros" if not is_successful else "sem Erros"
-  message = (
-    f"{param_report}\n{cost_report}\n{general_report}"
-    if include_report
-    else f"{param_report}\n{cost_report}"
-  )
-  send_discord_message(
-    title=f"{emoji} Execução `dbt {command}` finalizada {complement}",
-    message=message,
-    file_path=log_path,
-    slug="dbt-runs",
-    multiple_messages_ok=True,
-  )
 
-  if not is_successful:
-    raise RuntimeError(general_report)
+  for slug, report in reports.items():
+    if report:
+      include_report = True
+      emoji = "⚠️ "
+      complement = "com erros/warnings"
+      report = sorted(report, reverse=True)
+      report = "**Resumo**:\n" + "\n".join(report)
+      log(report)
+    else:
+      include_report = False
+      emoji = "✅"
+      complement = "com sucesso"
+
+    message = (
+      f"{param_report}\n{cost_report}\n{report}"
+      if include_report
+      else f"{param_report}\n{cost_report}"
+    )
+    send_discord_message(
+      title=f"{emoji} Execução `dbt {command}` finalizada {complement}",
+      message=message,
+      file_path=log_path,
+      slug=slug,
+      multiple_messages_ok=True,
+    )
 
 
 @task

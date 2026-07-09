@@ -12,7 +12,13 @@ from pipelines.utils.infisical import get_secret
 from pipelines.utils.logger import log
 
 type DiscordWebhookSlug = Literal[
-  "custo_jobs", "data-ingestion", "dbt-runs", "error", "hci_status", "warning"
+  "custo_jobs",
+  "data-ingestion",
+  "dbt-runs",
+  "dbt-runs-sms",
+  "error",
+  "hci_status",
+  "warning",
 ]
 
 
@@ -77,6 +83,9 @@ async def send_discord_webhook(
       #   embed = Embed()
       #   embed.set_image(url=f"attachment://{file_path}")
       #   params["embeds"].append(embed)
+
+  log(f"Enviando mensagem para Discord (slug={slug})", level="info")
+  log(f"webhook_url: {webhook_url}", level="info")
 
   async with aiohttp.ClientSession() as session:
     webhook = Webhook.from_url(webhook_url, session=session)
