@@ -268,6 +268,11 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
 
   include_report = has_warnings or (not is_successful)
 
+  # Debugging
+  log(f"Equipe: {model_team}")
+  log(f"Donos: {owner_tags}")
+  log(f"Enviando para {slug}...")
+
   # Envia arquivo de logs para o Discord
   command = run_params.get("command")
   emoji = "❌" if not is_successful else "✅"
