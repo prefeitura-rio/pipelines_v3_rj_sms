@@ -9,14 +9,6 @@ inputs:
     description: Printar logs de debug
     required: false
     default: "false"
-  batch_size:
-    description: Número de deploys paralelos
-    required: false
-    default: "3"
-  max_retries:
-    description: Número de retentativas em caso de erro no deploy
-    required: false
-    default: "2"
   pipeline_filter:
     description: |
       Filtro de flows a fazer deploy. Por exemplo:
@@ -50,14 +42,14 @@ runs:
   using: composite
   steps:
     - name: Login to Google Artifact Registry
-      uses: docker/login-action@v4
+      uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0  # v4.4.0
       with:
         registry: southamerica-east1-docker.pkg.dev
         username: _json_key
         password: ${{ inputs.GOOGLE_CREDENTIALS }}
 
     - name: Setup Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
       with:
         python-version: "3.13"
 
@@ -65,7 +57,7 @@ runs:
       shell: bash
       run: pip install uv 1> /dev/null
 
-    - uses: actions/cache@v5
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
       with:
         path: |
           ./.venv
@@ -91,7 +83,5 @@ runs:
         FORCE_DEPLOY: ${{ inputs.force_deploy == 'true' && '1' || '0' }}
         GITHUB_SHA: ${{ github.sha }}
         LOG_LEVEL: ${{ inputs.debug == 'true' && 'DEBUG' || 'INFO' }}
-        BATCH_SIZE: ${{ inputs.batch_size || '3' }}
-        MAX_RETRIES: ${{ inputs.max_retries || '2' }}
         PIPELINE_FILTER: ${{ inputs.pipeline_filter }}
       run: uv run python .github/scripts/deploy_prefect_flows.py
