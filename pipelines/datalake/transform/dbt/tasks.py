@@ -264,15 +264,22 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
       param_report.append(f"- {key}: `{value}`")
   param_report = "\n".join(param_report) + " \n"
 
-  include_report = has_warnings or (not is_successful)
-
   # Envia arquivo de logs para o Discord
   command = run_params.get("command")
 
   for slug, report in reports.items():
-    report = sorted(report, reverse=True)
-    report = "**Resumo**:\n" + "\n".join(report)
-    log(report)
+    if report:
+      include_report = True
+      emoji = "⚠️ "
+      complement = "com erros/warnings"
+      report = sorted(report, reverse=True)
+      report = "**Resumo**:\n" + "\n".join(report)
+      log(report)
+    else:
+      include_report = False
+      emoji = "✅"
+      complement = "com sucesso"
+      log(report)
 
     message = (
       f"{param_report}\n{cost_report}\n{report}"
@@ -280,7 +287,7 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
       else f"{param_report}\n{cost_report}"
     )
     send_discord_message(
-      title=f"Execução `dbt {command}` finalizada.",
+      title=f"{emoji} Execução `dbt {command}` finalizada {complement}",
       message=message,
       file_path=log_path,
       slug=slug,
