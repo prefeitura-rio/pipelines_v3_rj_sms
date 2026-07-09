@@ -264,8 +264,6 @@ async def main():
   environment = os.getenv("ENVIRONMENT", "dev")
   commit_sha = os.getenv("GITHUB_SHA", "HEAD")
   pipeline_filter = os.getenv("PIPELINE_FILTER", "")
-  # batch_size = os.getenv("BATCH_SIZE", "3")
-  # max_retries = os.getenv("MAX_RETRIES", "2")
 
   PREFECT_API_URL = os.getenv("PREFECT_API_URL")
   if not PREFECT_API_URL:

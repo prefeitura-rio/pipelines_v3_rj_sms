@@ -36,8 +36,6 @@ jobs:
         with:
           environment: prod
           debug: ${{ inputs.debug }}
-          batch_size: ${{ inputs.batch_size || '3' }}
-          max_retries: ${{ inputs.max_retries || '2' }}
           pipeline_filter: ${{ inputs.pipeline_filter }}
 
           PREFECT_API_URL: ${{ secrets.PREFECT_API_URL }}
