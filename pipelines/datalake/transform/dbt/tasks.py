@@ -190,6 +190,10 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
   log_path = log_to_file(logs)
   summarizer = Summarizer()
 
+  cit_report = []
+  sms_report = []
+  reports = {"dbt-runs": cit_report, "dbt-runs-sms": sms_report}
+
   is_successful, has_warnings = True, False
   owners_model = {}
 
@@ -205,27 +209,13 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
       model_team = command_result.node.meta.get("team")
       model_owners = command_result.node.meta.get("owner")
       owners_model[model_name] = {"team": model_team, "owner": model_owners}
-      log(f"Modelo: {model_name} | Equipe: {model_team} | Donos: {model_owners}")
     elif command_result.node.refs:
       model_name = command_result.node.refs[0].name
       model_team = owners_model.get(model_name, "").get("team", "cit")
       model_owners = owners_model.get(model_name, "").get("owner", "modelo sem dono")
-      log(f"Modelo: {model_name} | Equipe: {model_team} | Donos: {model_owners}")
     else:
       model_team = "cit"
       model_owners = "modelo sem dono"
-      log(f"Modelo: {model_name} | Equipe: {model_team} | Donos: {model_owners}")
-
-    if isinstance(model_team, list):
-      if "cit" in model_team:
-        slug = "dbt-runs"
-      else:
-        slug = "dbt-runs-sms"
-    else:
-      if model_team == "cit":
-        slug = "dbt-runs"
-      else:
-        slug = "dbt-runs-sms"
 
     owner_tags = ""
 
@@ -244,20 +234,25 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
 
     if status == "fail":
       is_successful = False
-      general_report.append(f"- 🛑 FAIL: {summarizer(command_result)} {owner_tags}")
+      if model_team == "cit":
+        cit_report.append(f"- 🛑 FAIL: {summarizer(command_result)} {owner_tags}")
+      else:
+        sms_report.append(f"- 🛑 FAIL: {summarizer(command_result)} {owner_tags}")
     elif status == "error":
       is_successful = False
-      general_report.append(f"- ❌ ERROR: {summarizer(command_result)} {owner_tags}")
+      if model_team == "cit":
+        cit_report.append(f"- ❌ ERROR: {summarizer(command_result)} {owner_tags}")
+      else:
+        sms_report.append(f"- ❌ ERROR: {summarizer(command_result)} {owner_tags}")
     elif status == "warn":
       has_warnings = True
-      general_report.append(f"- ⚠️ WARN: {summarizer(command_result)} {owner_tags}")
+      if model_team == "cit":
+        cit_report.append(f"- ⚠️ WARN: {summarizer(command_result)} {owner_tags}")
+      else:
+        sms_report.append(f"- ⚠️ WARN: {summarizer(command_result)} {owner_tags}")
 
   cost_report = f"**Custo da Execução**: R${estimated_total_cost:.2f}"
   log(cost_report)
-
-  general_report = sorted(general_report, reverse=True)
-  general_report = "**Resumo**:\n" + "\n".join(general_report)
-  log(general_report)
 
   # Parâmetros do flow
   param_report = ["**Parametros**:"]
@@ -271,30 +266,26 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
 
   include_report = has_warnings or (not is_successful)
 
-  # Debugging
-  log(f"Equipe: {model_team}")
-  log(f"Donos: {owner_tags}")
-  log(f"Enviando para {slug}...")
-
   # Envia arquivo de logs para o Discord
   command = run_params.get("command")
-  emoji = "❌" if not is_successful else "✅"
-  complement = "com Erros" if not is_successful else "sem Erros"
-  message = (
-    f"{param_report}\n{cost_report}\n{general_report}"
-    if include_report
-    else f"{param_report}\n{cost_report}"
-  )
-  send_discord_message(
-    title=f"{emoji} Execução `dbt {command}` finalizada {complement}",
-    message=message,
-    file_path=log_path,
-    slug=slug,
-    multiple_messages_ok=True,
-  )
 
-  if not is_successful:
-    raise RuntimeError(general_report)
+  for slug, report in reports.items():
+    report = sorted(report, reverse=True)
+    report = "**Resumo**:\n" + "\n".join(report)
+    log(report)
+
+    message = (
+      f"{param_report}\n{cost_report}\n{report}"
+      if include_report
+      else f"{param_report}\n{cost_report}"
+    )
+    send_discord_message(
+      title=f"Execução `dbt {command}` finalizada.",
+      message=message,
+      file_path=log_path,
+      slug=slug,
+      multiple_messages_ok=True,
+    )
 
 
 @task
