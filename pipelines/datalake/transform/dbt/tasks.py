@@ -211,8 +211,12 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
       owners_model[model_name] = {"team": model_team, "owner": model_owners}
     elif command_result.node.refs:
       model_name = command_result.node.refs[0].name
-      model_team = owners_model.get(model_name, "").get("team", "cit")
-      model_owners = owners_model.get(model_name, "").get("owner", "modelo sem dono")
+      try:
+        model_team = owners_model.get(model_name, {}).get("team", "cit")
+        model_owners = owners_model.get(model_name, {}).get("owner", "modelo sem dono")
+      except KeyError:
+        model_team = "cit"
+        model_owners = "modelo sem dono"
     else:
       model_team = "cit"
       model_owners = "modelo sem dono"
@@ -279,7 +283,6 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
       include_report = False
       emoji = "✅"
       complement = "com sucesso"
-      log(report)
 
     message = (
       f"{param_report}\n{cost_report}\n{report}"
