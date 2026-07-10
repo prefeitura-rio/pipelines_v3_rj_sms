@@ -235,21 +235,21 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
     if status == "fail":
       is_successful = False
       if model_team == "cit":
-        cit_report.append(f"- 🛑 FAIL: {summarizer(command_result)} {owner_tags}")
+        cit_report.append(f"- 🛑 FAIL: {owner_tags} {summarizer(command_result)} ")
       else:
-        sms_report.append(f"- 🛑 FAIL: {summarizer(command_result)} {owner_tags}")
+        sms_report.append(f"- 🛑 FAIL: {owner_tags} {summarizer(command_result)}")
     elif status == "error":
       is_successful = False
       if model_team == "cit":
-        cit_report.append(f"- ❌ ERROR: {summarizer(command_result)} {owner_tags}")
+        cit_report.append(f"- ❌ ERROR: {owner_tags} {summarizer(command_result)} ")
       else:
-        sms_report.append(f"- ❌ ERROR: {summarizer(command_result)} {owner_tags}")
+        sms_report.append(f"- ❌ ERROR: {owner_tags} {summarizer(command_result)} ")
     elif status == "warn":
       has_warnings = True
       if model_team == "cit":
-        cit_report.append(f"- ⚠️ WARN: {summarizer(command_result)} {owner_tags}")
+        cit_report.append(f"- ⚠️ WARN: {summarizer(command_result)}")
       else:
-        sms_report.append(f"- ⚠️ WARN: {summarizer(command_result)} {owner_tags}")
+        sms_report.append(f"- ⚠️ WARN: {summarizer(command_result)}")
 
   cost_report = f"**Custo da Execução**: R${estimated_total_cost:.2f}"
   log(cost_report)
