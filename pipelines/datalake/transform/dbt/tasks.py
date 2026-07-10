@@ -194,10 +194,8 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
   sms_report = []
   reports = {"dbt-runs": cit_report, "dbt-runs-sms": sms_report}
 
-  is_successful, has_warnings = True, False
   owners_model = {}
 
-  general_report = []
   for command_result in running_results:
     status = command_result.status
     if status == "pass":  # Passou em teste, não gera report
@@ -233,19 +231,16 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
         owner_tags += f"<@{dbt_constants.OWNERS.value['cit']}>"
 
     if status == "fail":
-      is_successful = False
       if model_team == "cit":
         cit_report.append(f"- 🛑 FAIL: {summarizer(command_result)} {owner_tags}")
       else:
         sms_report.append(f"- 🛑 FAIL: {summarizer(command_result)} {owner_tags}")
     elif status == "error":
-      is_successful = False
       if model_team == "cit":
         cit_report.append(f"- ❌ ERROR: {summarizer(command_result)} {owner_tags}")
       else:
         sms_report.append(f"- ❌ ERROR: {summarizer(command_result)} {owner_tags}")
     elif status == "warn":
-      has_warnings = True
       if model_team == "cit":
         cit_report.append(f"- ⚠️ WARN: {summarizer(command_result)} {owner_tags}")
       else:

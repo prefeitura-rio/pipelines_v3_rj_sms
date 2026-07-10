@@ -315,7 +315,9 @@ def upload_df_to_datalake(
       é `True`
     csv_delimiter(str?):
       Delimitador de campos no caso de `source_format="csv"`; por padrão,
-      é `;`. Só importa se você pretende compartilhar os CSVs originais
+      é `;`. Só importa se você pretende compartilhar os CSVs originais.
+      Importante não misturar delimitadores! Se uma tabela já existe separada
+      por `,`, fazer upload de mais dados para ela com `;` vai quebrar consultas.
     date_partition_column(str?):
       Nome da coluna de particionamento por data; normalmente algo
       como `"data_particao"`. Por padrão, nenhuma (`None`)

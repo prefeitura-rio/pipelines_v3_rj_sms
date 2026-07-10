@@ -3,7 +3,7 @@ from prefect.schedules import Cron
 
 from pipelines.utils.schedules import create_schedule_list
 
-flow_parameters = [
+daily_flow_parameters = [
   {
     "source_project_name": "basedosdados",
     "source_dataset_name": "br_ms_cnes",
@@ -67,6 +67,18 @@ flow_parameters = [
   },
 ]
 
+weekly_flow_parameters = [
+  {
+    "source_project_name": "blp-medirec",
+    "source_dataset_name": "medirec_ext",
+    "source_table_list": ["cielab_exams_sms", "cielab_sectionitems_sms"],
+    "destination_dataset_name": "brutos_medirec",
+    "environment": "prod",
+    "horribly_inefficient_method": True,  # !! não copie !!
+    "horribly_inefficient_chunk_size": 100_000,
+  }
+]
+
 cegonha_flow_parameters = [
   {
     "source_project_name": "rj-crm-registry",
@@ -77,13 +89,18 @@ cegonha_flow_parameters = [
   }
 ]
 
+
 daily_schedules = create_schedule_list(
-  parameters_list=flow_parameters, interval="daily", config={"hour": 5}
+  parameters_list=daily_flow_parameters, interval="daily", config={"hour": 5}
+)
+weekly_schedules = create_schedule_list(
+  parameters_list=weekly_flow_parameters, interval="weekly", config={"hour": 4}
 )
 
 cegonha_schedules = [
+  # de 15 em 15min entre 7:00-21:00
   Cron("*/15 7-21 * * *", timezone="America/Sao_Paulo", parameters=params)
   for params in cegonha_flow_parameters
 ]
 
-schedules = daily_schedules + cegonha_schedules
+schedules = daily_schedules + weekly_schedules + cegonha_schedules

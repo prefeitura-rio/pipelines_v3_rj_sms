@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
+from prefect.concurrency.sync import rate_limit
+from prefect.futures import wait
+
 from pipelines.constants import CIT
 from pipelines.datalake.transform.dbt.flows import sms_execute_dbt
 from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.prefect import create_flow_run, flow, flow_config, rename_flow_run
 
 from .schedules import schedules
-from .tasks import clone_bigquery_table
+from .tasks import clone_bigquery_table, download_then_reupload_bigquery_table
 
 
 @flow(
@@ -19,6 +22,8 @@ def clone_bigquery(
   source_dataset_name: str,
   source_table_list: list[str],
   destination_dataset_name: str,
+  horribly_inefficient_method: bool = False,
+  horribly_inefficient_chunk_size: int = 100_000,
   dbt_select_exp: str | None = None,
   environment: str = "dev",
 ):
@@ -36,24 +41,52 @@ def clone_bigquery(
       Expressão a ser usada após um `--select` de dbt. Se presente,
       é executada após a clonagem das tabelas.
       Cria uma nova flow run de dbt.
-    environment: (str?):
+    horribly_inefficient_method (bool?):
+      Em alguns casos, não é possível fazer nem um `CLONE` nem um
+      `CREATE ... AS SELECT`, mesmo com permissão de leitura à tabela fonte.
+      Nesses casos, é necessário usar o método horrivelmente
+      ineficiente: `SELECT *`, salva como parquet, reupload como tabela.
+    horribly_inefficient_chunk_size (int?):
+      Nos casos ineficientes acima, as tabelas são extraídas em pedaços
+      de `horribly_inefficient_chunk_size`; por padrão, 100,000.
+    environment (str?):
       Ambiente de execução; "dev" por padrão.
   """
   bigquery_project = get_google_project_for_environment(environment=environment)
-  rename_task = rename_flow_run(
+  rename_flow_run(
     new_name=f"Cloning dataset '{source_project_name}.{source_dataset_name}' into '{bigquery_project}'"
   )
 
-  # Sem .submit(), em teoria essa chamada é bloqueante
-  # então só segue pro `if` abaixo quando termina
-  clone_bigquery_table(
-    source_project_name=source_project_name,
-    source_dataset_name=source_dataset_name,
-    source_table_list=source_table_list,
-    destination_project_name=bigquery_project,
-    destination_dataset_name=destination_dataset_name,
-    wait_for=[rename_task],
-  )
+  if not horribly_inefficient_method:
+    # Sem .submit(), essa task é bloqueante, então só segue pro `if` abaixo quando termina
+    clone_bigquery_table(
+      source_project_name=source_project_name,
+      source_dataset_name=source_dataset_name,
+      source_table_list=source_table_list,
+      destination_project_name=bigquery_project,
+      destination_dataset_name=destination_dataset_name,
+    )
+  else:
+    # Método horrivelmente ineficiente: baixa cada tabela individualmente
+    # para um dataframe, via `SELECT * FROM ... LIMIT ... OFFSET ...`,
+    # chamando `upload_df_to_datalake()` pra cada pedaço
+    table_futures = []
+    for table in source_table_list:
+      # Limita tasks a uma por segundo para não sobrecarregar
+      # o Infisical ou os limites do Google
+      # Nome configurado na aba 'Concurrency' na UI do Prefect
+      rate_limit("um-por-segundo")
+      table_futures.append(
+        download_then_reupload_bigquery_table.submit(
+          source_project_name=source_project_name,
+          source_dataset_name=source_dataset_name,
+          source_table_name=table,
+          destination_dataset_name=destination_dataset_name,
+          chunk_size=horribly_inefficient_chunk_size,
+        )
+      )
+    # Espera todos os uploads terminarem
+    wait(table_futures)
 
   if dbt_select_exp:
     create_flow_run(
