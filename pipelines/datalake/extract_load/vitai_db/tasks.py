@@ -32,7 +32,9 @@ def create_working_time_range(
   return start, end
 
 
-@task(retries=3, retry_delay_seconds=120)
+@task(
+  retries=3, retry_delay_seconds=120, tags=[flow_constants.CONCURRENCY_LIMIT_TAG.value]
+)
 def define_queries(
   db_url: str,
   schema_name: str,

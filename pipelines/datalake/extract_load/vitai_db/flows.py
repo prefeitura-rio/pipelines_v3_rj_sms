@@ -85,7 +85,6 @@ def vitai_db_extraction(
 
   dataframes_futures = []
   for query in queries:
-    rate_limit("um-por-segundo")
     dataframes_futures.append(
       run_query.submit(db_url=db_url, query=query, partition_column=partition_column)
     )
