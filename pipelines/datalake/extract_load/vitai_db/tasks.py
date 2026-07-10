@@ -2,10 +2,11 @@
 
 import pandas as pd
 
-from pipelines.datalake.extract_load.vitai_db import constants as flow_constants
 from pipelines.utils.datetime import from_relative_date, now
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
+
+from .constants import constants as flow_constants
 
 
 @task
