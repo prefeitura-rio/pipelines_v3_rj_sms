@@ -121,7 +121,6 @@ def download_then_reupload_bigquery_table(
       df=df,
       dataset_id=destination_dataset_name,
       table_id=source_table_name,
-      date_partition_column="data_particao",
       # apaga tabela original no primeiro pedaço da extração
       dump_mode=("replace" if offset == 0 else "append"),
       source_format="parquet",
