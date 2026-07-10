@@ -28,3 +28,6 @@ Conforme configurado em `schedules.py`, os dados são extraídos a cada **12 hor
 * **Faturamento (dtw):** `fat_boletim`, `fat_atendimento`, `fat_internacao`, `fat_recem_nascido`.
 * **Cadastros:** `profissional`, `m_estabelecimento`.
 
+## Atualizações 
+
+- 10/08/2026: Adiciona limite de concorrência na task `run_query` para evitar problemas de `OperationalError` ocasionado por múltiplas conexões simultâneas ao banco de dados.

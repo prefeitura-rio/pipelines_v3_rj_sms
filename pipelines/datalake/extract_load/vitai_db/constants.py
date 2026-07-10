@@ -9,3 +9,4 @@ class constants(Enum):
 
   SLUG_NAME = "historico_vitai_db"
   DATASET_NAME = "brutos_prontuario_vitai"
+  CONCURRENCY_LIMIT_TAG = "vitai-db-query"

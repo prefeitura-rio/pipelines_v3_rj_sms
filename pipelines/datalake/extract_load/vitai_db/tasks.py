@@ -2,6 +2,7 @@
 
 import pandas as pd
 
+from pipelines.datalake.extract_load.vitai_db import constants as flow_constants
 from pipelines.utils.datetime import from_relative_date, now
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
@@ -75,7 +76,9 @@ def define_queries(
   return queries
 
 
-@task(retries=3, retry_delay_seconds=120)
+@task(
+  retries=3, retry_delay_seconds=120, tags=[flow_constants.CONCURRENCY_LIMIT_TAG.value]
+)
 def run_query(db_url: str, query: str, partition_column: str) -> pd.DataFrame:
   log("Running query: \n" + query)
 
