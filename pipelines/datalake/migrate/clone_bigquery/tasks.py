@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
-
 from google.api_core.exceptions import BadRequest as GoogleBadRequest
 from google.cloud import bigquery
+from pandas import DataFrame
 
 from pipelines.utils.datalake import upload_df_to_datalake
 from pipelines.utils.logger import log

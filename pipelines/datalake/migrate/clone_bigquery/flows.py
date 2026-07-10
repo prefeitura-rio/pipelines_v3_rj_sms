@@ -81,7 +81,6 @@ def clone_bigquery(
           source_project_name=source_project_name,
           source_dataset_name=source_dataset_name,
           source_table_name=table,
-          destination_project_name=bigquery_project,
           destination_dataset_name=destination_dataset_name,
           chunk_size=horribly_inefficient_chunk_size,
         )

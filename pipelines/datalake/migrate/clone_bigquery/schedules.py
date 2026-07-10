@@ -71,10 +71,7 @@ weekly_flow_parameters = [
   {
     "source_project_name": "blp-medirec",
     "source_dataset_name": "medirec_ext",
-    "source_table_list": [
-      "cielab_exams_sms",
-      "cielab_sectionitems_sms",
-    ],
+    "source_table_list": ["cielab_exams_sms", "cielab_sectionitems_sms"],
     "destination_dataset_name": "brutos_medirec",
     "environment": "prod",
     "horribly_inefficient_method": True,  # !! não copie !!
