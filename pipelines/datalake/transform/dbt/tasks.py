@@ -167,6 +167,30 @@ def estimate_dbt_costs(execution_info: dict, environment: str) -> float:
   return total_brl_cost
 
 
+def get_owner_tags(model_owners, status: str) -> str:
+  """Gera uma string de menções para os donos de um modelo.
+  Se for falha ou erro, menciona o dono com o ID do Discord (se estiver no dicionário de donos).
+  Warnings mencionam sem utilizar o ID do dono.
+  """
+  owners = model_owners if isinstance(model_owners, list) else [model_owners]
+  tags = []
+
+  if not owners or not any(owners):
+    default_owner = "cit"
+    if status in ("fail", "error"):
+      return f"<@{dbt_constants.OWNERS.value[default_owner]}>"
+    return f"<@{default_owner}>"
+
+  for name in owners:
+    if (
+      name and status in ("fail", "error") and name.lower() in dbt_constants.OWNERS.value
+    ):
+      tags.append(f"<@{dbt_constants.OWNERS.value[name.lower()]}>")
+    elif name:
+      tags.append(f"<@{name}>")
+  return " ".join(tags)
+
+
 @task
 def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None:
   """
@@ -217,20 +241,7 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
       model_team = "cit"
       model_owners = "modelo sem dono"
 
-    owner_tags = ""
-
-    if isinstance(model_owners, list):
-      for name in model_owners:
-        if name in dbt_constants.OWNERS.value:
-          owner_tags += f"<@{dbt_constants.OWNERS.value[name.lower()]}> "
-      else:
-        if not owner_tags:
-          owner_tags += f"<@{dbt_constants.OWNERS.value['cit']}>"
-    else:
-      if model_owners in dbt_constants.OWNERS.value:
-        owner_tags += f"<@{dbt_constants.OWNERS.value[model_owners.lower()]}>"
-      else:
-        owner_tags += f"<@{dbt_constants.OWNERS.value['cit']}>"
+    owner_tags = get_owner_tags(model_owners, status)
 
     if status == "fail":
       is_successful = False
@@ -247,9 +258,9 @@ def create_dbt_report(execution_info: dict, estimated_total_cost: float) -> None
     elif status == "warn":
       has_warnings = True
       if model_team == "cit":
-        cit_report.append(f"- ⚠️ WARN: {summarizer(command_result)}")
+        cit_report.append(f"- ⚠️ WARN: {owner_tags} {summarizer(command_result)}")
       else:
-        sms_report.append(f"- ⚠️ WARN: {summarizer(command_result)}")
+        sms_report.append(f"- ⚠️ WARN: {owner_tags} {summarizer(command_result)}")
 
   cost_report = f"**Custo da Execução**: R${estimated_total_cost:.2f}"
   log(cost_report)
