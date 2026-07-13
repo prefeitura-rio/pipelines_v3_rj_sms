@@ -14,17 +14,20 @@ O fluxo principal (`vitai_db_extraction`) realiza as seguintes etapas:
 2. **Definição de Janela Temporal**: Determina o intervalo de tempo para a extração baseando-se em uma coluna de data/hora (ex: `created_at` ou `datahora`). Se não for fornecido, extrai os últimos 7 dias por padrão.
 3. **Paginação de Consultas**: Para evitar sobrecarga no banco de dados e estouro de memória, a tarefa conta o número de registros no intervalo e gera múltiplas consultas paginadas (utilizando `LIMIT` e `OFFSET`) com base no parâmetro `batch_size`.
 4. **Extração de Dados**: As consultas são executadas em paralelo de forma controlada (rate limit de "um por segundo").
-5. **Tratamento Inicial**: 
+5. **Tratamento Inicial**:
    - Se a coluna `id` estiver presente, ela é renomeada para `gid`.
    - Adiciona colunas de controle do datalake (`datalake_loaded_at` e `partition_date`).
-6. **Carga no Datalake**: Os *DataFrames* resultantes são carregados em paralelo no datalake (formato Parquet) no modo de adição (`append`), particionados diariamente.
+6. **Carga no Datalake**: Os _DataFrames_ resultantes são carregados em paralelo no datalake (formato Parquet) no modo de adição (`append`), particionados diariamente.
 
 ## Agendamentos (Schedules)
 
 Conforme configurado em `schedules.py`, os dados são extraídos a cada **12 horas**. O pipeline processa tabelas de dois schemas principais (`basecentral` e `dtw`), incluindo:
 
-* **Pacientes e Atendimentos:** `paciente`, `boletim`, `atendimento`, `internacao`, `alta`, `classificacao_risco`.
-* **Clínico:** `alergia`, `diagnostico`, `exame`, `prescricao`, `item_prescricao`, `cirurgia`, `relato_cirurgico`, `resumo_alta`.
-* **Faturamento (dtw):** `fat_boletim`, `fat_atendimento`, `fat_internacao`, `fat_recem_nascido`.
-* **Cadastros:** `profissional`, `m_estabelecimento`.
+- **Pacientes e Atendimentos:** `paciente`, `boletim`, `atendimento`, `internacao`, `alta`, `classificacao_risco`.
+- **Clínico:** `alergia`, `diagnostico`, `exame`, `prescricao`, `item_prescricao`, `cirurgia`, `relato_cirurgico`, `resumo_alta`.
+- **Faturamento (dtw):** `fat_boletim`, `fat_atendimento`, `fat_internacao`, `fat_recem_nascido`.
+- **Cadastros:** `profissional`, `m_estabelecimento`.
 
+## Atualizações
+
+- 10/08/2026: Adiciona limite de concorrência na task `run_query` para evitar problemas de `OperationalError` ocasionado por múltiplas conexões simultâneas ao banco de dados.

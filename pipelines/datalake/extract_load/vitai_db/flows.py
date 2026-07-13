@@ -3,9 +3,7 @@ from prefect.concurrency.sync import rate_limit
 from prefect.futures import wait
 
 from pipelines.constants import CIT
-from pipelines.datalake.extract_load.vitai_db.constants import (
-  constants as vitai_db_constants,
-)
+from pipelines.datalake.extract_load.vitai_db.constants import constants as flow_constants
 from pipelines.datalake.extract_load.vitai_db.schedules import schedules
 from pipelines.datalake.extract_load.vitai_db.tasks import (
   create_working_time_range,
@@ -14,10 +12,26 @@ from pipelines.datalake.extract_load.vitai_db.tasks import (
 )
 from pipelines.utils.datalake import upload_df_to_datalake_task
 from pipelines.utils.infisical import get_secret
-from pipelines.utils.prefect import flow, flow_config, rename_flow_run
+from pipelines.utils.prefect import (
+  clear_concurrency_limit,
+  flow,
+  flow_config,
+  rename_flow_run,
+)
 
 
-@flow(name="Extração: Vitai (Rio Saúde)", owners=[CIT.HERIAN_ID.value], tags=["CIT"])
+def clear_vitai_db_limit(*args, **kwargs):
+  limit = f"tag:{flow_constants.CONCURRENCY_LIMIT_TAG.value}"
+  clear_concurrency_limit(limit)
+
+
+@flow(
+  name="Extração: Vitai (Rio Saúde)",
+  owners=[CIT.HERIAN_ID.value],
+  tags=["CIT"],
+  on_crashed=[clear_vitai_db_limit],
+  on_cancellation=[clear_vitai_db_limit],
+)
 def vitai_db_extraction(
   environment: str = "dev",
   table_name: str = "",
@@ -71,7 +85,6 @@ def vitai_db_extraction(
 
   dataframes_futures = []
   for query in queries:
-    rate_limit("um-por-segundo")
     dataframes_futures.append(
       run_query.submit(db_url=db_url, query=query, partition_column=partition_column)
     )
@@ -85,7 +98,7 @@ def vitai_db_extraction(
     upload_futures.append(
       upload_df_to_datalake_task.submit(
         df=df,
-        dataset_id=vitai_db_constants.DATASET_NAME.value,
+        dataset_id=flow_constants.DATASET_NAME.value,
         table_id=target_name,
         dump_mode="append",
         source_format="parquet",
