@@ -126,6 +126,6 @@ def download_then_reupload_bigquery_table(
       source_format="parquet",
     )
     # Confere se já consumimos a tabela inteira
-    if len(df) <= chunk_size:
+    if len(df) < chunk_size:
       break
     offset += chunk_size
