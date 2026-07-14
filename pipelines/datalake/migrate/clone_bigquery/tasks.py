@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
+import pandas as pd
 from google.api_core.exceptions import BadRequest as GoogleBadRequest
-from google.cloud import bigquery
+from google.cloud import bigquery, bigquery_storage
 from pandas import DataFrame
 
 from pipelines.utils.datalake import upload_df_to_datalake
@@ -107,25 +108,47 @@ def download_then_reupload_bigquery_table(
   """
   bq_client = bigquery.Client()
 
-  offset = 0
-  while True:
-    command = f"""
-    SELECT *
-    FROM `{source_project_name}.{source_dataset_name}.{source_table_name}`
-    LIMIT {chunk_size} OFFSET {offset};
-    """
-    log(f"Executando comando:\n\t{command}")
-    df: DataFrame = bq_client.query_and_wait(command).to_dataframe()
-
+  command = f"""
+  SELECT *
+  FROM `{source_project_name}.{source_dataset_name}.{source_table_name}`
+  """
+  log(f"Executando comando:\n\t{command}")
+  query_job = bq_client.query(command)
+  # Aguarda o resultado
+  rows = query_job.result(page_size=chunk_size)
+  # Fazemos então streaming com API do BigQuery Storage
+  bqstorage_client = bigquery_storage.BigQueryReadClient()
+  df = DataFrame()
+  first_upload = True
+  for i, chunk in enumerate(
+    rows.to_dataframe_iterable(bqstorage_client=bqstorage_client, max_queue_size=1)
+  ):
+    chunk: DataFrame
+    log(f"[{source_table_name} #{i + 1}] Recebido DataFrame com formato {chunk.shape}")
+    # Concatena com dataframes anterioes
+    # (em testes, cada iteração recebia 256 linhas somente)
+    df = pd.concat([df, chunk], ignore_index=True)
+    # Se passamos de pelo menos metade do chunk_size esperado
+    if len(df) > chunk_size / 2:
+      # Faz upload
+      upload_df_to_datalake(
+        df=chunk,
+        dataset_id=destination_dataset_name,
+        table_id=source_table_name,
+        # apaga tabela original no primeiro pedaço da extração
+        dump_mode=("replace" if first_upload else "append"),
+        source_format="parquet",
+      )
+      first_upload = False
+      df = DataFrame()
+      continue
+  # Caso tenha sobrado alguma linha no dataframe
+  if len(df) > 0:
     upload_df_to_datalake(
       df=df,
       dataset_id=destination_dataset_name,
       table_id=source_table_name,
       # apaga tabela original no primeiro pedaço da extração
-      dump_mode=("replace" if offset == 0 else "append"),
+      dump_mode=("replace" if first_upload else "append"),
       source_format="parquet",
     )
-    # Confere se já consumimos a tabela inteira
-    if len(df) < chunk_size:
-      break
-    offset += chunk_size
