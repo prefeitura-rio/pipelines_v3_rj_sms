@@ -120,16 +120,14 @@ def download_then_reupload_bigquery_table(
   bqstorage_client = bigquery_storage.BigQueryReadClient()
   df = DataFrame()
   first_upload = True
-  for i, chunk in enumerate(
-    rows.to_dataframe_iterable(bqstorage_client=bqstorage_client, max_queue_size=1)
-  ):
+  log(f"[{source_table_name}] Iterando pelas linhas da tabela...")
+  for chunk in enumerate(rows.to_dataframe_iterable(bqstorage_client=bqstorage_client)):
     chunk: DataFrame
-    log(f"[{source_table_name} #{i + 1}] Recebido DataFrame com formato {chunk.shape}")
     # Concatena com dataframes anterioes
-    # (em testes, cada iteração recebia 256 linhas somente)
+    # (em testes, as iterações não tinham tamanho `chunk_size`)
     df = pd.concat([df, chunk], ignore_index=True)
-    # Se passamos de pelo menos metade do chunk_size esperado
-    if len(df) > chunk_size / 2:
+    # Se passamos de pelo menos 3/4 do chunk_size esperado
+    if len(df) > (3 * chunk_size) / 4:
       # Faz upload
       upload_df_to_datalake(
         df=chunk,
