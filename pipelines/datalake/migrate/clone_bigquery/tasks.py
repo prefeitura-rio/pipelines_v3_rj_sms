@@ -158,3 +158,4 @@ def download_then_reupload_bigquery_table(
       dump_mode=("replace" if first_upload else "append"),
       source_format="parquet",
     )
+  log(f"[{source_table_name}] Tabela inteira copiada!")

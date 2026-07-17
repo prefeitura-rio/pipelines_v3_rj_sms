@@ -75,7 +75,7 @@ weekly_flow_parameters = [
     "destination_dataset_name": "brutos_medirec",
     "environment": "prod",
     "horribly_inefficient_method": True,  # !! não copie !!
-    "horribly_inefficient_chunk_size": 100_000,
+    "horribly_inefficient_chunk_size": 50_000,
   }
 ]
 
