@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
+import gc
+
+import pandas as pd
 from google.api_core.exceptions import BadRequest as GoogleBadRequest
-from google.cloud import bigquery
+from google.cloud import bigquery, bigquery_storage
 from pandas import DataFrame
 
 from pipelines.utils.datalake import upload_df_to_datalake
@@ -102,30 +105,60 @@ def download_then_reupload_bigquery_table(
     destination_dataset_name (str):
       Nome do dataset destino no BigQuery.
     chunk_size (int):
-      Tamanho de cada pedaço a ser extraído da tabela (para não estourar
-      a memória). Executa `SELECT * FROM ... LIMIT {chunk_size} OFFSET ...`.
+      Tamanho aproximado de cada DataFrame antes de fazer upload; tem
+      como objetivo não estourar a memória da VM.
   """
   bq_client = bigquery.Client()
 
-  offset = 0
-  while True:
-    command = f"""
-    SELECT *
-    FROM `{source_project_name}.{source_dataset_name}.{source_table_name}`
-    LIMIT {chunk_size} OFFSET {offset};
-    """
-    log(f"Executando comando:\n\t{command}")
-    df: DataFrame = bq_client.query_and_wait(command).to_dataframe()
-
+  command = f"""
+  SELECT *
+  FROM `{source_project_name}.{source_dataset_name}.{source_table_name}`
+  """
+  log(f"Executando comando:\n\t{command}")
+  query_job = bq_client.query(command)
+  # Aguarda o resultado
+  rows = query_job.result()
+  # Fazemos então streaming com API do BigQuery Storage
+  bqstorage_client = bigquery_storage.BigQueryReadClient()
+  df = DataFrame()
+  first_upload = True
+  log(f"[{source_table_name}] Iterando pelas linhas da tabela...")
+  for chunk in rows.to_dataframe_iterable(
+    bqstorage_client=bqstorage_client, max_queue_size=4, max_stream_count=2
+  ):
+    chunk: DataFrame
+    # `chunk` aqui pode ter meio que qualquer tamanho, otimizado pelo BigQuery
+    # Em testes em uma tabela, era sempre de 256 linhas
+    # Assim, concatena com dataframes anterioes até termos pelo menos 80%
+    # do `chunk_size` esperado -- senão criaríamos um zilhão de arquivos no
+    # GCS desnecessariamente
+    df = pd.concat([df, chunk], ignore_index=True)
+    if len(df) > int(0.8 * chunk_size):
+      log(f"[{source_table_name}] Fazendo upload de {len(df)} linha(s)")
+      upload_df_to_datalake(
+        df=df,
+        dataset_id=destination_dataset_name,
+        table_id=source_table_name,
+        # apaga tabela original no primeiro pedaço da extração
+        dump_mode=("replace" if first_upload else "append"),
+        source_format="parquet",
+      )
+      first_upload = False
+      # Apaga referência ao DataFrame, força o Python a limpar a memória
+      del df
+      gc.collect()
+      # Novo DataFrame
+      df = DataFrame()
+      continue
+  # Caso tenha sobrado alguma linha no dataframe
+  if len(df) > 0:
+    log(f"[{source_table_name}] (fim) Fazendo upload de {len(df)} linha(s)")
     upload_df_to_datalake(
       df=df,
       dataset_id=destination_dataset_name,
       table_id=source_table_name,
       # apaga tabela original no primeiro pedaço da extração
-      dump_mode=("replace" if offset == 0 else "append"),
+      dump_mode=("replace" if first_upload else "append"),
       source_format="parquet",
     )
-    # Confere se já consumimos a tabela inteira
-    if len(df) <= chunk_size:
-      break
-    offset += chunk_size
+  log(f"[{source_table_name}] Tabela inteira copiada!")
