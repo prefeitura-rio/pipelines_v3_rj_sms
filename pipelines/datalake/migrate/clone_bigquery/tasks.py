@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import gc
 import pandas as pd
 from google.api_core.exceptions import BadRequest as GoogleBadRequest
 from google.cloud import bigquery, bigquery_storage
@@ -140,6 +141,10 @@ def download_then_reupload_bigquery_table(
         source_format="parquet",
       )
       first_upload = False
+      # Apaga referência ao DataFrame, força o Python a limpar a memória
+      del df
+      gc.collect()
+      # Novo DataFrame
       df = DataFrame()
       continue
   # Caso tenha sobrado alguma linha no dataframe
