@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import gc
+
 import pandas as pd
 from google.api_core.exceptions import BadRequest as GoogleBadRequest
 from google.cloud import bigquery, bigquery_storage
@@ -104,8 +105,8 @@ def download_then_reupload_bigquery_table(
     destination_dataset_name (str):
       Nome do dataset destino no BigQuery.
     chunk_size (int):
-      Tamanho de cada pedaço a ser extraído da tabela (para não estourar
-      a memória). Executa `SELECT * FROM ... LIMIT {chunk_size} OFFSET ...`.
+      Tamanho aproximado de cada DataFrame antes de fazer upload; tem
+      como objetivo não estourar a memória da VM.
   """
   bq_client = bigquery.Client()
 

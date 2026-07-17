@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from prefect.concurrency.sync import rate_limit
-from prefect.futures import resolve_futures_to_results
-
 from pipelines.constants import CIT
 from pipelines.datalake.transform.dbt.flows import sms_execute_dbt
 from pipelines.utils.env import get_google_project_for_environment
@@ -68,25 +65,15 @@ def clone_bigquery(
     )
   else:
     # Método horrivelmente ineficiente: baixa cada tabela individualmente
-    # para um dataframe, via `SELECT * FROM ... LIMIT ... OFFSET ...`,
-    # chamando `upload_df_to_datalake()` pra cada pedaço
-    table_futures = []
+    # para dataframes, e chama `upload_df_to_datalake()` pra cada pedaço
     for table in source_table_list:
-      # Limita tasks a uma por segundo para não sobrecarregar
-      # o Infisical ou os limites do Google
-      # Nome configurado na aba 'Concurrency' na UI do Prefect
-      rate_limit("um-por-segundo")
-      table_futures.append(
-        download_then_reupload_bigquery_table.submit(
-          source_project_name=source_project_name,
-          source_dataset_name=source_dataset_name,
-          source_table_name=table,
-          destination_dataset_name=destination_dataset_name,
-          chunk_size=horribly_inefficient_chunk_size,
-        )
+      download_then_reupload_bigquery_table(
+        source_project_name=source_project_name,
+        source_dataset_name=source_dataset_name,
+        source_table_name=table,
+        destination_dataset_name=destination_dataset_name,
+        chunk_size=horribly_inefficient_chunk_size,
       )
-    # Espera todos os uploads terminarem
-    resolve_futures_to_results(table_futures)
 
   if dbt_select_exp:
     create_flow_run(
