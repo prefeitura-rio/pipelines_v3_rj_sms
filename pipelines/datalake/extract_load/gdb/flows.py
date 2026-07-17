@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from prefect.concurrency.sync import rate_limit
-from prefect.futures import wait
+from prefect.futures import resolve_futures_to_results
 
 from pipelines.constants import CIT
 from pipelines.utils.google import (
@@ -84,7 +84,7 @@ def extract_gdb(
       )
     )
   # Espera todos os uploads terminarem
-  wait(bq_futures)
+  resolve_futures_to_results(bq_futures)
 
 
 _flows = [

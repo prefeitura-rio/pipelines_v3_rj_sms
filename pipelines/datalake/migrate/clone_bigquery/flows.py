@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from prefect.concurrency.sync import rate_limit
-from prefect.futures import wait
+from prefect.futures import resolve_futures_to_results
 
 from pipelines.constants import CIT
 from pipelines.datalake.transform.dbt.flows import sms_execute_dbt
@@ -86,7 +86,7 @@ def clone_bigquery(
         )
       )
     # Espera todos os uploads terminarem
-    wait(table_futures)
+    resolve_futures_to_results(table_futures)
 
   if dbt_select_exp:
     create_flow_run(

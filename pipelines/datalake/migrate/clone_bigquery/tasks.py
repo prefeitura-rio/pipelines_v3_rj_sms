@@ -115,20 +115,21 @@ def download_then_reupload_bigquery_table(
   log(f"Executando comando:\n\t{command}")
   query_job = bq_client.query(command)
   # Aguarda o resultado
-  rows = query_job.result(page_size=chunk_size)
+  rows = query_job.result()
   # Fazemos então streaming com API do BigQuery Storage
   bqstorage_client = bigquery_storage.BigQueryReadClient()
   df = DataFrame()
   first_upload = True
   log(f"[{source_table_name}] Iterando pelas linhas da tabela...")
-  for chunk in enumerate(rows.to_dataframe_iterable(bqstorage_client=bqstorage_client)):
+  for chunk in rows.to_dataframe_iterable(bqstorage_client=bqstorage_client):
     chunk: DataFrame
-    # Concatena com dataframes anterioes
-    # (em testes, as iterações não tinham tamanho `chunk_size`)
+    # `chunk` aqui pode ter meio que qualquer tamanho, otimizado pelo BigQuery
+    # Em testes em uma tabela, era sempre de 256 linhas
+    # Assim, concatena com dataframes anterioes até termos pelo menos 80%
+    # do `chunk_size` esperado -- senão criaríamos um zilhão de arquivos no
+    # GCS desnecessariamente
     df = pd.concat([df, chunk], ignore_index=True)
-    # Se passamos de pelo menos 3/4 do chunk_size esperado
-    if len(df) > (3 * chunk_size) / 4:
-      # Faz upload
+    if len(df) > int(0.8 * chunk_size):
       upload_df_to_datalake(
         df=chunk,
         dataset_id=destination_dataset_name,
