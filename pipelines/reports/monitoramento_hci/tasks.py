@@ -135,7 +135,7 @@ def send_report(data, environment: str):
     elif evt_type.startswith("Busca") or evt_type.startswith("Consulta"):
       section = "use"
 
-    if status == "500" and not evt_type.startswith("("):
+    if status == "500" and not evt_type.startswith("GovBr"):
       warnings.append(f"🚨 HTTP 500 em {evt_type}")
 
     if evt_type not in sections[section]:
