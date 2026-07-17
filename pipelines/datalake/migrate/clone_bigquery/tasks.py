@@ -123,7 +123,9 @@ def download_then_reupload_bigquery_table(
   df = DataFrame()
   first_upload = True
   log(f"[{source_table_name}] Iterando pelas linhas da tabela...")
-  for chunk in rows.to_dataframe_iterable(bqstorage_client=bqstorage_client):
+  for chunk in rows.to_dataframe_iterable(
+    bqstorage_client=bqstorage_client, max_queue_size=4, max_stream_count=2
+  ):
     chunk: DataFrame
     # `chunk` aqui pode ter meio que qualquer tamanho, otimizado pelo BigQuery
     # Em testes em uma tabela, era sempre de 256 linhas
