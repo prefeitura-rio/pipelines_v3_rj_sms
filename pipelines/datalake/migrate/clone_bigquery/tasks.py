@@ -130,8 +130,9 @@ def download_then_reupload_bigquery_table(
     # GCS desnecessariamente
     df = pd.concat([df, chunk], ignore_index=True)
     if len(df) > int(0.8 * chunk_size):
+      log(f"[{source_table_name}] Fazendo upload de {len(df)} linha(s)")
       upload_df_to_datalake(
-        df=chunk,
+        df=df,
         dataset_id=destination_dataset_name,
         table_id=source_table_name,
         # apaga tabela original no primeiro pedaço da extração
@@ -143,6 +144,7 @@ def download_then_reupload_bigquery_table(
       continue
   # Caso tenha sobrado alguma linha no dataframe
   if len(df) > 0:
+    log(f"[{source_table_name}] (fim) Fazendo upload de {len(df)} linha(s)")
     upload_df_to_datalake(
       df=df,
       dataset_id=destination_dataset_name,
