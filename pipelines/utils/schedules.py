@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 from typing import List, Literal, Optional, TypedDict
 
-from prefect.schedules import Interval
+from prefect.schedules import Cron, Interval
 
 from pipelines.constants import constants
 
@@ -215,21 +215,18 @@ def create_schedule(
     )
 
   if interval == "monthly":
-    # TODO: investigar se, por ser '30 dias' e não '1 mês', o
-    #       schedule não vai gradualmente desviar da data desejada
-    return Interval(
-      timedelta(days=30),
-      anchor_date=datetime(2026, 1, day, hour, minute, tzinfo=constants.TIMEZONE.value),
+    return Cron(
+      f"{minute} {hour} {day} * *",
       timezone=constants.TIMEZONE_NAME.value,
       parameters=parameters,
     )
 
   if interval == "semiannual":
-    return Interval(
-      timedelta(days=6 * 30),
-      anchor_date=datetime(
-        2026, month, day, hour, minute, tzinfo=constants.TIMEZONE.value
-      ),
+    month_pair = ((month - 1) + 6) % 12 + 1
+    month_start = min(month, month_pair)
+    month_end = max(month, month_pair)
+    return Cron(
+      f"{minute} {hour} {day} {month_start},{month_end} *",
       timezone=constants.TIMEZONE_NAME.value,
       parameters=parameters,
     )
