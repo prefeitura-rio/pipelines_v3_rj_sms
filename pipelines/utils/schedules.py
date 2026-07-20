@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 from typing import List, Literal, Optional, TypedDict
 
-from prefect.schedules import Interval
+from prefect.schedules import Interval, RRule
 
 from pipelines.constants import constants
 
@@ -215,20 +215,30 @@ def create_schedule(
     )
 
   if interval == "monthly":
-    # TODO: investigar se, por ser '30 dias' e não '1 mês', o
-    #       schedule não vai gradualmente desviar da data desejada
-    return Interval(
-      timedelta(days=30),
-      anchor_date=datetime(2026, 1, day, hour, minute, tzinfo=constants.TIMEZONE.value),
+    # Teste de RRule: https://jkbrzt.github.io/rrule/
+    return RRule(
+      f"RRULE:FREQ=MONTHLY;BYMONTHDAY={day};BYHOUR={hour};BYMINUTE={minute};BYSECOND=0",
       timezone=constants.TIMEZONE_NAME.value,
       parameters=parameters,
     )
 
   if interval == "semiannual":
-    return Interval(
-      timedelta(days=6 * 30),
-      anchor_date=datetime(
-        2026, month, day, hour, minute, tzinfo=constants.TIMEZONE.value
+    # Data de início é "DTSTART;(fuso):(data)T(hora)", com data=YYYYMMDD/hora=HHMMSS
+    # Vide:
+    # https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.2.4
+    # https://datatracker.ietf.org/doc/html/rfc5545#section-3.2.19
+    tzid = constants.TIMEZONE_NAME.value
+    dtstart = datetime(2026, month, day, hour, minute, tzinfo=tzid)
+    dt_str = dtstart.strftime("%Y%m%dT%H%M%S")
+    return RRule(
+      (
+        f"DTSTART;{tzid}:{dt_str}\r\n",
+        "RRULE:FREQ=MONTHLY;"
+        "INTERVAL=6;"
+        f"BYMONTHDAY={day};"
+        f"BYHOUR={hour};"
+        f"BYMINUTE={minute};"
+        "BYSECOND=0",
       ),
       timezone=constants.TIMEZONE_NAME.value,
       parameters=parameters,
