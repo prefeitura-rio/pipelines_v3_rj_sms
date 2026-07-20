@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
-from pipelines.utils.schedules import create_schedule
+from prefect.schedules import Cron
+
+from pipelines.constants import constants
 
 schedules = [
-  create_schedule(
+  Cron(
+    "0 6 * * 1-5",  # Às 6:00, todo dia, todo mês, SEG-SEX
+    timezone=constants.TIMEZONE_NAME.value,
     parameters={
       "environment": "prod"
       # "date": (não passamos porque queremos 'hoje'),
     },
-    interval="daily",
-    config={"hour": 6, "minute": 0},
   )
 ]
