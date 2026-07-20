@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 from typing import List, Literal, Optional, TypedDict
 
-from prefect.schedules import Interval, RRule
+from prefect.schedules import Cron, Interval
 
 from pipelines.constants import constants
 
@@ -215,31 +215,18 @@ def create_schedule(
     )
 
   if interval == "monthly":
-    # Teste de RRule: https://jkbrzt.github.io/rrule/
-    return RRule(
-      f"RRULE:FREQ=MONTHLY;BYMONTHDAY={day};BYHOUR={hour};BYMINUTE={minute};BYSECOND=0",
+    return Cron(
+      f"{minute} {hour} {day} * *",
       timezone=constants.TIMEZONE_NAME.value,
       parameters=parameters,
     )
 
   if interval == "semiannual":
-    # Data de início é "DTSTART;(fuso):(data)T(hora)", com data=YYYYMMDD/hora=HHMMSS
-    # Vide:
-    # https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.2.4
-    # https://datatracker.ietf.org/doc/html/rfc5545#section-3.2.19
-    tzid = constants.TIMEZONE_NAME.value
-    dtstart = datetime(2026, month, day, hour, minute, tzinfo=constants.TIMEZONE.value)
-    dt_str = dtstart.strftime("%Y%m%dT%H%M%S")
-    return RRule(
-      (
-        f"DTSTART;TZID={tzid}:{dt_str}\r\n"
-        "RRULE:FREQ=MONTHLY;"
-        "INTERVAL=6;"
-        f"BYMONTHDAY={day};"
-        f"BYHOUR={hour};"
-        f"BYMINUTE={minute};"
-        "BYSECOND=0"
-      ),
+    month_pair = ((month - 1) + 6) % 12 + 1
+    month_start = min(month, month_pair)
+    month_end = max(month, month_pair)
+    return Cron(
+      f"{minute} {hour} {day} {month_start},{month_end} *",
       timezone=constants.TIMEZONE_NAME.value,
       parameters=parameters,
     )
