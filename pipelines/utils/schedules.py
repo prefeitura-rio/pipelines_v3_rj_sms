@@ -232,7 +232,7 @@ def create_schedule(
     dt_str = dtstart.strftime("%Y%m%dT%H%M%S")
     return RRule(
       (
-        f"DTSTART;{tzid}:{dt_str}\r\n"
+        f"DTSTART;TZID={tzid}:{dt_str}\r\n"
         "RRULE:FREQ=MONTHLY;"
         "INTERVAL=6;"
         f"BYMONTHDAY={day};"
