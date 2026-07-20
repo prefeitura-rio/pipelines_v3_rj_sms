@@ -228,7 +228,7 @@ def create_schedule(
     # https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.2.4
     # https://datatracker.ietf.org/doc/html/rfc5545#section-3.2.19
     tzid = constants.TIMEZONE_NAME.value
-    dtstart = datetime(2026, month, day, hour, minute, tzinfo=tzid)
+    dtstart = datetime(2026, month, day, hour, minute, tzinfo=constants.TIMEZONE.value)
     dt_str = dtstart.strftime("%Y%m%dT%H%M%S")
     return RRule(
       (
