@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from prefect.futures import wait
-
 from pipelines.constants import CIT
 from pipelines.datalake.extract_load.vitacare_historico.flows import vitacare_historico
 from pipelines.datalake.migrate.gdrive_to_gcs.flows import gdrive_to_gcs
@@ -33,7 +31,7 @@ def orquestracao_vitacare(environment: str = "prod"):
     parameters=constants.GDRIVE_TO_GCS_PARAMS.value,
     environment=environment,
   )
-  wait_gdrive = wait_for_flow_run_task.submit(flow_run_id=fr_gdrive.id)
+  wait_for_flow_run_task(flow_run_id=fr_gdrive.id)
 
   # 2. sqlserver_backup
   fr_sqlserver = create_flow_run(
@@ -41,7 +39,7 @@ def orquestracao_vitacare(environment: str = "prod"):
     parameters=constants.SQLSERVER_BACKUP_PARAMS.value,
     environment=environment,
   )
-  wait_sqlserver = wait_for_flow_run_task.submit(flow_run_id=fr_sqlserver.id)
+  wait_for_flow_run_task(flow_run_id=fr_sqlserver.id)
 
   # 3. vitacare_historico
   fr_vitacare = create_flow_run(
@@ -49,10 +47,7 @@ def orquestracao_vitacare(environment: str = "prod"):
     parameters=constants.VITACARE_HISTORICO_PARAMS.value,
     environment=environment,
   )
-  wait_vitacare = wait_for_flow_run_task.submit(flow_run_id=fr_vitacare.id)
-
-  # Aguarda todos os flows (continua mesmo com falha)
-  wait([wait_gdrive, wait_sqlserver, wait_vitacare])
+  wait_for_flow_run_task(flow_run_id=fr_vitacare.id)
 
 
 _flows = [flow_config(flow=orquestracao_vitacare, schedules=schedules)]
