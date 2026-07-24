@@ -20,7 +20,7 @@ from .schedules import schedules
   name="Orquestração: Vitacare Histórico",
   description="Executa sequencialmente: gdrive_to_gcs → sqlserver_backup → vitacare_historico",
   owners=[CIT.DANIEL_ID.value],
-  tags=["CIT", "vitacare"],
+  tags=["CIT"],
 )
 def orquestracao_vitacare(environment: str = "prod"):
   """
