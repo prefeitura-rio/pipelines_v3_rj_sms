@@ -166,6 +166,7 @@ def send_report(data, environment: str):
   ####################################
 
   HTTP_STATUS = {
+    "307": "➡️ Redirecionado",
     "400": "Requisição mal formatada",
     "401": "Não autorizado",
     "403": "Permissão negada",
