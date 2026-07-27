@@ -78,6 +78,7 @@ def vitacare_historico_cnes(
   name="Extração: Vitacare Histórico",
   state_handlers=[handle_flow_state_change],
   owners=[CIT.DANIEL_ID.value],
+  tags=["CIT"],
 )
 def vitacare_historico(
   environment: str = "dev", cnes: str = None, table_name: str = None
