@@ -12,7 +12,7 @@ class constants(Enum):
     "table_id": "log_gdrive_to_gcs",
     "start_date": "M-0",
     "end_date": "D-0",
-    "environment": "dev",
+    "environment": "prod",
   }
 
   # Parâmetros para sqlserver_backup (vitacare_historic)
@@ -21,8 +21,8 @@ class constants(Enum):
     "bucket_name": "vitacare_backups_gdrive",
     "instance_name": "vitacare",
     "file_pattern": "HISTÓRICO_PEPVITA_RJ/AP*/vitacare_historic_*_*_*.bak",
-    "environment": "dev",
+    "environment": "prod",
   }
 
   # Parâmetros para vitacare_historico
-  VITACARE_HISTORICO_PARAMS = {"environment": "dev"}
+  VITACARE_HISTORICO_PARAMS = {"environment": "prod"}
