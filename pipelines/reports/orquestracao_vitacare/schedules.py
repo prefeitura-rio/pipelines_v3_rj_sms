@@ -6,5 +6,10 @@ schedules = [
     parameters={"environment": "prod"},
     interval="monthly",
     config={"day": 7, "hour": 16, "minute": 0},
-  )
+  ),
+  create_schedule(
+    parameters={"environment": "prod"},
+    interval="monthly",
+    config={"day": 29, "hour": 16, "minute": 0},
+  ),
 ]
