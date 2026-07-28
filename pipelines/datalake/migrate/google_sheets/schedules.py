@@ -253,12 +253,20 @@ monthly_parameters = [
     "table_id": "codigos_exames",
     "url": "https://docs.google.com/spreadsheets/d/1IwykWf0glAraHrVDZLJosxuhnpo8AO5EUdj1OSwDqNU",
   },
+  # TODO: remover essa planilha quando migrar totalmente pra outra
   {
     "dataset_id": "brutos_sheets",
     "environment": "prod",
     "gsheets_sheet_name": "vacinas",
     "table_id": "vacinas_padronizadas",
     "url": "https://docs.google.com/spreadsheets/d/1TcN_4PHp2xnTzRkKLKO0eG1sjpwO7Nl5g9eAhEBDdOU",
+  },
+  {
+    "dataset_id": "brutos_sheets",
+    "environment": "prod",
+    "gsheets_sheet_name": "Vacinas",
+    "table_id": "depara_vacinas",
+    "url": "https://docs.google.com/spreadsheets/d/1lrr5xm_CsMz4sgsEIluQj1j2ys2W61CxBq49bUNIfH8",
   },
 ]
 # /monthly_parameters
