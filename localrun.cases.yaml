@@ -296,6 +296,14 @@ cases:
       # destination_dataset_name: ...
       # dbt_select_exp: ...
 
+  # Migra dados do RMD para o BigQuery
+  - case_slug: "rmd_to_bigquery"
+    flow_path: "pipelines.datalake.migrate.rmd_to_bigquery.flows"
+    flow_name: "rmd_to_bigquery"
+    params:
+      environment: dev
+      # recurso: ...
+
 
   ################################
   #  TRANSFORM                   #
