@@ -51,7 +51,7 @@ daily_flow_parameters = [
     "environment": "prod",
   },
   {
-    "source_project_name": "rj-smfp",
+    "source_project_name": "rj-sma",
     "source_dataset_name": "recursos_humanos_ergon_saude",
     "source_table_list": ["funcionarios"],
     "destination_dataset_name": "brutos_ergon_staging",
