@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from pipelines.constants import CIT
-from pipelines.utils.google import build_bucket_name
+#from pipelines.utils.google import build_bucket_name
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
 
@@ -28,17 +28,17 @@ from .tasks import (
 def sqlserver_backup(
   backup_type: str,
   bucket_name: str,
-  instance_name: str,
   file_pattern: str,
+  instance_name: str = 'vitacare',
   table_id: str = LOG_TABLE_ID,
   environment: str = "dev",
 ):
   rename_flow_run(new_name=f"{environment} - {backup_type}")
 
-  resolved_bucket_name = build_bucket_name(
-    bucket_name=bucket_name, environment=environment
-  )
-
+  # Houve uma mudança no bucket utilizado, com isso, essa dinstinção entre dev e prod n se faz necessário
+  # Deixando aqui caso algum dia mude novamente (05/08/26)
+  # resolved_bucket_name =  build_bucket_name(bucket_name=bucket_name, environment=environment)
+  resolved_bucket_name = bucket_name
   results = []
   instance_started = False
 
