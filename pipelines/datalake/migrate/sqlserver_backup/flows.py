@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from pipelines.constants import CIT
-#from pipelines.utils.google import build_bucket_name
+
+# from pipelines.utils.google import build_bucket_name
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import flow, flow_config, rename_flow_run
 
@@ -29,7 +30,7 @@ def sqlserver_backup(
   backup_type: str,
   bucket_name: str,
   file_pattern: str,
-  instance_name: str = 'vitacare',
+  instance_name: str = "vitacare",
   table_id: str = LOG_TABLE_ID,
   environment: str = "dev",
 ):
