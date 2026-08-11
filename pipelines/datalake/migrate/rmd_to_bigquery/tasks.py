@@ -56,11 +56,7 @@ def calculate_date_interval(data_inicio: str, data_fim: str | None) -> Tuple[str
 
 @task(retries=1, retry_delay_seconds=30)
 def query_api_page(
-  secrets: Dict[str, str],
-  data_inicio: str,
-  data_fim: str,
-  skip: int,
-  limit: int = 100,
+  secrets: Dict[str, str], data_inicio: str, data_fim: str, skip: int, limit: int = 100
 ) -> Tuple[List[dict], int]:
   """Busca uma página de dados da API. Retorna (dados_da_página, total)."""
 
@@ -101,7 +97,9 @@ def query_api_page(
   total = json_resp["total"]
   resource_name = json_resp["recurso_nome"]
 
-  log(f"(query_api_page) Recebido(s) {len(page_data)} registro(s) (skip={skip}, total={total}, recurso='{resource_name}')")
+  log(
+    f"(query_api_page) Recebido(s) {len(page_data)} registro(s) (skip={skip}, total={total}, recurso='{resource_name}')"
+  )
 
   return page_data, total
 
