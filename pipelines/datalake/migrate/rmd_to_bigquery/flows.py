@@ -6,7 +6,7 @@ from pipelines.utils.prefect import flow, flow_config
 from .constants import RecursosRMD
 
 # from .schedules import schedules
-from .tasks import calculate_date_interval, get_secrets, query_api, upload_data
+from .tasks import calculate_date_interval, get_secrets, query_api_page, upload_data
 
 
 @flow(
@@ -24,8 +24,18 @@ def rmd_to_bigquery(
 ):
   secrets = get_secrets(recurso=recurso, environment=environment)
   (start, end) = calculate_date_interval(data_inicio=data_inicio, data_fim=data_fim)
-  data = query_api(secrets=secrets, data_inicio=start, data_fim=end)
-  upload_data(dataset_id=dataset_id, secrets=secrets, data=data)
+
+  skip = 0
+  total = None
+  while True:
+    page_data, total = query_api_page(
+      secrets=secrets, data_inicio=start, data_fim=end, skip=skip
+    )
+    if page_data:
+      upload_data(dataset_id=dataset_id, secrets=secrets, data=page_data)
+    skip += len(page_data)
+    if skip >= total or len(page_data) == 0:
+      break
 
 
 _flows = [flow_config(flow=rmd_to_bigquery)]

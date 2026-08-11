@@ -302,8 +302,7 @@ cases:
     flow_name: "rmd_to_bigquery"
     params:
       environment: dev
-      # recurso: ...
-
+      recurso: RECURSO_EXAMES_LABORATORIAIS
 
   ################################
   #  TRANSFORM                   #

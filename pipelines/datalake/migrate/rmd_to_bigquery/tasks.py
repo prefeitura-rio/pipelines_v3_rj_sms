@@ -55,35 +55,16 @@ def calculate_date_interval(data_inicio: str, data_fim: str | None) -> Tuple[str
 
 
 @task(retries=1, retry_delay_seconds=30)
-def query_api(secrets: Dict[str, str], data_inicio: str, data_fim: str):
+def query_api_page(
+  secrets: Dict[str, str],
+  data_inicio: str,
+  data_fim: str,
+  skip: int,
+  limit: int = 100,
+) -> Tuple[List[dict], int]:
+  """Busca uma página de dados da API. Retorna (dados_da_página, total)."""
 
-  log(f"Requisitando dados de '{data_inicio}' a '{data_fim}'")
-
-  resp = requests.get(
-    secrets["url"],
-    params=(
-      {
-        "recurso_id": secrets["resource"],
-        "data_inicio": f"{data_inicio} 00:00:00-03:00",
-        "data_fim": f"{data_fim} 00:00:00-03:00",
-        # TODO:
-        # "limit": xxxx,
-        # "skip": xxxx,
-      }
-    ),
-    headers={"X-API-Key": secrets["key"]},
-  )
-  log(f"API respondeu com status {resp.status_code}")
-  try:
-    resp.raise_for_status()
-  except Exception as e:
-    log(resp.json(), level="error")
-    raise e
-
-  resp.encoding = "utf-8"
-  json_resp = resp.json()
-
-  # Dados são no formato:
+  # Resposta da API no formato:
   # {
   #   'total': xx,
   #   'skip': xx,
@@ -95,10 +76,34 @@ def query_api(secrets: Dict[str, str], data_inicio: str, data_fim: str):
   #   'validado_filtro': xx,
   #   'dados': [ ... ]
   # }
+  resp = requests.get(
+    secrets["url"],
+    params={
+      "recurso_id": secrets["resource"],
+      "data_inicio": f"{data_inicio} 00:00:00-03:00",
+      "data_fim": f"{data_fim} 00:00:00-03:00",
+      "limit": limit,
+      "skip": skip,
+    },
+    headers={"X-API-Key": secrets["key"]},
+  )
+  log(f"(query_api_page) API respondeu com status {resp.status_code} (skip={skip})")
+  try:
+    resp.raise_for_status()
+  except Exception as e:
+    log(resp.json(), level="error")
+    raise e
+
+  resp.encoding = "utf-8"
+  json_resp = resp.json()
+
+  page_data = json_resp["dados"]
+  total = json_resp["total"]
   resource_name = json_resp["recurso_nome"]
-  total_records = json_resp["total"]
-  log(f"Recebido(s) {total_records} registro(s) do recurso '{resource_name}'")
-  return json_resp["dados"]
+
+  log(f"(query_api_page) Recebido(s) {len(page_data)} registro(s) (skip={skip}, total={total}, recurso='{resource_name}')")
+
+  return page_data, total
 
 
 @task
