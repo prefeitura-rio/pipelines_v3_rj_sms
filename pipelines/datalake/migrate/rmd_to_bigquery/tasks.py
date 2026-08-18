@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
+import base64
 import json
 from typing import Dict, List, Tuple
 
 import requests
+from google.cloud import storage
 from pandas import DataFrame
 
 from pipelines.utils.datalake import upload_df_to_datalake
@@ -12,6 +14,7 @@ from pipelines.utils.datetime import (
   parse_date_or_today,
   today_str,
 )
+from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
@@ -54,7 +57,7 @@ def calculate_date_interval(data_inicio: str, data_fim: str | None) -> Tuple[str
   return (start_date, parse_date_or_today(data_fim).date().isoformat())
 
 
-@task(retries=1, retry_delay_seconds=30)
+@task(retries=1, retry_delay_seconds=30, persist_result=False)
 def query_api_page(
   secrets: Dict[str, str], data_inicio: str, data_fim: str, skip: int, limit: int = 100
 ) -> Tuple[List[dict], int]:
@@ -104,8 +107,21 @@ def query_api_page(
   return page_data, total
 
 
-@task
-def upload_data(dataset_id: str, secrets: Dict[str, str], data: List[dict]):
+def _upload_laudo_to_gcs(record_id: str, b64_string: str, bucket_name: str) -> str:
+  """Decodifica o laudo PDF em base64 e faz upload para o GCS. Retorna o URI gs://..."""
+  pdf_bytes = base64.b64decode(b64_string)
+  blob_name = f"staging/brutos_rmd_laudos/{record_id}.pdf"
+  blob = storage.Client().bucket(bucket_name).blob(blob_name)
+  blob.upload_from_string(pdf_bytes, content_type="application/pdf")
+  gcs_uri = f"gs://{bucket_name}/{blob_name}"
+  log(f"(_upload_laudo_to_gcs) PDF enviado para '{gcs_uri}'")
+  return gcs_uri
+
+
+@task(persist_result=False)
+def upload_data(
+  dataset_id: str, secrets: Dict[str, str], data: List[dict], environment: str
+):
   if len(data) <= 0:
     log("Dados vazios! Ignorando upload", level="warning")
     return
@@ -123,6 +139,16 @@ def upload_data(dataset_id: str, secrets: Dict[str, str], data: List[dict]):
   #     ...
   #   },
   # }
+
+  # Para exames laboratoriais, extrai o laudo PDF (base64) e envia para GCS antes do dump
+  if secrets["table_id"] == "exames_laboratoriais":
+    gcs_bucket = get_google_project_for_environment(environment)
+    for d in data:
+      laudo = d.get("dados", {}).get("exame_resultado_laudo")
+      if laudo:
+        d["dados"]["exame_resultado_laudo"] = _upload_laudo_to_gcs(
+          record_id=d["id"], b64_string=laudo, bucket_name=gcs_bucket
+        )
 
   # Transforma campo `dados` em uma string JSON
   for i, d in enumerate(data):

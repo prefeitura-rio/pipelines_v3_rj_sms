@@ -32,7 +32,9 @@ def rmd_to_bigquery(
       secrets=secrets, data_inicio=start, data_fim=end, skip=skip
     )
     if page_data:
-      upload_data(dataset_id=dataset_id, secrets=secrets, data=page_data)
+      upload_data(
+        dataset_id=dataset_id, secrets=secrets, data=page_data, environment=environment
+      )
     skip += len(page_data)
     if skip >= total or len(page_data) == 0:
       break
