@@ -52,6 +52,7 @@ def GET(
     return None
   return response
 
+
 def POST(
   url: str,
   json: dict = None,
@@ -94,6 +95,7 @@ def POST(
       raise e
     return None
   return response
+
 
 def convert_usd_to_brl(usd: float, default_rate: float = None) -> float:
   """
