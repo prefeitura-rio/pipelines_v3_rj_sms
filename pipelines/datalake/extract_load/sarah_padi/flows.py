@@ -8,7 +8,7 @@ from pipelines.datalake.extract_load.sarah_padi.constants import (
 from pipelines.datalake.extract_load.sarah_padi.tasks import auth, get_fatos, parse_date
 from pipelines.utils.datalake import upload_df_to_datalake_task
 from pipelines.utils.infisical import get_secret
-from pipelines.utils.prefect import flow
+from pipelines.utils.prefect import flow, flow_config
 
 
 @flow(name="Extração: SARAH PADI", owners=[CIT.HERIAN_ID.value], tags=["CIT"])
