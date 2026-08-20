@@ -12,7 +12,25 @@ from pipelines.utils.prefect import authenticated_task as task
 
 
 @task
-def parse_date(date_str: str):
+def parse_date(date_str: str) -> str:
+  """
+  Transforma a data em string no formato dd/mm/yyyy. Se None ou string vazia, retorna string do dia anterior
+
+  Args:
+    date_str (str):
+      Data no formato dd/mm/yyyy.
+
+  Returns:
+    str:
+      Data no formato dd/mm/yyyy.
+
+  >>> parse_date("20/08/2026")
+  "20/08/2026"
+  >>> parse_date()
+  "19/08/2026"
+  >>> parse_date("2026/08/20")
+  "20/08/2026"
+  """
   if not date_str:
     date = from_relative_date("D-1")
   else:
@@ -24,16 +42,21 @@ def parse_date(date_str: str):
 
 
 @task
-def auth(url: str, user: str, password: str):
-
+def auth(url: str, user: str, password: str) -> str:
+  """Autentica na API do SARAH PADI e retorna token"""
   encoded_bytes = base64.b64encode(password.encode("utf-8"))
   password_b64 = encoded_bytes.decode("utf-8")
 
   body = {"user": user, "password": password_b64, "method": "getToken"}
   response = requests.post(url, json=body)
-  payload = response.json()
-  token = payload.get("token")
 
+  if response.status_code == 200:
+    payload = response.json()
+    token = payload.get("token")
+    log("Token obtido com sucesso", level="info")
+  else:
+    log(f"Erro ao obter token: {response.status_code}", level="error")
+    raise Exception(f"Erro ao obter token: {response.status_code}\n{response.json()}")
   return token
 
 
@@ -41,6 +64,7 @@ def auth(url: str, user: str, password: str):
 def get_fatos(
   url: str, cnes: str, tabela: int, data: str, access_token: str, token: str
 ) -> DataFrame:
+  """Busca os dados na API BIS (BI System) do SARAH PADI"""
 
   TABLES = padi_constants.TABLES.value
   tabela_id = TABLES.get(tabela)

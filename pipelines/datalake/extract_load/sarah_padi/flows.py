@@ -16,11 +16,22 @@ table_names = TABLES.keys()
 
 @flow(name="Extração: SARAH PADI", owners=[CIT.HERIAN_ID.value], tags=["CIT"])
 def padi_extraction(
-  tabela: Literal[tuple(table_names)],
+  table: Literal[tuple(table_names)],
   date: Optional[str],
   dataset_id: str = "brutos_prontuario_sarah_padi",
-  environment: str = "dev",
+  environment: Literal["dev", "prod"] = "dev",
 ):
+  """
+  Args:
+    table (str):
+      Tabela a ser extraída.
+    date (str):
+      Data de referência para a extração, no formato DD/MM/AAAA.
+    dataset_id (str):
+      Nome do dataset onde os dados serão inseridos. Por padrão, 'brutos_prontuario_sarah_padi'.
+    environment (Literal["dev", "prod"]):
+      Ambiente de execução, "dev" (padrão) ou "prod".
+  """
 
   USER = get_secret(
     path=padi_constants.INFISICAL_PATH.value, secret_name="user", environment=environment
@@ -53,7 +64,7 @@ def padi_extraction(
   df = get_fatos(
     url=BIS_URL,
     cnes=padi_constants.CNES.value,
-    tabela=tabela,
+    tabela=table,
     data=data_str,
     access_token=ACCESS_TOKEN,
     token=token,
@@ -62,7 +73,7 @@ def padi_extraction(
   upload_df_to_datalake_task(
     df=df,
     dataset_id=dataset_id,
-    table_id=tabela,
+    table_id=table,
     dump_mode="append",
     date_partition_column="extracted_at",
     csv_delimiter=";",

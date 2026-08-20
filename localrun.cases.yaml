@@ -234,7 +234,7 @@ cases:
       environment: dev
       date: "07/08/2026"
       dataset_id: brutos_prontuario_sarah_padi
-      tabela: atendimento_domiciliar_entradas
+      table: atendimento_domiciliar_entradas
 
   ################################
   #  MIGRATE                     #
