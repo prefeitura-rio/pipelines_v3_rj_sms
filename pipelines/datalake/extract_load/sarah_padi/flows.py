@@ -64,3 +64,6 @@ def padi_extraction(
     date_partition_column="extracted_at",
     csv_delimiter=";",
   )
+
+
+_flows = [flow_config(flow=padi_extraction)]
