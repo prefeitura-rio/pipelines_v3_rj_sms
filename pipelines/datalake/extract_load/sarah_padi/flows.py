@@ -10,10 +10,13 @@ from pipelines.utils.datalake import upload_df_to_datalake_task
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.prefect import flow, flow_config
 
+TABLES = padi_constants.TABLES.value
+table_names = TABLES.keys()
+
 
 @flow(name="Extração: SARAH PADI", owners=[CIT.HERIAN_ID.value], tags=["CIT"])
 def padi_extraction(
-  tabela: Literal[padi_constants.TABLES.value.keys()],
+  tabela: Literal[tuple(table_names)],
   date: Optional[str],
   dataset_id: str = "brutos_prontuario_sarah_padi",
   environment: str = "dev",
