@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import base64
+import binascii
 import json
 from typing import Dict, List, Tuple
 
@@ -109,7 +110,13 @@ def query_api_page(
 
 def _upload_laudo_to_gcs(record_id: str, b64_string: str, bucket_name: str) -> str:
   """Decodifica o laudo PDF em base64 e faz upload para o GCS. Retorna o URI gs://..."""
-  pdf_bytes = base64.b64decode(b64_string)
+  try:
+    pdf_bytes = base64.b64decode(b64_string)
+  except binascii.Error:
+    log(
+      f"(_upload_laudo_to_gcs) Valor de 'exame_resultado_laudo' para o registro '{record_id}' não é base64 válido; mantendo valor original."
+    )
+    return b64_string
   blob_name = f"staging/brutos_rmd_laudos/{record_id}.pdf"
   blob = storage.Client().bucket(bucket_name).blob(blob_name)
   blob.upload_from_string(pdf_bytes, content_type="application/pdf")
