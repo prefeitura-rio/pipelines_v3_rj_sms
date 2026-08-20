@@ -1,5 +1,4 @@
 cases:
-
   ################################
   #  EXTRACT/LOAD                #
   ################################
@@ -123,7 +122,7 @@ cases:
       # source_table_list: ...
       # destination_dataset_name: ...
       # dbt_select_exp: ...
-    
+
   # Clona tabelas com respostas de disparo do projeto Cegonha Digital
   - case_slug: "test-cegonha-clone-chatbot"
     flow_path: "pipelines.datalake.extract_load.clone_bigquery.flows"
@@ -145,17 +144,17 @@ cases:
       dou_section: "DO1 DO2 DO3"
       dataset_id: "brutos_diario_oficial"
 
-  # Extração de tabelas do Postgre do prontuaRio, via backup em blob storage 
+  # Extração de tabelas do Postgre do prontuaRio, via backup em blob storage
   - case_slug: "prontuaRio_postgres"
     flow_path: "pipelines.datalake.extract_load.prontua_rio.flows"
     flow_name: "prontuario_postgres_operator"
     params:
       environment: dev
-      cnes: '2269945'
-      blob_path: '2026-05/hospubAF-mai-2269945-sql-07-05-2026-06h01m.tar.gz'
-      folder: '2026-05'
-      bucket_name: 'subhue_backups'
-      dataset: 'brutos_prontuario_prontuaRio_continuo_staging'
+      cnes: "2269945"
+      blob_path: "2026-05/hospubAF-mai-2269945-sql-07-05-2026-06h01m.tar.gz"
+      folder: "2026-05"
+      bucket_name: "subhue_backups"
+      dataset: "brutos_prontuario_prontuaRio_continuo_staging"
       lines_per_chunk: 1000
 
   # Extração de tabelas do OpenBase do prontuaRio, via backup em blob storage
@@ -164,13 +163,13 @@ cases:
     flow_name: "prontuario_openbase_operator"
     params:
       environment: dev
-      cnes: '2269945'
-      blob_path: '2026-05/hospubAF-mai-2269945-openbase-07-05-2026-05h00m.tar.gz'
-      folder: '2026-05'
-      bucket_name: 'subhue_backups'
-      dataset: 'brutos_prontuario_prontuaRio_continuo_staging'
+      cnes: "2269945"
+      blob_path: "2026-05/hospubAF-mai-2269945-openbase-07-05-2026-05h00m.tar.gz"
+      folder: "2026-05"
+      bucket_name: "subhue_backups"
+      dataset: "brutos_prontuario_prontuaRio_continuo_staging"
       lines_per_chunk: 5000
-         
+
   # Extração de dados do Vitai no banco da RioSaúde
   - case_slug: "vitai-db-extraction"
     flow_path: "pipelines.datalake.extract_load.vitai_db.flows"
@@ -179,13 +178,13 @@ cases:
       environment: dev
       table_name: boletim
       schema_name: "basecentral"
-      datetime_column: 'created_at'
+      datetime_column: "created_at"
       target_name: "basecentral__boletim_eventos"
-      partition_column: 'datalake_loaded_at'
+      partition_column: "datalake_loaded_at"
       batch_size: 10000
       # interval_start: '2026-01-01'
       # interval_end: '2026-01-02'
-      relative_date: 'D-7'
+      relative_date: "D-7"
 
   # Extração do Diário Oficial -> tabela no BigQuery
   - case_slug: "extract_diario_oficial_rj"
@@ -227,6 +226,15 @@ cases:
       # dataset_id: brutos_sisreg_api_v2
       # table_id: solicitacoes
 
+  # Extração do Prontuário Sarah PADI
+  - case_slug: "extract_sarah_padi"
+    flow_path: "pipelines.datalake.extract_load.sarah_padi.flows"
+    flow_name: "padi_extraction"
+    params:
+      environment: dev
+      date: "07/08/2026"
+      dataset_id: brutos_prontuario_sarah_padi
+      tabela: atendimento_domiciliar_entradas
 
   ################################
   #  MIGRATE                     #
@@ -296,7 +304,6 @@ cases:
       # destination_dataset_name: ...
       # dbt_select_exp: ...
 
-
   ################################
   #  TRANSFORM                   #
   ################################
@@ -314,7 +321,6 @@ cases:
       target: null
       rename_flow: false
       send_discord_report: false
-
 
   ################################
   #  REPORTS                     #
@@ -359,11 +365,12 @@ cases:
     flow_name: "report_alerta_atualizacao_tabelas"
     params:
       environment: dev
-      table_ids: 
+      table_ids:
         # Tabela atualizada (espera-se que esteja)
         "rj-sms.projeto_whatsapp.telefones_validos": ["IplanRio - E Aí?"]
         # Tabela desatualizada
-        "rj-sms.projeto_gestacoes.temp_correlacao_prenatal_20250831_192404": ["S/SUBPAV/SAP - BI de Gestantes"]
+        "rj-sms.projeto_gestacoes.temp_correlacao_prenatal_20250831_192404":
+          ["S/SUBPAV/SAP - BI de Gestantes"]
 
   # Alerta jobs caros
   - case_slug: "report_jobs_caros"
@@ -392,4 +399,3 @@ cases:
     flow_name: "report_long_running_flows"
     params:
       environment: "dev"
-

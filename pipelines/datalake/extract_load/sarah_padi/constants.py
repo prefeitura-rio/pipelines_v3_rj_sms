@@ -2,56 +2,72 @@ from enum import Enum
 
 
 class constants(Enum):
-  {
+  TABLES = {
     # Agendamento
-    10022: "absenteismo",
-    10010: "agendas",
+    "absenteismo": 10022,
+    "agendas": 10010,
     # Ambulatório
-    10026: "ambulatorio_pacientes",
+    "ambulatorio_pacientes": 10026,
     # Assistência ao Paciente
-    10014: "escalas_assistenciais",
-    10029: "prescricao_medica_itens",
-    10002: "procedimentos_realizados",
+    "escalas_assistenciais": 10014,
+    "prescricao_medica_itens": 10029,
+    "procedimentos_realizados": 10002,
     # Atendimento Domiciliar
-    10025: "captacoes_ad_encerradas",
-    10024: "captacoes_ad_iniciadas",
-    10015: "atendimento_domiciliar_entradas",
-    10012: "atendimento_domiciliar_escalas",
-    10032: "atendimento_domiciliar_linhas_cuidado",
-    10011: "atendimento_domiciliar_pacientes",
-    10016: "atendimento_domiciliar_saidas",
+    "captacoes_ad_encerradas": 10025,
+    "captacoes_ad_iniciadas": 10024,
+    "atendimento_domiciliar_entradas": 10015,
+    "atendimento_domiciliar_escalas": 10012,
+    "atendimento_domiciliar_linhas_cuidado": 10032,
+    "atendimento_domiciliar_pacientes": 10011,
+    "atendimento_domiciliar_saidas": 10016,
     # Centro Cirúrgico
-    10027: "cirurgias",
+    "cirurgias": 10027,
     # Documento do Paciente
-    10028: "documentos_emitidos",
+    "documentos_emitidos": 10028,
     # Estoque
-    10009: "estoque_entradas",
-    10008: "estoque_saidas",
+    "estoque_entradas": 10009,
+    "estoque_saidas": 10008,
     # Faturamento
-    10031: "faturamento_convenio_particular",
-    10005: "faturamento_sih_sus",
-    10007: "producao_sadt_sih_sus",
+    "faturamento_convenio_particular": 10031,
+    "faturamento_sih_sus": 10005,
+    "producao_sadt_sih_sus": 10007,
     # Internação
-    10013: "internacao_diarias",
-    10018: "leitos_dia",
-    10023: "movimentacao_periodo",
-    10019: "pacientes_dia",
+    "internacao_diarias": 10013,
+    "leitos_dia": 10018,
+    "movimentacao_periodo": 10023,
+    "pacientes_dia": 10019,
     # NHE
-    10033: "notificacoes",
+    "notificacoes": 10033,
     # Nutrição e Dietética
-    10006: "pacientes_snd",
+    "pacientes_snd": 10006,
     # Obstetrícia
-    10035: "neonatologia",
+    "neonatologia": 10035,
     # Pronto atendimento
-    10004: "emergencia_pacientes_atendimento",
-    10001: "emergencia_pacientes_registrados",
+    "emergencia_pacientes_atendimento": 10004,
+    "emergencia_pacientes_registrados": 10001,
     # Qualidade
-    10020: "pesquisas_periodo",
+    "pesquisas_periodo": 10020,
     # Recursos Humanos
-    10034: "plantoes",
+    "plantoes": 10034,
     # SADT
-    10003: "exames_solicitados",
-    10017: "procedimentos_especiais",
+    "exames_solicitados": 10003,
+    "procedimentos_especiais": 10017,
     # Sistema
-    10021: "log_acessos",
+    "log_acessos": 10021,
   }
+
+  INFISICAL_PATH = "/sarah_padi"
+
+  CNES = "5462886"
+
+  CNES_LIST = [
+    "6694330",  # PADI MIGUEL COUTO
+    "4092104",  # PADI PAULINO WERNECK
+    "4466403",  # PADI FARMARCIA
+    "6694101",  # PADI SALGADO FILHO
+    "4337557",  # PADI ALBERT SCHWEITZER
+    "7110340",  # PADI FRANCISCO DA SILVA TELLES
+    "7063679",  # PADI LOURENÇO JORGE
+    "2976706",  # PADI ROCHA FARIA
+    "7110324",  # PADI PEDRO II
+  ]
