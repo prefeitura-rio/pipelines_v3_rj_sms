@@ -27,7 +27,7 @@ from .schedules import schedules
 
 @flow(
   name="Extração: SISCAN Web Laudos (Operator)",
-  owners=[SUBGERAL.MILOSKI_ID.value, CIT.HERIAN_ID.value],
+  owners=[SUBGERAL.MILOSKI_ID.value],
   tags=["SUBGERAL", "CIT"],
 )
 def sms_siscan_web_operator(
