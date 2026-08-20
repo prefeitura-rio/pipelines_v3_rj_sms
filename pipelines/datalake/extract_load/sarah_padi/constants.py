@@ -58,16 +58,5 @@ class constants(Enum):
 
   INFISICAL_PATH = "/sarah_padi"
 
+  # CNES da SMS Rio, retorna os fatos (registros) de todas as unidades PADI
   CNES = "5462886"
-
-  CNES_LIST = [
-    "6694330",  # PADI MIGUEL COUTO
-    "4092104",  # PADI PAULINO WERNECK
-    "4466403",  # PADI FARMARCIA
-    "6694101",  # PADI SALGADO FILHO
-    "4337557",  # PADI ALBERT SCHWEITZER
-    "7110340",  # PADI FRANCISCO DA SILVA TELLES
-    "7063679",  # PADI LOURENÇO JORGE
-    "2976706",  # PADI ROCHA FARIA
-    "7110324",  # PADI PEDRO II
-  ]
