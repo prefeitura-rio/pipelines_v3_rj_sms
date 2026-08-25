@@ -20,7 +20,7 @@ from pipelines.utils.infisical import get_secret
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
-from .constants import RecursosRMD, resource_to_table_map
+from .constants import FORNECEDORES_COM_LAUDO_BASE64, RecursosRMD, resource_to_table_map
 
 
 @task
@@ -33,16 +33,12 @@ def get_secrets(recurso: RecursosRMD, environment: str):
 
   resource_id = get_secret(secret_name=recurso, path="/rmd", environment=environment)
 
-  consumer_uuid = get_secret(
-    secret_name="CONSUMER_UUID", path="/rmd", environment=environment
-  )
   consumer_key = get_secret(
     secret_name="CONSUMER_KEY", path="/rmd", environment=environment
   )
   return {
     "url": api_full_url,
     "resource": resource_id,
-    "uuid": consumer_uuid,
     "key": consumer_key,
     "table_id": resource_to_table_map[recurso],
   }
@@ -133,7 +129,7 @@ def upload_data(
     log("Dados vazios! Ignorando upload", level="warning")
     return
 
-  # `data` é um arrao de dados no formato:
+  # `data` é um array de dados no formato:
   # {
   #   'id': 'xx',
   #   'tipo_recurso_id': 'xx',
@@ -147,12 +143,14 @@ def upload_data(
   #   },
   # }
 
-  # Para exames laboratoriais, extrai o laudo PDF (base64) e envia para GCS antes do dump
-  if secrets["table_id"] == "exames_laboratoriais":
-    gcs_bucket = get_google_project_for_environment(environment)
-    for d in data:
+  # Para fornecedores que enviam o laudo como base64 (ex: Blessing), extrai o PDF,
+  # faz upload para o GCS e substitui o campo pelo URI gs://.
+  # Os demais fornecedores enviam o laudo via endpoint separado e não precisam desse tratamento.
+  for d in data:
+    if d.get("fornecedor_id") in FORNECEDORES_COM_LAUDO_BASE64:
       laudo = d.get("dados", {}).get("exame_resultado_laudo")
       if laudo:
+        gcs_bucket = get_google_project_for_environment(environment)
         d["dados"]["exame_resultado_laudo"] = _upload_laudo_to_gcs(
           record_id=d["id"], b64_string=laudo, bucket_name=gcs_bucket
         )
