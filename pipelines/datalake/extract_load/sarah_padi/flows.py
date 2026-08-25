@@ -10,6 +10,8 @@ from pipelines.utils.datalake import upload_df_to_datalake_task
 from pipelines.utils.infisical import get_secret
 from pipelines.utils.prefect import flow, flow_config
 
+from .schedules import schedules
+
 TABLES = padi_constants.TABLES.value
 table_names = TABLES.keys()
 
@@ -80,4 +82,4 @@ def padi_extraction(
   )
 
 
-_flows = [flow_config(flow=padi_extraction)]
+_flows = [flow_config(flow=padi_extraction, schedules=schedules)]
