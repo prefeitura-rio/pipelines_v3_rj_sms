@@ -104,7 +104,9 @@ def query_api_page(
   return page_data, total
 
 
-def _upload_laudo_to_gcs(record_id: str, recebido_em: str, b64_string: str, bucket_name: str) -> str:
+def _upload_laudo_to_gcs(
+  record_id: str, recebido_em: str, b64_string: str, bucket_name: str
+) -> str:
   """Decodifica o laudo PDF em base64 e faz upload para o GCS. Retorna o URI gs://..."""
   try:
     pdf_bytes = base64.b64decode(b64_string)
@@ -113,7 +115,9 @@ def _upload_laudo_to_gcs(record_id: str, recebido_em: str, b64_string: str, buck
       f"(_upload_laudo_to_gcs) Valor de 'exame_resultado_laudo' para o registro '{record_id}' não é base64 válido; mantendo valor original."
     )
     return b64_string
-  recebido_em_clean = recebido_em[:19]  # "2026-08-25T18:12:07.877078+00:00" -> "2026-08-25T18:12:07"
+  recebido_em_clean = recebido_em[
+    :19
+  ]  # "2026-08-25T18:12:07.877078+00:00" -> "2026-08-25T18:12:07"
   prefix = f"{recebido_em_clean}_" if recebido_em_clean else ""
   blob_name = f"staging/brutos_rmd_laudos/{prefix}{record_id}.pdf"
   blob = storage.Client().bucket(bucket_name).blob(blob_name)
