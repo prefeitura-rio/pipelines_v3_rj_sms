@@ -104,7 +104,7 @@ def query_api_page(
   return page_data, total
 
 
-def _upload_laudo_to_gcs(record_id: str, b64_string: str, bucket_name: str) -> str:
+def _upload_laudo_to_gcs(record_id: str, recebido_em: str, b64_string: str, bucket_name: str) -> str:
   """Decodifica o laudo PDF em base64 e faz upload para o GCS. Retorna o URI gs://..."""
   try:
     pdf_bytes = base64.b64decode(b64_string)
@@ -113,7 +113,9 @@ def _upload_laudo_to_gcs(record_id: str, b64_string: str, bucket_name: str) -> s
       f"(_upload_laudo_to_gcs) Valor de 'exame_resultado_laudo' para o registro '{record_id}' não é base64 válido; mantendo valor original."
     )
     return b64_string
-  blob_name = f"staging/brutos_rmd_laudos/{record_id}.pdf"
+  recebido_em_clean = recebido_em[:19]  # "2026-08-25T18:12:07.877078+00:00" -> "2026-08-25T18:12:07"
+  prefix = f"{recebido_em_clean}_" if recebido_em_clean else ""
+  blob_name = f"staging/brutos_rmd_laudos/{prefix}{record_id}.pdf"
   blob = storage.Client().bucket(bucket_name).blob(blob_name)
   blob.upload_from_string(pdf_bytes, content_type="application/pdf")
   gcs_uri = f"gs://{bucket_name}/{blob_name}"
@@ -146,13 +148,18 @@ def upload_data(
   # Para fornecedores que enviam o laudo como base64 (ex: Blessing), extrai o PDF,
   # faz upload para o GCS e substitui o campo pelo URI gs://.
   # Os demais fornecedores enviam o laudo via endpoint separado e não precisam desse tratamento.
+  gcs_bucket = None
   for d in data:
     if d.get("fornecedor_id") in FORNECEDORES_COM_LAUDO_BASE64:
       laudo = d.get("dados", {}).get("exame_resultado_laudo")
       if laudo:
-        gcs_bucket = get_google_project_for_environment(environment)
+        if gcs_bucket is None:
+          gcs_bucket = get_google_project_for_environment(environment)
         d["dados"]["exame_resultado_laudo"] = _upload_laudo_to_gcs(
-          record_id=d["id"], b64_string=laudo, bucket_name=gcs_bucket
+          record_id=d["id"],
+          recebido_em=d.get("recebido_em", ""),
+          b64_string=laudo,
+          bucket_name=gcs_bucket,
         )
 
   # Transforma campo `dados` em uma string JSON
