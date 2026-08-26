@@ -4,8 +4,7 @@ from pipelines.constants import CIT
 from pipelines.utils.prefect import flow, flow_config
 
 from .constants import RecursosRMD
-
-# from .schedules import schedules
+from .schedules import schedules
 from .tasks import calculate_date_interval, get_secrets, query_api_page, upload_data
 
 
@@ -40,4 +39,4 @@ def rmd_to_bigquery(
       break
 
 
-_flows = [flow_config(flow=rmd_to_bigquery)]
+_flows = [flow_config(flow=rmd_to_bigquery, schedules=schedules)]
