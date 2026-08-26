@@ -79,9 +79,7 @@ def current_weekday(format: Literal["en", "pt", "int"] = "int") -> int | str:
   raise NotImplementedError(f"Formato {format} não implementado!")
 
 
-def from_relative_date(
-  relative_date: Optional[str] = None,
-) -> Optional[datetime.date | datetime.datetime]:
+def from_relative_date(relative_date: Optional[str] = None) -> datetime.date:
   """
   Converte uma data relativa para um objeto de data.
 
@@ -117,7 +115,7 @@ def from_relative_date(
       "tentando conversão para datetime",
       level="warning",
     )
-    result = datetime.datetime.fromisoformat(relative_date)
+    result = datetime.datetime.fromisoformat(relative_date).date()
 
   log(f"Data relativa '{relative_date}' calculada como '{result}'")
   return result
