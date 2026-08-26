@@ -53,7 +53,7 @@ daily_flow_parameters = [
   {
     "source_project_name": "rj-sma",
     "source_dataset_name": "recursos_humanos_ergon_saude",
-    "source_table_list": ["funcionarios"],
+    "source_table_list": ["funcionarios_sms"],
     "destination_dataset_name": "brutos_ergon_staging",
     "environment": "prod",
     "dbt_select_exp": "tag:ergon",
