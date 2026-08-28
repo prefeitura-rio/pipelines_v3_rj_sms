@@ -1,17 +1,23 @@
 # -*- coding: utf-8 -*-
 from typing import Literal, Optional
 
-from prefect.concurrency.sync import rate_limit
-from prefect.futures import wait
+import pandas as pd
 
-from pipelines.constants import CIT, SUBGERAL
+from pipelines.constants import CIT
 from pipelines.utils.datalake import upload_df_to_datalake
 from pipelines.utils.infisical import get_secret_task
 from pipelines.utils.prefect import clear_concurrency_limit, flow, flow_config
 
 from .constants import constants as flow_constants
 from .schedules import schedules
-from .tasks import delete_old_files, extract_from_api, gerar_faixas_de_data
+from .tasks import (
+  delete_old_files,
+  delete_partition_files,
+  extract_from_api,
+  gerar_faixas_de_data,
+  merge_partition,
+  read_partition_from_bigquery,
+)
 from .utils import table_name_from_resource
 
 
@@ -28,7 +34,7 @@ def clear_sisreg_limit(*args, **kwargs):
 
 @flow(
   name="Extração: Sisreg API",
-  owners=[CIT.AVELLAR_ID.value, SUBGERAL.MILOSKI_ID.value],
+  owners=[CIT.AVELLAR_ID.value],
   tags=["CIT", "SUBGERAL"],
   on_crashed=[clear_sisreg_limit],
   on_cancellation=[clear_sisreg_limit],
@@ -42,8 +48,9 @@ def extract_sisreg_api(
   page_size: int = 10_000,
   dias_por_faixa: int = 7,
   dataset_id: str = "brutos_sisreg_api_v2",
+  mode: Literal["extract", "update"] = "extract",
   table_id: Optional[str] = None,
-  environment: str = "dev",
+  environment: Literal["dev", "prod"] = "dev",
 ):
   """
   Args:
@@ -89,44 +96,72 @@ def extract_sisreg_api(
     data_inicio=data_inicio, data_fim=data_fim, dias_por_faixa=dias_por_faixa
   )
 
-  # 1) Extrai e salva cada lote em disco, retorna dataframe
-  extraction_futures = []
+  dataset_id = dataset_id if dataset_id else "brutos_sisreg_api_v2"
+  table_id = table_id if table_id else table_name_from_resource(es_index)
+
   for inicio, fim in faixas:
-    rate_limit("meio-por-segundo")
-    extraction_futures.append(
-      extract_from_api.submit(
-        user=username,
-        password=password,
-        index_name=es_index,
-        page_size=page_size,
-        data_inicio=inicio,
-        data_fim=fim,
+    # 1) Extrai lote a lote, retorna dados em dataframe
+    df: pd.DataFrame = extract_from_api(
+      user=username,
+      password=password,
+      index_name=es_index,
+      page_size=page_size,
+      data_inicio=inicio,
+      data_fim=fim,
+      mode=mode,
+    )
+    if df is None or df.empty:
+      continue
+
+    if mode == "extract":
+      # 2a) Se estamos só extraindo, faz upload direto do dataframe com 'append'
+      # Como extraímos o mês inteiro, vamos ter um substituto completo dos
+      # dados já presentes, então dados antigos são excluídos no fim do flow
+      upload_df_to_datalake(
+        df=df,
+        dataset_id=dataset_id,
+        table_id=table_id,
+        dump_mode="append",
+        source_format="parquet",
+        date_partition_column="data_particao",
       )
+
+    elif mode == "update":
+      # 2b) Para cada partição presente nos dados novos:
+      for data_particao, partition_df in df.groupby("data_particao"):
+        # 2b.1) Lê os dados dessa partição já no BigQuery
+        existing_df = read_partition_from_bigquery(
+          dataset_id=dataset_id,
+          table_id=table_id,
+          data_particao=data_particao,
+          environment=environment,
+        )
+        # 2b.2) Junta os dados antigos com os dados novos
+        merged_df = merge_partition(
+          old_df=existing_df, new_df=partition_df, data_particao=data_particao
+        )
+        # 2b.3) Apaga os arquivos antigos da partição antes de reenviar
+        delete_partition_files(
+          dataset_id=dataset_id,
+          table_id=table_id,
+          data_particao=data_particao,
+          environment=environment,
+        )
+        # 2b.4) Reupload dos dados agora atualizados
+        upload_df_to_datalake(
+          df=merged_df,
+          dataset_id=dataset_id,
+          table_id=table_id,
+          dump_mode="append",
+          source_format="parquet",
+          date_partition_column="data_particao",
+        )
+
+  if mode == "extract":
+    # 3) Por fim, apaga arquivos antigos
+    delete_old_files(
+      data_inicio=data_inicio, data_fim=data_fim, dataset_id=dataset_id, table_id=table_id
     )
-  wait(extraction_futures)
-  dataframes = [future.result() for future in extraction_futures]
-
-  # 2) Faz upload dos dataframes como tabelas
-  # Sem .submit(), são uploads sequenciais/bloqueantes
-  for df in dataframes:
-    upload_df_to_datalake(
-      df=df,
-      dataset_id=(dataset_id if dataset_id else "brutos_sisreg_api_v2"),
-      table_id=(table_id if table_id else table_name_from_resource(es_index)),
-      dump_mode="append",
-      source_format="parquet",
-      date_partition_column="data_particao",
-    )
-    del df  # Apaga referência ao dataframe
-
-  delete_old_files(
-    data_inicio=data_inicio,
-    data_fim=data_fim,
-    dataset_id=(dataset_id if dataset_id else "brutos_sisreg_api_v2"),
-    table_id=(table_id if table_id else table_name_from_resource(es_index)),
-  )
-
-  # TODO: validação de quais uploads foram bem sucedidos, quais não
 
 
 _flows = [flow_config(flow=extract_sisreg_api, schedules=schedules, memory="large")]

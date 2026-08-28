@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from datetime import date, datetime, timedelta
-from typing import Optional, Tuple
+from typing import Literal, Optional, Tuple
 
 from elasticsearch import Elasticsearch, exceptions
 
@@ -14,7 +14,7 @@ def normalize_dates(
 ) -> Tuple[date, date]:
   """
   Recebe dois objetos, ou strings de data ou None, e retorna `date()`s equivalentes.
-  * Caso `data_inicio` seja None, será `data_fim` subtraída de 1 ano.
+  * Caso `data_inicio` seja None, será `data_fim` subtraída de 6 meses.
   * Caso `data_fim` seja None, será o dia de hoje.
   Importante: a data início será SEMPRE o dia 1º do mês, e a data fim será sempre
   o último dia do mês. Essa decisão tem como objetivo facilitar a limpeza de partições
@@ -31,7 +31,7 @@ def normalize_dates(
   )
 
   if not data_inicio:
-    dt_inicio = dt_fim.replace(year=dt_fim.year - 1, day=1)
+    dt_inicio = (dt_fim - timedelta(days=30 * 6)).replace(day=1)
   else:
     dt_inicio = datetime.fromisoformat(data_inicio).date().replace(day=1)
 
@@ -61,7 +61,9 @@ def connect_ES(url: str, user: str, password: str) -> Elasticsearch:
   return es
 
 
-def build_ES_query(page_size: int, data_inicial: str, data_final: str):
+def build_ES_query(
+  page_size: int, data_inicial: str, data_final: str, mode: Literal["extract", "update"]
+):
   rj_ibge = "330455"
   # ElasticSearch tem limite de 10k resultados por requisição
   # > "By default, you cannot use from and size to page through
@@ -77,7 +79,7 @@ def build_ES_query(page_size: int, data_inicial: str, data_final: str):
           {"match": {"codigo_central_reguladora": rj_ibge}},
           {
             "range": {
-              "data_solicitacao": {
+              ("data_solicitacao" if mode == "extract" else "data_atualizacao"): {
                 "gte": data_inicial,
                 "lte": data_final,
                 "time_zone": "-03:00",
