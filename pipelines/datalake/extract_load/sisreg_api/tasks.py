@@ -266,6 +266,7 @@ def delete_partition_files(
   table_id: str,
   data_particao: str,
   environment: Literal["dev", "prod"] = "dev",
+  sanity_check: pd.DataFrame = None,
 ):
   """
   Apaga todos os arquivos Parquet de uma partição específica no GCS (staging).
@@ -275,7 +276,14 @@ def delete_partition_files(
     table_id(str): Nome da tabela
     data_particao(str): Data da partição no formato "YYYY-MM-DD".
     environment(str): "dev" ou "prod".
+    sanity_check(pd.DataFrame):
+      DataFrame contendo os dados novos; caso esteja vazio, a partição não é deletada.
   """
+  if not sanity_check or len(sanity_check) <= 0:
+    raise RuntimeError(
+      f"DataFrame `sanity_check` veio vazio! Partição {data_particao} não será apagada"
+    )
+
   dt = datetime.fromisoformat(data_particao).date()
 
   prefix = (

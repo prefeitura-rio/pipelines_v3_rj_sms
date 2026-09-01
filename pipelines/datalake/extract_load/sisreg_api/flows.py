@@ -148,6 +148,7 @@ def extract_sisreg_api(
           table_id=table_id,
           data_particao=data_particao,
           environment=environment,
+          sanity_check=merged_df,
         )
         # 2b.4) Reupload dos dados agora atualizados
         future = upload_df_to_datalake_task.submit(
