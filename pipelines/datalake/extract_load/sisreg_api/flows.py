@@ -2,9 +2,11 @@
 from typing import Literal, Optional
 
 import pandas as pd
+from prefect.concurrency.sync import rate_limit
+from prefect.futures import PrefectFuture, wait
 
 from pipelines.constants import CIT
-from pipelines.utils.datalake import upload_df_to_datalake
+from pipelines.utils.datalake import upload_df_to_datalake_task
 from pipelines.utils.infisical import get_secret_task
 from pipelines.utils.prefect import clear_concurrency_limit, flow, flow_config
 
@@ -117,7 +119,7 @@ def extract_sisreg_api(
       # 2a) Se estamos só extraindo, faz upload direto do dataframe com 'append'
       # Como extraímos o mês inteiro, vamos ter um substituto completo dos
       # dados já presentes, então dados antigos são excluídos no fim do flow
-      upload_df_to_datalake(
+      upload_df_to_datalake_task(
         df=df,
         dataset_id=dataset_id,
         table_id=table_id,
@@ -128,34 +130,46 @@ def extract_sisreg_api(
 
     elif mode == "update":
       # 2b) Para cada partição presente nos dados novos:
-      for data_particao, partition_df in df.groupby("data_particao"):
+      def run_group(data_particao: str, partition_df: pd.DataFrame):
         # 2b.1) Lê os dados dessa partição já no BigQuery
-        existing_df = read_partition_from_bigquery(
+        existing_df = read_partition_from_bigquery.submit(
           dataset_id=dataset_id,
           table_id=table_id,
           data_particao=data_particao,
           environment=environment,
         )
         # 2b.2) Junta os dados antigos com os dados novos
-        merged_df = merge_partition(
+        merged_df = merge_partition.submit(
           old_df=existing_df, new_df=partition_df, data_particao=data_particao
         )
         # 2b.3) Apaga os arquivos antigos da partição antes de reenviar
-        delete_partition_files(
+        deleted_future = delete_partition_files.submit(
           dataset_id=dataset_id,
           table_id=table_id,
           data_particao=data_particao,
           environment=environment,
         )
         # 2b.4) Reupload dos dados agora atualizados
-        upload_df_to_datalake(
+        future = upload_df_to_datalake_task.submit(
           df=merged_df,
           dataset_id=dataset_id,
           table_id=table_id,
           dump_mode="append",
           source_format="parquet",
           date_partition_column="data_particao",
+          wait_for=[deleted_future],
         )
+        return future
+
+      wait_futures: list[PrefectFuture] = []
+      for data_particao, partition_df in df.groupby("data_particao"):
+        rate_limit("meio-por-segundo")
+        wait_futures.append(run_group(data_particao, partition_df))
+
+      wait(wait_futures)
+      # Dispara erro no flow se alguma execução paralela deu erro
+      for f in wait_futures:
+        f.result()
 
   if mode == "extract":
     # 3) Por fim, apaga arquivos antigos
