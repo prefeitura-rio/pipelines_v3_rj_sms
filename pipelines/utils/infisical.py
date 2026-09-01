@@ -147,9 +147,16 @@ def inject_bd_credentials(environment: str = "dev", force_injection=False) -> No
   if not os.path.exists("/tmp"):
     os.makedirs("/tmp")
 
-  with open("/tmp/credentials.json", "wb") as credentials_file:
-    credentials_file.write(credentials)
-  os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/credentials.json"
+  CREDENTIALS_JSON_PATH = "/tmp/credentials.json"
+  # Confere se já não existe um arquivo de credenciais de pelo menos 2KB
+  if (
+    not os.path.isfile(CREDENTIALS_JSON_PATH)
+    or os.path.getsize(CREDENTIALS_JSON_PATH) < 2000
+  ):
+    # Nesse caso, cria um novo com as credenciais lidas
+    with open(CREDENTIALS_JSON_PATH, "wb") as credentials_file:
+      credentials_file.write(credentials)
+  os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = CREDENTIALS_JSON_PATH
 
   project = get_google_project_for_environment(environment=environment)
   bd.config.from_file = True
@@ -158,16 +165,17 @@ def inject_bd_credentials(environment: str = "dev", force_injection=False) -> No
 
   # Se não existir um config.toml, o basedosdados acha uma ótima ideia abrir
   # um prompt interativo pra configurar o essas infos, o que trava o container
-  with open("/tmp/config.toml", "w") as config_file:
-    config_file.write(f"""
+  if not os.path.isfile("/tmp/config.toml"):
+    with open("/tmp/config.toml", "w") as config_file:
+      config_file.write(f"""
 bucket_name = "{project}"
 [gcloud-projects]
   [gcloud-projects.staging]
   name = "rj-sms-dev"
-  credentials_path = "/tmp/credentials.json"
+  credentials_path = "{CREDENTIALS_JSON_PATH}"
   [gcloud-projects.prod]
   name = "rj-sms"
-  credentials_path = "/tmp/credentials.json"
+  credentials_path = "{CREDENTIALS_JSON_PATH}"
 [api]
 url = "https://staging.api.basedosdados.org/api/v1/graphql"
 """)
