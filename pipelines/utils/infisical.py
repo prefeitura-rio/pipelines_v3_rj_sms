@@ -144,6 +144,15 @@ def inject_bd_credentials(environment: str = "dev", force_injection=False) -> No
   )
   credentials = base64.b64decode(os.environ[service_account_name])
 
+  if not credentials or len(credentials) <= 0:
+    log(
+      f"""=============== !! ===============
+Variável de credenciais vazia!
+'{environment}' é o ambiente correto?
+=============== !! ===============""",
+      level="error",
+    )
+
   if not os.path.exists("/tmp"):
     os.makedirs("/tmp")
 

@@ -165,8 +165,12 @@ def extract_sisreg_api(
       wait_futures: list[PrefectFuture] = []
       for data_particao, partition_df in df.groupby("data_particao"):
         rate_limit("meio-por-segundo")
-        wait_futures.append(run_group(data_particao, partition_df))
-
+        wait_futures.append(run_group(data_particao, partition_df.copy()))
+      # Estamos (sempre) preocupados com uso de RAM; aqui fazemos uma cópia
+      # de cada partição do DataFrame, e depois apagamos o DataFrame original
+      # Assim, cada partição vive independentemente do original, e pode ser
+      # desalocada quando seu processamento terminar
+      del df
       wait(wait_futures)
       # Dispara erro no flow se alguma execução paralela deu erro
       for f in wait_futures:
