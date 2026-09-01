@@ -3,12 +3,15 @@
 from pipelines.utils.schedules import create_schedule
 
 schedules = [
+  # mode="update"
+  # Pegamos solicitações atualizadas nos últimos 7 dias
   create_schedule(
     parameters={
       "es_index": "marcacao-ambulatorial-rj",
-      "page_size": 5_000,
-      "dias_por_faixa": 5,
+      "page_size": 10_000,
+      "dias_por_faixa": 7,
       "dataset_id": "brutos_sisreg_api_v2",
+      "mode": "update",
       "environment": "prod",
     },
     interval="daily",
@@ -17,9 +20,10 @@ schedules = [
   create_schedule(
     parameters={
       "es_index": "solicitacao-ambulatorial-rj",
-      "page_size": 5_000,
-      "dias_por_faixa": 5,
+      "page_size": 10_000,
+      "dias_por_faixa": 7,
       "dataset_id": "brutos_sisreg_api_v2",
+      "mode": "update",
       "environment": "prod",
     },
     interval="daily",
@@ -28,9 +32,10 @@ schedules = [
   create_schedule(
     parameters={
       "es_index": "solicitacao-hospitalar-rj",
-      "page_size": 5_000,
-      "dias_por_faixa": 5,
+      "page_size": 10_000,
+      "dias_por_faixa": 7,
       "dataset_id": "brutos_sisreg_api_v2",
+      "mode": "update",
       "environment": "prod",
     },
     interval="daily",

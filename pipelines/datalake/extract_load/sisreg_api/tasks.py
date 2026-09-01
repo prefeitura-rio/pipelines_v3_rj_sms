@@ -23,6 +23,7 @@ from .utils import build_ES_query, connect_ES, normalize_dates
 def gerar_faixas_de_data(
   data_inicio: Optional[str] = None,
   data_fim: Optional[str] = None,
+  mode: Literal["extract", "update"] = "extract",
   dias_por_faixa: int = 7,
 ) -> List[Tuple[str, str]]:
   """
@@ -32,7 +33,7 @@ def gerar_faixas_de_data(
   # NOTE: Tecnicamente, pra mode="update", aqui não precisaria
   #       arredondar pro mês mais próximo, mas devemos usar sempre
   #       com precisão de mês, então não faz mal
-  dt_inicio, dt_fim = normalize_dates(data_inicio, data_fim)
+  dt_inicio, dt_fim = normalize_dates(data_inicio, data_fim, mode)
 
   log("Gerando faixas de datas para processamento em lotes")
   faixas = []
@@ -309,13 +310,17 @@ def merge_partition(old_df: pd.DataFrame, new_df: pd.DataFrame, data_particao: s
     data_particao(str): Data da partição no formato "YYYY-MM-DD".
   """
   if old_df.empty:
-    log(f"[{data_particao}] Nenhum dado já no datalake; {len(new_df)} novos registros.")
+    log(
+      f"[{data_particao}] Nenhum dado já no datalake; {len(new_df)} registros atualizados."
+    )
     return new_df.reset_index(drop=True)
 
   old_df = old_df.astype(str)
   new_df = new_df.astype(str)
 
-  log(f"[{data_particao}] {len(old_df)} registros no datalake; {len(new_df)} novos.")
+  log(
+    f"[{data_particao}] {len(old_df)} registros no datalake; {len(new_df)} atualizados."
+  )
   merged_df = (
     pd.concat([old_df, new_df], ignore_index=True)
     .drop_duplicates(subset=["codigo_solicitacao"], keep="last")

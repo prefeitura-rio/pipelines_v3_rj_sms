@@ -10,16 +10,16 @@ from pipelines.utils.logger import log
 
 
 def normalize_dates(
-  data_inicio: Optional[str], data_fim: Optional[str]
+  data_inicio: Optional[str], data_fim: Optional[str], mode: Literal["extract", "update"]
 ) -> Tuple[date, date]:
   """
   Recebe dois objetos, ou strings de data ou None, e retorna `date()`s equivalentes.
-  * Caso `data_inicio` seja None, será `data_fim` subtraída de 6 meses.
+  * Caso `data_inicio` seja None, será `data_fim` subtraída de 1 semana.
   * Caso `data_fim` seja None, será o dia de hoje.
-  Importante: a data início será SEMPRE o dia 1º do mês, e a data fim será sempre
-  o último dia do mês. Essa decisão tem como objetivo facilitar a limpeza de partições
-  repetidas posteriormente. Ex.:
-  >>> normalize_dates(data_inicio='2025-06-20', data_fim='2026-01-04')
+  Importante: a data fim será sempre o último dia do mês e, em mode='extract',
+  a data início será SEMPRE o dia 1º do mês. Essa decisão tem como objetivo facilitar
+  a limpeza de partições repetidas posteriormente. Ex.:
+  >>> normalize_dates(data_inicio='2025-06-20', data_fim='2026-01-04', mode="extract")
   ( date(2025, 6, 1), date(2026, 1, 31) )
   """
   dt_fim = parse_date_or_today(data_fim).date()
@@ -31,9 +31,19 @@ def normalize_dates(
   )
 
   if not data_inicio:
-    dt_inicio = (dt_fim - timedelta(days=30 * 6)).replace(day=1)
+    dt_inicio = (
+      # Quando consultando por data de criação, queremos a(s) partição(ões)
+      # que inclui(em) os dias de 1 semana atrás
+      (dt_fim - timedelta(days=7)).replace(day=1)
+      if mode == "extract"
+      # Caso contrário, consultando por data de atualização, queremos
+      # somente os 7 dias mesmo
+      else (dt_fim - timedelta(days=7))
+    )
   else:
-    dt_inicio = datetime.fromisoformat(data_inicio).date().replace(day=1)
+    dt_inicio = datetime.fromisoformat(data_inicio).date()
+    if mode == "extract":
+      dt_inicio = dt_inicio.replace(day=1)
 
   if dt_inicio > dt_fim:
     raise ValueError(
@@ -71,15 +81,18 @@ def build_ES_query(
   # [Ref] https://www.elastic.co/docs/reference/elasticsearch/rest-apis/paginate-search-results
   page_size = min(max(1, page_size), 10_000)
 
+  filter_field = "data_solicitacao" if mode == "extract" else "data_atualizacao"
+
   return {
     "size": page_size,
+    "sort": [{"data_solicitacao": {"order": "desc"}}],
     "query": {
       "bool": {
         "must": [
           {"match": {"codigo_central_reguladora": rj_ibge}},
           {
             "range": {
-              ("data_solicitacao" if mode == "extract" else "data_atualizacao"): {
+              filter_field: {
                 "gte": data_inicial,
                 "lte": data_final,
                 "time_zone": "-03:00",

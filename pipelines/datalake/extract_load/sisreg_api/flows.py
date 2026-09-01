@@ -93,7 +93,7 @@ def extract_sisreg_api(
   )
 
   faixas = gerar_faixas_de_data(
-    data_inicio=data_inicio, data_fim=data_fim, dias_por_faixa=dias_por_faixa
+    data_inicio=data_inicio, data_fim=data_fim, mode=mode, dias_por_faixa=dias_por_faixa
   )
 
   dataset_id = dataset_id if dataset_id else "brutos_sisreg_api_v2"
@@ -164,4 +164,4 @@ def extract_sisreg_api(
     )
 
 
-_flows = [flow_config(flow=extract_sisreg_api, schedules=schedules, memory="large")]
+_flows = [flow_config(flow=extract_sisreg_api, schedules=schedules, memory="medium")]
