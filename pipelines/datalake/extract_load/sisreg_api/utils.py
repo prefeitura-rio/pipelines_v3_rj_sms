@@ -16,19 +16,20 @@ def normalize_dates(
   Recebe dois objetos, ou strings de data ou None, e retorna `date()`s equivalentes.
   * Caso `data_inicio` seja None, será `data_fim` subtraída de 1 semana.
   * Caso `data_fim` seja None, será o dia de hoje.
-  Importante: a data fim será sempre o último dia do mês e, em mode='extract',
-  a data início será SEMPRE o dia 1º do mês. Essa decisão tem como objetivo facilitar
+  Importante: em mode='extract', a data início será SEMPRE o dia 1º do mês, e a data fim
+  será sempre o último dia do mês. Essa decisão tem como objetivo facilitar
   a limpeza de partições repetidas posteriormente. Ex.:
   >>> normalize_dates(data_inicio='2025-06-20', data_fim='2026-01-04', mode="extract")
   ( date(2025, 6, 1), date(2026, 1, 31) )
   """
   dt_fim = parse_date_or_today(data_fim).date()
-  # Calcula último dia do mês
-  dt_fim = (
-    date(dt_fim.year, 12, 31)
-    if dt_fim.month == 12
-    else (date(dt_fim.year, dt_fim.month + 1, 1) - timedelta(days=1))
-  )
+  if mode == "extract":
+    # Calcula último dia do mês
+    dt_fim = (
+      date(dt_fim.year, 12, 31)
+      if dt_fim.month == 12
+      else (date(dt_fim.year, dt_fim.month + 1, 1) - timedelta(days=1))
+    )
 
   if not data_inicio:
     dt_inicio = (
