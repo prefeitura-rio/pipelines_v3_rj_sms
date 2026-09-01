@@ -2,6 +2,8 @@
 
 from pipelines.utils.schedules import create_schedule
 
+from .constants import constants as flow_consts
+
 schedules = [
   # mode="update"
   # Pegamos solicitações atualizadas nos últimos 7 dias
@@ -9,7 +11,7 @@ schedules = [
     parameters={
       "es_index": "marcacao-ambulatorial-rj",
       "page_size": 10_000,
-      "dias_por_faixa": 7,
+      "dias_por_faixa": flow_consts.DEFAULT_WINDOW_DAYS.value,
       "dataset_id": "brutos_sisreg_api_v2",
       "mode": "update",
       "environment": "prod",
@@ -21,7 +23,7 @@ schedules = [
     parameters={
       "es_index": "solicitacao-ambulatorial-rj",
       "page_size": 10_000,
-      "dias_por_faixa": 7,
+      "dias_por_faixa": flow_consts.DEFAULT_WINDOW_DAYS.value,
       "dataset_id": "brutos_sisreg_api_v2",
       "mode": "update",
       "environment": "prod",
@@ -33,7 +35,7 @@ schedules = [
     parameters={
       "es_index": "solicitacao-hospitalar-rj",
       "page_size": 10_000,
-      "dias_por_faixa": 7,
+      "dias_por_faixa": flow_consts.DEFAULT_WINDOW_DAYS.value,
       "dataset_id": "brutos_sisreg_api_v2",
       "mode": "update",
       "environment": "prod",

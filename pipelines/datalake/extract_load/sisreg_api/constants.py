@@ -18,3 +18,5 @@ class constants(Enum):
   Nome da tag do Prefect, configurada via UI, que limita execuções
   concorrentes da task de extração
   """
+
+  DEFAULT_WINDOW_DAYS = 5

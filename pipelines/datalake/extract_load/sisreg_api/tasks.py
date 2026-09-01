@@ -141,9 +141,14 @@ def extract_from_api(
     # Confere metadados
     # '_shards': {'total': x, 'successful': x, 'skipped': x, 'failed': x}
     shards: dict = resposta.get("_shards", {})
-    if shards.get("failed", 0) > 0 or shards.get("skipped", 0) > 0:
+    if shards.get("failed", 0) > 0:
       raise RuntimeError(
         f"[{data_inicio} : {data_fim}] Consulta com falhas em shards: {shards}"
+      )
+    if shards.get("skipped", 0) > 0:
+      log(
+        f"[{data_inicio} : {data_fim}] Consulta com shards pulados: {shards}",
+        level="warning",
       )
 
     hits: List[dict] = resposta["hits"]["hits"]

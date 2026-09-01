@@ -8,6 +8,8 @@ from pipelines.utils.cleanup import cleanup_bigquery_name
 from pipelines.utils.datetime import parse_date_or_today
 from pipelines.utils.logger import log
 
+from .constants import constants as flow_consts
+
 
 def normalize_dates(
   data_inicio: Optional[str], data_fim: Optional[str], mode: Literal["extract", "update"]
@@ -35,11 +37,11 @@ def normalize_dates(
     dt_inicio = (
       # Quando consultando por data de criação, queremos a(s) partição(ões)
       # que inclui(em) os dias de 1 semana atrás
-      (dt_fim - timedelta(days=7)).replace(day=1)
+      (dt_fim - timedelta(days=flow_consts.DEFAULT_WINDOW_DAYS.value)).replace(day=1)
       if mode == "extract"
       # Caso contrário, consultando por data de atualização, queremos
       # somente os 7 dias mesmo
-      else (dt_fim - timedelta(days=7))
+      else (dt_fim - timedelta(days=flow_consts.DEFAULT_WINDOW_DAYS.value))
     )
   else:
     dt_inicio = datetime.fromisoformat(data_inicio).date()
