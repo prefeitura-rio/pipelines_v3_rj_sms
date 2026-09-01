@@ -279,7 +279,7 @@ def delete_partition_files(
     sanity_check(pd.DataFrame):
       DataFrame contendo os dados novos; caso esteja vazio, a partição não é deletada.
   """
-  if not sanity_check or len(sanity_check) <= 0:
+  if sanity_check is None or sanity_check.empty:
     raise RuntimeError(
       f"DataFrame `sanity_check` veio vazio! Partição {data_particao} não será apagada"
     )
