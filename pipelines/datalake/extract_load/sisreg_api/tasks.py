@@ -15,7 +15,7 @@ from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
-from .constants import constants as flow_constants
+from .constants import constants as flow_consts
 from .utils import build_ES_query, connect_ES, normalize_dates
 
 
@@ -24,7 +24,7 @@ def gerar_faixas_de_data(
   data_inicio: Optional[str] = None,
   data_fim: Optional[str] = None,
   mode: Literal["extract", "update"] = "extract",
-  dias_por_faixa: int = 7,
+  dias_por_faixa: int | None = None,
 ) -> List[Tuple[str, str]]:
   """
   Gera uma lista de tuplas (inicio, fim) dividindo o intervalo
@@ -34,6 +34,9 @@ def gerar_faixas_de_data(
   #       arredondar pro mês mais próximo, mas devemos usar sempre
   #       com precisão de mês, então não faz mal
   dt_inicio, dt_fim = normalize_dates(data_inicio, data_fim, mode)
+
+  if not dias_por_faixa:
+    dias_por_faixa = flow_consts.DEFAULT_WINDOW_DAYS.value
 
   log("Gerando faixas de datas para processamento em lotes")
   faixas = []
@@ -51,11 +54,11 @@ def gerar_faixas_de_data(
     # Nova data de início
     dt_inicio = dt_chunk_fim + timedelta(days=1)
 
-  log(f"{len(faixas)} faixas de datas geradas com sucesso.")
+  log(f"{len(faixas)} faixas de datas geradas com sucesso:\n{faixas}")
   return faixas
 
 
-@task(retries=5, retry_delay_seconds=30)
+@task(retries=5, retry_delay_seconds=30, tags=[flow_consts.CONCURRENCY_LIMIT_TAG.value])
 def extract_from_api(
   user: str,
   password: str,
@@ -87,7 +90,7 @@ def extract_from_api(
   ###
 
   log(f"[{data_inicio} : {data_fim}] Conectando ao ElasticSearch...")
-  es = connect_ES(flow_constants.API_URL.value, user, password)
+  es = connect_ES(flow_consts.API_URL.value, user, password)
   query = build_ES_query(page_size, data_inicio, data_fim, mode)
 
   # Lista de IDs a serem limpados posteriormente
@@ -107,11 +110,11 @@ def extract_from_api(
     while True:
       if i == 0:
         resposta: dict = es.search(
-          index=index_name, body=query, scroll=flow_constants.SCROLL_TIMEOUT.value
+          index=index_name, body=query, scroll=flow_consts.SCROLL_TIMEOUT.value
         )
       else:
         resposta = es.scroll(
-          scroll_id=latest_scroll_id, scroll=flow_constants.SCROLL_TIMEOUT.value
+          scroll_id=latest_scroll_id, scroll=flow_consts.SCROLL_TIMEOUT.value
         )
 
       # Se conseguiu obter os dados, sai do loop interno
@@ -229,7 +232,7 @@ def extract_from_api(
   return df
 
 
-@task(tags=[flow_constants.CONCURRENCY_LIMIT_TAG.value])
+@task()
 def read_partition_from_bigquery(
   dataset_id: str,
   table_id: str,

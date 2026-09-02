@@ -16,7 +16,7 @@ def normalize_dates(
 ) -> Tuple[date, date]:
   """
   Recebe dois objetos, ou strings de data ou None, e retorna `date()`s equivalentes.
-  * Caso `data_inicio` seja None, será `data_fim` subtraída de 1 semana.
+  * Caso `data_inicio` seja None, será `data_fim` subtraída de N dias.
   * Caso `data_fim` seja None, será o dia de hoje.
   Importante: em mode='extract', a data início será SEMPRE o dia 1º do mês, e a data fim
   será sempre o último dia do mês. Essa decisão tem como objetivo facilitar
@@ -36,12 +36,12 @@ def normalize_dates(
   if not data_inicio:
     dt_inicio = (
       # Quando consultando por data de criação, queremos a(s) partição(ões)
-      # que inclui(em) os dias de 1 semana atrás
-      (dt_fim - timedelta(days=flow_consts.DEFAULT_WINDOW_DAYS.value)).replace(day=1)
+      # que inclui(em) os dias desejados
+      (dt_fim - timedelta(days=flow_consts.DEFAULT_WINDOW_DAYS.value - 1)).replace(day=1)
       if mode == "extract"
       # Caso contrário, consultando por data de atualização, queremos
-      # somente os 7 dias mesmo
-      else (dt_fim - timedelta(days=flow_consts.DEFAULT_WINDOW_DAYS.value))
+      # somente os N dias mesmo
+      else (dt_fim - timedelta(days=flow_consts.DEFAULT_WINDOW_DAYS.value - 1))
     )
   else:
     dt_inicio = datetime.fromisoformat(data_inicio).date()

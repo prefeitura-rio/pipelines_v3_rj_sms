@@ -11,7 +11,7 @@ from pipelines.utils.datalake import upload_df_to_datalake_task
 from pipelines.utils.infisical import get_secret_task
 from pipelines.utils.prefect import clear_concurrency_limit, flow, flow_config
 
-from .constants import constants as flow_constants
+from .constants import constants as flow_consts
 from .schedules import schedules
 from .tasks import (
   delete_old_files,
@@ -31,7 +31,7 @@ from .utils import table_name_from_resource
 # Então colocamos hooks pra 'manualmente' reabrir os slots caso
 # o flow seja interrompido
 def clear_sisreg_limit(*args, **kwargs):
-  limit = f"tag:{flow_constants.CONCURRENCY_LIMIT_TAG.value}"
+  limit = f"tag:{flow_consts.CONCURRENCY_LIMIT_TAG.value}"
   clear_concurrency_limit(limit)
 
 
@@ -50,7 +50,7 @@ def extract_sisreg_api(
   data_inicio: Optional[str] = None,
   data_fim: Optional[str] = None,
   page_size: int = 10_000,
-  dias_por_faixa: int = 7,
+  dias_por_faixa: int | None = flow_consts.DEFAULT_WINDOW_DAYS.value,
   dataset_id: str = "brutos_sisreg_api_v2",
   mode: Literal["extract", "update"] = "extract",
   table_id: Optional[str] = None,
