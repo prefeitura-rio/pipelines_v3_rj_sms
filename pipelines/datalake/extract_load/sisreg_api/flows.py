@@ -4,6 +4,7 @@ from typing import Literal, Optional
 import pandas as pd
 from prefect.concurrency.sync import rate_limit
 from prefect.futures import PrefectFuture, wait
+from prefect.task_runners import ThreadPoolTaskRunner
 
 from pipelines.constants import CIT
 from pipelines.utils.datalake import upload_df_to_datalake_task
@@ -40,6 +41,7 @@ def clear_sisreg_limit(*args, **kwargs):
   tags=["CIT", "SUBGERAL"],
   on_crashed=[clear_sisreg_limit],
   on_cancellation=[clear_sisreg_limit],
+  task_runner=ThreadPoolTaskRunner(max_workers=2),
 )
 def extract_sisreg_api(
   es_index: Literal[
@@ -165,12 +167,8 @@ def extract_sisreg_api(
       wait_futures: list[PrefectFuture] = []
       for data_particao, partition_df in df.groupby("data_particao"):
         rate_limit("meio-por-segundo")
-        wait_futures.append(run_group(data_particao, partition_df.copy()))
-      # Estamos (sempre) preocupados com uso de RAM; aqui fazemos uma cópia
-      # de cada partição do DataFrame, e depois apagamos o DataFrame original
-      # Assim, cada partição vive independentemente do original, e pode ser
-      # desalocada quando seu processamento terminar
-      del df
+        wait_futures.append(run_group(data_particao, partition_df))
+
       wait(wait_futures)
       # Dispara erro no flow se alguma execução paralela deu erro
       for f in wait_futures:

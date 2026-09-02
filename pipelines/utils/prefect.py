@@ -3,7 +3,7 @@ import asyncio
 import re
 import time
 import unicodedata
-from typing import Any, Callable, Dict, List, Literal, Optional, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Type, Union
 from uuid import UUID
 
 from prefect import State, Task, get_client
@@ -15,7 +15,9 @@ from prefect.deployments.flow_runs import run_deployment
 from prefect.exceptions import ObjectNotFound
 from prefect.flows import Flow as OriginalFlow
 from prefect.flows import FlowDecorator as OriginalFlowDecorator
+from prefect.futures import PrefectFuture
 from prefect.schedules import Schedule
+from prefect.task_runners import TaskRunner
 
 from pipelines.utils.env import get_current_environment, get_prefect_url, is_dev_run
 from pipelines.utils.infisical import inject_bd_credentials
@@ -51,6 +53,9 @@ class FlowDecorator(OriginalFlowDecorator):
   state_handlers: List[Callable] = None
   on_crashed: List[Callable] = None
   on_cancellation: List[Callable] = None
+  task_runner: Union[
+    Type[TaskRunner[PrefectFuture[Any]]], TaskRunner[PrefectFuture[Any]], None
+  ] = None
   # ...
 
   owners: List[str] = None
@@ -65,6 +70,9 @@ class FlowDecorator(OriginalFlowDecorator):
     state_handlers: Optional[List[Callable]] = None,
     on_crashed: Optional[List[Callable]] = None,
     on_cancellation: Optional[List[Callable]] = None,
+    task_runner: Union[
+      Type[TaskRunner[PrefectFuture[Any]]], TaskRunner[PrefectFuture[Any]], None
+    ] = None,
     owners: Optional[List[str]] = None,
     tags: Optional[List[str]] = None,
     log_prints: bool = False,
@@ -98,6 +106,8 @@ class FlowDecorator(OriginalFlowDecorator):
     self.on_crashed = list(set([*(on_crashed or []), *self.state_handlers]))
     self.on_cancellation = list(set([*(on_cancellation or []), *self.state_handlers]))
 
+    self.task_runner = task_runner
+
     self.owners = owners or []
     self.tags = tags or []
     self.log_prints = log_prints
@@ -115,6 +125,7 @@ class FlowDecorator(OriginalFlowDecorator):
       on_cancellation=[*self.on_cancellation],
       on_crashed=[*self.on_crashed],
       on_running=[*self.state_handlers],
+      task_runner=self.task_runner,
       validate_parameters=False,
       **kwargs,
     )
