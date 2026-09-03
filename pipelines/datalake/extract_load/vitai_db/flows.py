@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from typing import Literal, Optional
+
 from prefect.concurrency.sync import rate_limit
 from prefect.futures import wait
 
@@ -41,10 +42,10 @@ def vitai_db_extraction(
   target_name: str = "",
   partition_column: str = "datalake_loaded_at",
   batch_size: int = 10000,
-  interval_start: Optional[str] = '',
-  interval_end: Optional[str] = '',
-  relative_date: Optional[str] = '',
-  dataset_id: str = "brutos_prontuario_vitai"
+  interval_start: Optional[str] = "",
+  interval_end: Optional[str] = "",
+  relative_date: Optional[str] = "",
+  dataset_id: str = "brutos_prontuario_vitai",
 ):
   """
   Fluxo de extração e carga de dados do prontuário Vitai.
