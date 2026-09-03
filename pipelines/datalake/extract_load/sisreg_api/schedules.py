@@ -2,13 +2,56 @@
 
 from pipelines.utils.schedules import create_schedule
 
+from .constants import constants as flow_consts
+
 schedules = [
+  # mode="update"
+  # Pegamos solicitações atualizadas nos últimos 7 dias
   create_schedule(
     parameters={
       "es_index": "marcacao-ambulatorial-rj",
-      "page_size": 5_000,
-      "dias_por_faixa": 5,
+      "page_size": 10_000,
+      "dias_por_faixa": flow_consts.DEFAULT_WINDOW_DAYS.value,
       "dataset_id": "brutos_sisreg_api_v2",
+      "mode": "update",
+      "environment": "prod",
+    },
+    interval="daily",
+    config={"hour": 1, "minute": 45},
+  ),
+  create_schedule(
+    parameters={
+      "es_index": "solicitacao-ambulatorial-rj",
+      "page_size": 10_000,
+      "dias_por_faixa": flow_consts.DEFAULT_WINDOW_DAYS.value,
+      "dataset_id": "brutos_sisreg_api_v2",
+      "mode": "update",
+      "environment": "prod",
+    },
+    interval="daily",
+    config={"hour": 1, "minute": 30},
+  ),
+  create_schedule(
+    parameters={
+      "es_index": "solicitacao-hospitalar-rj",
+      "page_size": 10_000,
+      "dias_por_faixa": flow_consts.DEFAULT_WINDOW_DAYS.value,
+      "dataset_id": "brutos_sisreg_api_v2",
+      "mode": "update",
+      "environment": "prod",
+    },
+    interval="daily",
+    config={"hour": 1, "minute": 15},
+  ),
+  # mode="extract"
+  # Pegamos solicitações criadas no último mês
+  create_schedule(
+    parameters={
+      "es_index": "marcacao-ambulatorial-rj",
+      "page_size": 10_000,
+      "dias_por_faixa": flow_consts.DEFAULT_WINDOW_DAYS.value,
+      "dataset_id": "brutos_sisreg_api_v2",
+      "mode": "extract",
       "environment": "prod",
     },
     interval="daily",
@@ -17,9 +60,10 @@ schedules = [
   create_schedule(
     parameters={
       "es_index": "solicitacao-ambulatorial-rj",
-      "page_size": 5_000,
-      "dias_por_faixa": 5,
+      "page_size": 10_000,
+      "dias_por_faixa": flow_consts.DEFAULT_WINDOW_DAYS.value,
       "dataset_id": "brutos_sisreg_api_v2",
+      "mode": "extract",
       "environment": "prod",
     },
     interval="daily",
@@ -28,9 +72,10 @@ schedules = [
   create_schedule(
     parameters={
       "es_index": "solicitacao-hospitalar-rj",
-      "page_size": 5_000,
-      "dias_por_faixa": 5,
+      "page_size": 10_000,
+      "dias_por_faixa": flow_consts.DEFAULT_WINDOW_DAYS.value,
       "dataset_id": "brutos_sisreg_api_v2",
+      "mode": "extract",
       "environment": "prod",
     },
     interval="daily",

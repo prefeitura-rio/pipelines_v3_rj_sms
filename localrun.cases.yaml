@@ -260,6 +260,7 @@ cases:
       es_index: solicitacao-ambulatorial-rj
       data_inicio: null
       data_fim: null
+      mode: extract
       # tamanho_pagina: 10000
       # dias_por_faixa: 7
       # dataset_id: brutos_sisreg_api_v2

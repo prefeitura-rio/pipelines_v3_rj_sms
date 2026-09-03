@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 import time
 from datetime import datetime, timedelta
-from typing import List, Optional, Tuple
+from typing import List, Literal, Optional, Tuple
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 import pandas as pd
-from google.cloud import storage
+from google.cloud import bigquery, storage
 from prefect import task as unauthenticated_task
 
 from pipelines.utils.cleanup import cleanup_columns_for_bigquery
@@ -15,7 +15,7 @@ from pipelines.utils.env import get_google_project_for_environment
 from pipelines.utils.logger import log
 from pipelines.utils.prefect import authenticated_task as task
 
-from .constants import constants as flow_constants
+from .constants import constants as flow_consts
 from .utils import build_ES_query, connect_ES, normalize_dates
 
 
@@ -23,13 +23,20 @@ from .utils import build_ES_query, connect_ES, normalize_dates
 def gerar_faixas_de_data(
   data_inicio: Optional[str] = None,
   data_fim: Optional[str] = None,
-  dias_por_faixa: int = 1,
+  mode: Literal["extract", "update"] = "extract",
+  dias_por_faixa: int | None = None,
 ) -> List[Tuple[str, str]]:
   """
   Gera uma lista de tuplas (inicio, fim) dividindo o intervalo
   entre data_inicial e data_final em blocos de tamanho 'dias_por_faixa'.
   """
-  dt_inicio, dt_fim = normalize_dates(data_inicio, data_fim)
+  # NOTE: Tecnicamente, pra mode="update", aqui não precisaria
+  #       arredondar pro mês mais próximo, mas devemos usar sempre
+  #       com precisão de mês, então não faz mal
+  dt_inicio, dt_fim = normalize_dates(data_inicio, data_fim, mode)
+
+  if not dias_por_faixa:
+    dias_por_faixa = flow_consts.DEFAULT_WINDOW_DAYS.value
 
   log("Gerando faixas de datas para processamento em lotes")
   faixas = []
@@ -47,12 +54,12 @@ def gerar_faixas_de_data(
     # Nova data de início
     dt_inicio = dt_chunk_fim + timedelta(days=1)
 
-  log(f"{len(faixas)} faixas de datas geradas com sucesso.")
+  log(f"{len(faixas)} faixas de datas geradas com sucesso:\n{faixas}")
   return faixas
 
 
-@task(
-  retries=5, retry_delay_seconds=30, tags=[flow_constants.CONCURRENCY_LIMIT_TAG.value]
+@unauthenticated_task(
+  retries=5, retry_delay_seconds=30, tags=[flow_consts.CONCURRENCY_LIMIT_TAG.value]
 )
 def extract_from_api(
   user: str,
@@ -61,6 +68,7 @@ def extract_from_api(
   page_size: int,
   data_inicio: str,
   data_fim: str,
+  mode: Literal["extract", "update"],
 ):
   """
   Extrai dados do SISREG via API do ElasticSearch,
@@ -84,8 +92,8 @@ def extract_from_api(
   ###
 
   log(f"[{data_inicio} : {data_fim}] Conectando ao ElasticSearch...")
-  es = connect_ES(flow_constants.API_URL.value, user, password)
-  query = build_ES_query(page_size, data_inicio, data_fim)
+  es = connect_ES(flow_consts.API_URL.value, user, password)
+  query = build_ES_query(page_size, data_inicio, data_fim, mode)
 
   # Lista de IDs a serem limpados posteriormente
   latest_scroll_id = None
@@ -102,14 +110,13 @@ def extract_from_api(
     retries = 0
     max_retries = 5
     while True:
-      # TODO: migrar para paginação com "search_after" ao invés de scrolls
       if i == 0:
         resposta: dict = es.search(
-          index=index_name, body=query, scroll=flow_constants.SCROLL_TIMEOUT.value
+          index=index_name, body=query, scroll=flow_consts.SCROLL_TIMEOUT.value
         )
       else:
         resposta = es.scroll(
-          scroll_id=latest_scroll_id, scroll=flow_constants.SCROLL_TIMEOUT.value
+          scroll_id=latest_scroll_id, scroll=flow_consts.SCROLL_TIMEOUT.value
         )
 
       # Se conseguiu obter os dados, sai do loop interno
@@ -139,9 +146,14 @@ def extract_from_api(
     # Confere metadados
     # '_shards': {'total': x, 'successful': x, 'skipped': x, 'failed': x}
     shards: dict = resposta.get("_shards", {})
-    if shards.get("failed", 0) > 0 or shards.get("skipped", 0) > 0:
+    if shards.get("failed", 0) > 0:
       raise RuntimeError(
         f"[{data_inicio} : {data_fim}] Consulta com falhas em shards: {shards}"
+      )
+    if shards.get("skipped", 0) > 0:
+      log(
+        f"[{data_inicio} : {data_fim}] Consulta com shards pulados: {shards}",
+        level="warning",
       )
 
     hits: List[dict] = resposta["hits"]["hits"]
@@ -185,15 +197,15 @@ def extract_from_api(
       dado: dict = registro.get("_source", None)
       if not dado:
         continue
-      data_solicitacao = dado.get("data_solicitacao")
+      data_solicitacao = (
+        dado.get("data_solicitacao") or today().replace(day=1).isoformat()
+      )
       dado["data_particao"] = (
         datetime.fromisoformat(data_solicitacao)
         .astimezone(ZoneInfo("America/Sao_Paulo"))
         .date()
         .replace(day=1)
         .isoformat()
-        if data_solicitacao
-        else today().replace(day=1).isoformat()
       )
       dados.append(dado)
     log(
@@ -223,13 +235,125 @@ def extract_from_api(
 
 
 @task()
+def read_partition_from_bigquery(
+  dataset_id: str,
+  table_id: str,
+  data_particao: str,
+  environment: Literal["dev", "prod"] = "dev",
+) -> pd.DataFrame:
+  """
+  Lê todos os registros de uma partição específica da tabela BigLake (staging)
+  e retorna como DataFrame. Se a partição não existir ou estiver vazia, retorna
+  um DataFrame vazio.
+
+  Args:
+    dataset_id(str): Nome do dataset no BigQuery
+    table_id(str): Nome da tabela
+    data_particao(str): Data da partição no formato "YYYY-MM-DD".
+    environment(str): "dev" ou "prod".
+  """
+  project = get_google_project_for_environment(environment)
+  full_table = f"`{project}.{dataset_id}_staging.{table_id}`"
+  sql = f"SELECT * FROM {full_table} WHERE data_particao = '{data_particao}'"
+
+  log(f"[{data_particao}] Lendo partição existente: {full_table}")
+  client = bigquery.Client()
+  try:
+    df = client.query(sql).to_dataframe()
+    log(f"[{data_particao}] {len(df)} registros lidos da partição existente.")
+    return df
+  except Exception as e:
+    # A tabela pode ainda não existir na primeira execução
+    log(f"[{data_particao}] Não foi possível ler a partição existente: {repr(e)}")
+    return pd.DataFrame()
+
+
+@task()
+def delete_partition_files(
+  dataset_id: str,
+  table_id: str,
+  data_particao: str,
+  environment: Literal["dev", "prod"] = "dev",
+  sanity_check: pd.DataFrame = None,
+):
+  """
+  Apaga todos os arquivos Parquet de uma partição específica no GCS (staging).
+
+  Args:
+    dataset_id(str): Nome do dataset
+    table_id(str): Nome da tabela
+    data_particao(str): Data da partição no formato "YYYY-MM-DD".
+    environment(str): "dev" ou "prod".
+    sanity_check(pd.DataFrame):
+      DataFrame contendo os dados novos; caso esteja vazio, a partição não é deletada.
+  """
+  if sanity_check is None or sanity_check.empty:
+    raise RuntimeError(
+      f"DataFrame `sanity_check` veio vazio! Partição {data_particao} não será apagada"
+    )
+
+  dt = datetime.fromisoformat(data_particao).date()
+
+  prefix = (
+    f"staging/{dataset_id}/{table_id}/"
+    f"ano_particao={dt.year}/"
+    f"mes_particao={dt.month:02}/"
+    f"data_particao={data_particao}/"
+  )
+
+  project = get_google_project_for_environment(environment)
+  client = storage.Client()
+  bucket = client.bucket(project)
+
+  blobs = list(bucket.list_blobs(prefix=prefix, match_glob="**.parquet"))
+  if len(blobs) <= 0:
+    log(f"[{data_particao}] Não há arquivos em 'gs://{project}/{prefix}'")
+    return
+  log(
+    f"[{data_particao}] Apagando {len(blobs)} arquivo(s) da partição (gs://{project}/{prefix})"
+  )
+  bucket.delete_blobs(blobs)
+
+
+@unauthenticated_task()
+def merge_partition(old_df: pd.DataFrame, new_df: pd.DataFrame, data_particao: str):
+  """
+  Junta dois DataFrames, deduplicando por `codigo_solicitacao`.
+
+  Args:
+    old_df(DataFrame): DataFrame com dados já presentes no datalake.
+    new_df(DataFrame): DataFrame com os registros recém-extraídos da API para esta partição.
+    data_particao(str): Data da partição no formato "YYYY-MM-DD".
+  """
+  if old_df.empty:
+    log(
+      f"[{data_particao}] Nenhum dado já no datalake; {len(new_df)} registros atualizados."
+    )
+    return new_df.reset_index(drop=True)
+
+  old_df = old_df.astype(str)
+  new_df = new_df.astype(str)
+
+  log(
+    f"[{data_particao}] {len(old_df)} registros no datalake; {len(new_df)} atualizados."
+  )
+  merged_df = (
+    pd.concat([old_df, new_df], ignore_index=True)
+    .drop_duplicates(subset=["codigo_solicitacao"], keep="last")
+    .reset_index(drop=True)
+  )
+  log(f"[{data_particao}] Merge concluído; {len(merged_df)} registros no final")
+  return merged_df
+
+
+@task()
 def delete_old_files(
   data_inicio: Optional[str], data_fim: Optional[str], dataset_id: str, table_id: str
 ):
   # Esse flow é executado com frequência, e dados antigos acabam acumulando
   # Por isso, forçamos a extração de meses inteiros (dia 1 a último dia)
   # e aqui apagamos arquivos antigos de um mesmo mês
-  dt_inicio, dt_fim = normalize_dates(data_inicio, data_fim)
+  dt_inicio, dt_fim = normalize_dates(data_inicio, data_fim, "extract")
   dt_fim = dt_fim.replace(day=1)
 
   client = storage.Client()
@@ -273,39 +397,3 @@ def delete_old_files(
       current_month += 1
 
   return
-
-
-# @task()
-# def validate_upload(
-#   run_id,
-#   as_of,
-#   environment,
-#   bq_table,
-#   bq_dataset,
-#   data_inicio,
-#   data_fim,
-#   slice_completed,
-# ):
-#   values = slice_completed or []
-#   total_slices = len(values)
-
-#   # Slices que passaram por mark_slice_completed e retornaram True
-#   succeeded_slices = sum(1 for v in values if v)
-#   failed_slices = total_slices - succeeded_slices
-
-#   # Completed apenas se todos os slices finalizaram bem
-#   completed = failed_slices == 0
-
-#   row = {
-#     "run_id": run_id,
-#     "as_of": as_of,
-#     "environment": environment,
-#     "bq_table": bq_table,
-#     "bq_dataset": bq_dataset,
-#     "data_inicio": data_inicio,
-#     "data_fim": data_fim,
-#     "validation_date": datetime.now(),
-#     "completed": completed,
-#   }
-#   df = pd.DataFrame([row])
-#   return df
