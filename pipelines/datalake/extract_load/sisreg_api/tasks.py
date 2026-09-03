@@ -58,7 +58,9 @@ def gerar_faixas_de_data(
   return faixas
 
 
-@task(retries=5, retry_delay_seconds=30, tags=[flow_consts.CONCURRENCY_LIMIT_TAG.value])
+@unauthenticated_task(
+  retries=5, retry_delay_seconds=30, tags=[flow_consts.CONCURRENCY_LIMIT_TAG.value]
+)
 def extract_from_api(
   user: str,
   password: str,
@@ -313,7 +315,7 @@ def delete_partition_files(
   bucket.delete_blobs(blobs)
 
 
-@task()
+@unauthenticated_task()
 def merge_partition(old_df: pd.DataFrame, new_df: pd.DataFrame, data_particao: str):
   """
   Junta dois DataFrames, deduplicando por `codigo_solicitacao`.
@@ -351,7 +353,7 @@ def delete_old_files(
   # Esse flow é executado com frequência, e dados antigos acabam acumulando
   # Por isso, forçamos a extração de meses inteiros (dia 1 a último dia)
   # e aqui apagamos arquivos antigos de um mesmo mês
-  dt_inicio, dt_fim = normalize_dates(data_inicio, data_fim)
+  dt_inicio, dt_fim = normalize_dates(data_inicio, data_fim, "extract")
   dt_fim = dt_fim.replace(day=1)
 
   client = storage.Client()
