@@ -3,8 +3,6 @@ from typing import Literal, Optional
 
 import pandas as pd
 from prefect.concurrency.sync import rate_limit
-from prefect.futures import PrefectFuture, wait
-from prefect.task_runners import ThreadPoolTaskRunner
 
 from pipelines.constants import CIT
 from pipelines.utils.datalake import upload_df_to_datalake_task
@@ -41,7 +39,6 @@ def clear_sisreg_limit(*args, **kwargs):
   tags=["CIT", "SUBGERAL"],
   on_crashed=[clear_sisreg_limit],
   on_cancellation=[clear_sisreg_limit],
-  task_runner=ThreadPoolTaskRunner(max_workers=2),
 )
 def extract_sisreg_api(
   es_index: Literal[
@@ -132,20 +129,20 @@ def extract_sisreg_api(
 
     elif mode == "update":
       # 2b) Para cada partição presente nos dados novos:
-      def run_group(data_particao: str, partition_df: pd.DataFrame):
+      for data_particao, partition_df in df.groupby("data_particao"):
         # 2b.1) Lê os dados dessa partição já no BigQuery
-        existing_df = read_partition_from_bigquery.submit(
+        existing_df = read_partition_from_bigquery(
           dataset_id=dataset_id,
           table_id=table_id,
           data_particao=data_particao,
           environment=environment,
         )
         # 2b.2) Junta os dados antigos com os dados novos
-        merged_df = merge_partition.submit(
+        merged_df = merge_partition(
           old_df=existing_df, new_df=partition_df, data_particao=data_particao
         )
         # 2b.3) Apaga os arquivos antigos da partição antes de reenviar
-        deleted_future = delete_partition_files.submit(
+        deleted_future = delete_partition_files(
           dataset_id=dataset_id,
           table_id=table_id,
           data_particao=data_particao,
@@ -153,7 +150,7 @@ def extract_sisreg_api(
           sanity_check=merged_df,
         )
         # 2b.4) Reupload dos dados agora atualizados
-        future = upload_df_to_datalake_task.submit(
+        upload_df_to_datalake_task(
           df=merged_df,
           dataset_id=dataset_id,
           table_id=table_id,
@@ -162,17 +159,6 @@ def extract_sisreg_api(
           date_partition_column="data_particao",
           wait_for=[deleted_future],
         )
-        return future
-
-      wait_futures: list[PrefectFuture] = []
-      for data_particao, partition_df in df.groupby("data_particao"):
-        rate_limit("meio-por-segundo")
-        wait_futures.append(run_group(data_particao, partition_df))
-
-      wait(wait_futures)
-      # Dispara erro no flow se alguma execução paralela deu erro
-      for f in wait_futures:
-        f.result()
 
   if mode == "extract":
     # 3) Por fim, apaga arquivos antigos
